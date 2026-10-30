@@ -670,18 +670,21 @@ def test_lineage_matches_real_sessiondb(tmp_path):
 | A9 | One automated pin-versus-gateway comparison replaces eight `checkpoint:human-verify` tasks for the SUS packages. | Package Legitimacy Audit | If the planner or Theo wants a human check, add one checkpoint covering the whole dev group. |
 | A10 | Coverage target of 80 percent on `plugin/session_tasks` (house rule in `~/.claude/rules/ecc/testing.md`). | Validation | A lower gate would let untested branches through. |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **What does a delegate (subagent) session do with the board?**
    - What we know: 28 of 30 child rows in the live `state.db` are delegate children. `is_explicit_fork_child` is true for them. They carry their own `session_id` in a tool call.
    - What is unclear: whether a subagent may add items to Theo's board.
    - Recommendation: Phase 1 returns `kind="delegate"` and the delegator's root. Phase 2 refuses writes from a delegate with a plain tool error, because the board is Theo's list and not the agent's working plan. State this in the Phase 2 discuss.
+   - **RESOLVED (orchestrator decision 1):** a delegate resolves to the delegator's root with kind `delegate`, and Phase 1 stores nothing for it. The write policy for delegates is a Phase 2 tool decision. Plan 01-05 Task 1.
 2. **Where does the live `/compress` check run?**
    - What we know: it needs a tool, a hook and a pane. None exists before Phase 2 and Phase 4. Config has `in_place` unset (default true), so a forced `/compress` here proves "same id", not rotation.
    - Recommendation: Phase 2 verification runs the in-place check with the real tool. Rotation is covered by the fixture contract test. Skip a throwaway probe plugin.
+   - **RESOLVED (orchestrator decision 2):** the live `/compress` check moves to Phase 2. Phase 1 covers rotation with the `hermes`-marked contract test against a real `SessionDB` (plan 01-05 Task 3). No probe plugin.
 3. **Should a read of a branch trigger the fork copy?**
    - What we know: success criterion 3 says a branch "shows its parent's items". D-06 says "the first time the branch touches the board". PITFALLS P2.4 says reads create no row.
    - Recommendation: yes, a read triggers the one allowed write, and only when the parent has a board. If the parent has none, nothing is written.
+   - **RESOLVED (orchestrator decision 3):** yes. The first resolve of a branch copies the parent board once, and only when the parent has a board. A parent with no board leads to no write. Plan 01-05 Task 2.
 
 ## Environment Availability
 
