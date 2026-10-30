@@ -85,48 +85,48 @@
   "agent_skills": {
     "gsd-phase-researcher": [
       "global:python-architecture",
-      "global:donmor-python-stack"
+      "global:donmor-stack"
     ],
     "gsd-project-researcher": [
-      "global:donmor-python-stack"
+      "global:donmor-stack"
     ],
     "gsd-roadmapper": [
-      "global:donmor-python-stack"
+      "global:donmor-stack"
     ],
     "gsd-planner": [
       "global:python-architecture",
-      "global:donmor-python-stack"
+      "global:donmor-stack"
     ],
     "gsd-plan-checker": [
       "global:python-architecture",
-      "global:donmor-python-stack"
+      "global:donmor-stack"
     ],
     "gsd-executor": [
       "global:python-architecture",
-      "global:donmor-python-stack"
+      "global:donmor-stack"
     ],
     "gsd-code-reviewer": [
       "global:python-architecture",
-      "global:donmor-python-stack"
+      "global:donmor-stack"
     ],
     "gsd-code-fixer": [
       "global:python-architecture"
     ],
     "gsd-verifier": [
       "global:python-architecture",
-      "global:donmor-python-stack"
+      "global:donmor-stack"
     ],
     "gsd-debugger": [
       "global:python-architecture",
-      "global:donmor-python-stack"
+      "global:donmor-stack"
     ],
     "gsd-codebase-mapper": [
       "global:python-architecture",
-      "global:donmor-python-stack"
+      "global:donmor-stack"
     ],
     "gsd-doc-writer": [
       "global:asd-ste100",
-      "global:donmor-python-stack"
+      "global:donmor-stack"
     ]
   },
   "claude_md_path": "./.claude/CLAUDE.md",
