@@ -11,6 +11,7 @@ from typing import Any, Literal, Protocol, TypeAlias
 
 from . import aliases, rows, schema
 from .db import ConnFactory, read_txn, write_txn
+from .fork import fork_copy
 from .model import Clock, InvalidSession, utc_now
 
 MAX_LINEAGE_HOPS = 20
@@ -193,4 +194,5 @@ class SessionResolver:
     def _branch(self, session_id: str, branched: str, walk: _Walk) -> Resolution:
         """Resolve the parent first. The copy runs after every recursive resolve is done."""
         parent_root = self._resolve(branched, walk).root_id
+        fork_copy(self.connect, session_id, parent_root, self.clock)
         return Resolution(session_id, "branch", forked_from=parent_root)
