@@ -3,16 +3,16 @@ gsd_state_version: "1.0"
 current_phase: 1
 current_phase_name: Core, storage and session identity
 status: executing
-stopped_at: Completed 01-02-PLAN.md
-last_updated: "2026-10-30T23:21:41.668Z"
+stopped_at: Completed 01-03-PLAN.md
+last_updated: "2026-10-30T23:31:00.753Z"
 last_activity: 2026-10-30
 last_activity_desc: Phase 1 execution started
-state_head: b406c88e2dc0ad335efc0f778dea6f52b1df9410
+state_head: b6f60f4961d3447cff011cb08cc00ef49aae2110
 progress:
   total_phases: 7
   completed_phases: 0
   total_plans: 6
-  completed_plans: 2
+  completed_plans: 3
   percent: 0
 ---
 
@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-10-30)
 ## Current Position
 
 Phase: 1 (Core, storage and session identity) - EXECUTING
-Plan: 3 of 6
+Plan: 4 of 6
 Status: Ready to execute
 Last activity: 2026-10-30 - Phase 1 execution started
 
@@ -58,6 +58,7 @@ Progress: [░░░░░░░░░░] 0%
 |------|----------|-------|-------|
 | Phase 01 P01 | 3 min | 2 tasks | 11 files |
 | Phase 01 P02 | 4 min | 2 tasks | 11 files |
+| Phase 01 P03 | 9 min | 3 tasks | 9 files |
 
 ## Accumulated Context
 
@@ -74,6 +75,9 @@ Recent decisions affecting current work:
 - [Phase 01]: Lazy-import guard flags every non-stdlib import outside the public Hermes allowlist
 - [Phase 01]: clean_text measures the 500 char cap on the sanitised text - The sanitised text is what the store keeps.
 - [Phase 01]: An empty op batch writes nothing and returns Applied at the current rev - No board row appears from a no-op write.
+- [Phase 01]: Journal writes one row per changed item per operation; changed_ids lists each id once
+- [Phase 01]: Stale check runs before the no-op check, so a stale write of the current value returns Stale
+- [Phase 01]: connect_path retries the WAL switch on database is locked, like hermes_cli.sqlite_util.open_db
 
 ### Pending Todos
 
@@ -98,6 +102,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-30T23:21:41.621Z
-Stopped at: Completed 01-02-PLAN.md
+Last session: 2026-10-30T23:30:51.368Z
+Stopped at: Completed 01-03-PLAN.md
 Resume file: None

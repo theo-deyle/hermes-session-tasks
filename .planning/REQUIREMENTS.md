@@ -10,10 +10,10 @@ Requirements for the first release. Each maps to a roadmap phase.
 ### Storage and board model
 
 - [ ] **STOR-01**: Each session has its own board, stored in a plugin-owned SQLite file under `$HERMES_HOME/plugin-data/hermes-session-tasks/`, never in `state.db`.
-- [ ] **STOR-02**: An item has an id, text, checked state, parent id, position, created and updated timestamps, and who made the last change (agent or user).
-- [ ] **STOR-03**: An item can have subtasks (depth is set in discuss-phase; the model keeps `parent_id` so the depth can change later).
+- [x] **STOR-02**: An item has an id, text, checked state, parent id, position, created and updated timestamps, and who made the last change (agent or user).
+- [x] **STOR-03**: An item can have subtasks (depth is set in discuss-phase; the model keeps `parent_id` so the depth can change later).
 - [ ] **STOR-04**: Every board has a revision number. A write that targets an item changed since the caller's base revision is rejected and returns the current board.
-- [ ] **STOR-05**: Writes are safe when the agent tool and the pane write at the same time from different gateway processes (SQLite transaction, no in-process lock).
+- [x] **STOR-05**: Writes are safe when the agent tool and the pane write at the same time from different gateway processes (SQLite transaction, no in-process lock).
 - [ ] **STOR-06**: A board follows its session through context compression and branches, so Theo does not lose the list mid-session.
 - [ ] **STOR-07**: When Hermes deletes a session, the plugin removes that session's board; an archived session keeps its board.
 - [ ] **STOR-08**: The board round-trips to and from a markdown checklist (`- [ ]`, `- [x]`, indented subtasks) with a stdlib-only renderer and parser.
@@ -108,10 +108,10 @@ Each v1 requirement maps to exactly one phase.
 | Requirement | Phase | Status |
 |-------------|-------|--------|
 | STOR-01 | Phase 1 | Pending |
-| STOR-02 | Phase 1 | Pending |
-| STOR-03 | Phase 1 | Pending |
+| STOR-02 | Phase 1 | Complete |
+| STOR-03 | Phase 1 | Complete |
 | STOR-04 | Phase 1 | Pending |
-| STOR-05 | Phase 1 | Pending |
+| STOR-05 | Phase 1 | Complete |
 | STOR-06 | Phase 1 | Pending |
 | STOR-07 | Phase 5 | Pending |
 | STOR-08 | Phase 1 | Pending |
