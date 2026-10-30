@@ -1,0 +1,137 @@
+# hermes-session-tasks
+
+## What This Is
+
+A Hermes Desktop plugin that gives each Hermes session a task board in a Desktop side pane. The agent writes items to the board when it lists things to do or remember. Theo adds, edits, checks off and deletes items in the pane. The board is Theo's list of things to remember, not the agent's working plan.
+
+## Core Value
+
+Items the agent lists for Theo stay visible and editable in the pane for the whole session, so Theo never scrolls up or asks the agent to repeat itself.
+
+## Requirements
+
+### Validated
+
+(None yet - ship to validate)
+
+### Active
+
+- [ ] The agent writes items to the board when it lists things to do or remember for Theo.
+- [ ] Theo can add, edit, check off and delete items in the pane.
+- [ ] Items are checkboxes. An item can have subtasks (depth decided in discuss).
+- [ ] The agent changes the board when Theo asks, or when the work makes an item done or wrong.
+- [ ] When the agent is not sure a change is wanted, it asks Theo first and does not guess.
+- [ ] Each session has its own board.
+- [ ] Theo can view another session's board from a session picker in the pane.
+- [ ] On request, the agent can read or copy items from another session's board.
+- [ ] Markdown checklists (`- [ ]`, `- [x]`, indented subtasks) are the text format for import, export and what the agent sees.
+- [ ] The pane renders the list as an interactive board, not as raw markdown.
+- [ ] The pane updates live when the agent writes to the board.
+- [ ] The agent sees Theo's own edits to the board on its next turn, with small injected context.
+- [ ] A board follows its session through context compression and branches.
+- [ ] Writes are safe when the agent and the pane write at the same time (revision number, reject stale writes).
+- [ ] Board data lives on devpc under `$HERMES_HOME` in plugin-owned storage, never in `state.db`.
+- [ ] Deploy on devpc by symlink into `~/.hermes/plugins/`, enable, restart the gateway.
+
+### Out of Scope
+
+- A global or project board shared by all sessions - parked as a backlog idea for v2.
+- Due dates, priorities, assignees - not needed for a remember list.
+- Sync to Super Productivity or GitHub - not needed in v1.
+- Changes to the Hermes Agent source tree - everything ships as a plugin.
+- Reading, writing, wrapping or replacing the built-in `todo_list` tool - `todo_list` stays the agent's own working plan.
+
+## Context
+
+**Who and where.** Theo runs Hermes Desktop on his Mac and Windows PCs. Each Desktop connects to the Hermes gateway on devpc (DM-TheoDevPC, Debian 12) over an SSH remote. The gateway, the agent and all data live on devpc. Desktop never runs on devpc.
+
+**Problem.** In long Desktop sessions the agent lists what needs doing. Those items scroll away. Theo then scrolls up or asks the agent to repeat itself.
+
+**Hermes plugin model.** One "unified package" folder carries both halves. Reference docs (verified on devpc, Hermes Agent source at `~/.hermes/hermes-agent`):
+
+- `~/.hermes/hermes-agent/website/docs/developer-guide/desktop-plugin-sdk.md` (sections "A backend for your plugin", "One package, both SDKs", "Pushing events to your desktop half", "Pitfalls")
+- `~/.hermes/hermes-agent/website/docs/developer-guide/plugins/index.md` (tools, hooks, slash commands, bundled skills)
+
+Package layout:
+
+```
+~/.hermes/plugins/hermes-session-tasks/   # symlink to this repo's package dir
+├── plugin.yaml          # agent half: tools, hooks, skill
+├── __init__.py          # register(ctx): ctx.register_tool, ctx.register_hook, ctx.register_skill
+├── dashboard/
+│   ├── manifest.json    # { "name": "hermes-session-tasks", "api": "plugin_api.py" }
+│   └── plugin_api.py    # FastAPI APIRouter, mounted at /api/plugins/hermes-session-tasks/
+└── desktop/
+    └── plugin.js        # Desktop pane, one plain ESM file
+```
+
+**Python half facts.**
+
+- Loads only when the id is in `plugins.enabled` in `~/.hermes/config.yaml`. Set it with `hermes config set` or `hermes plugins enable`, never by hand edit.
+- Tool handlers can declare `session_id` as a keyword and Hermes passes the calling session. Use that to key the board. Never trust a session id from the model's arguments for the current session.
+- The gateway runs Python 3.11 (`~/.hermes/hermes-agent/venv`). Plugin code that runs in the gateway must work on 3.11 and import only the standard library plus what the gateway already ships (fastapi, pydantic).
+- Backend routes mount only when `hermes serve` starts. A Desktop reconnect reuses the old gateway, so new routes need a gateway restart.
+- `hermes_cli.plugin_events.broadcast_plugin_event("hermes-session-tasks", "board.updated", {...})` pushes `plugin.hermes-session-tasks.board.updated` to every connected Desktop window. Call it from the tool handler and from REST writes so the pane updates live.
+- `pre_llm_call` hooks can return `{"context": "..."}` to add text to the current turn. Use this (or an equivalent the research finds) so the agent sees Theo's own edits. Keep the injected text small and only send it when needed, so token cost and prompt caching stay sane.
+- Context compression starts a child session with a parent session id. A board must follow its session through compression and branches. Research how the session lineage is exposed (`hermes_state` session parent ids) and decide in discuss-phase.
+- Hermes core keeps a hard rule: never change past context or the system prompt mid-conversation (prompt caching).
+- `on_session_delete` hook exists. Data lifecycle on session delete is decided in discuss.
+
+**Desktop half facts.**
+
+- Plain ESM, no build, no JSX syntax: use `jsx()`/`jsxs()` from `react/jsx-runtime`. Import only `@hermes/plugin-sdk`, `react`, `react/jsx-runtime`. Verify every SDK name against the SDK doc before use.
+- Use SDK UI components (`Checkbox`, `Input`, `Button`, `ScrollArea`, `EmptyState`, `Select*`, `DropdownMenu*`, `ContextMenu*`) and theme vars (`var(--ui-*)`), never hardcoded colours. Dark theme only matters.
+- Follow the focused chat with `host.state.focusedStoredSessionId` (durable id). Use `ctx.rest` for reads and writes. Use `host.onEvent` for the broadcast event and a React Query `useQuery` polling fallback. `ctx.socket` is a no-op on OAuth remotes, so do not depend on it.
+- Default pane position: the right side, stacked with the other right-side panes (`placement: 'right'`). Theo can drag it later.
+
+**Pieces to build.**
+
+- Board per session: items with id, text, checked state, parent id (one or more subtask levels, decide depth in discuss), order, timestamps, and who made the last change (agent or Theo).
+- Agent tools (names decided in discuss; must not collide with `todo_list`): read the current board, add items, update/check/uncheck/rename items, remove items, reorder, read another session's board, copy items from another session, list sessions that have a board. Each write returns the full board as markdown.
+- A bundled skill that tells the agent when to use the board: when it lists things to do or remember for Theo, keep the board in sync, ask before an ambiguous change, never use it as its own scratch plan.
+- Pane: shows the focused session's board, checkboxes, inline add and edit, add subtask, delete, collapse subtasks, a session picker to view other boards, import and copy as markdown. Live update when the agent writes.
+- Storage on devpc under `$HERMES_HOME` (resolve with `get_hermes_home()`), in a plugin-owned SQLite file or JSON files. Never write into `state.db`.
+
+## Constraints
+
+- **Tech stack**: uv for the dev environment, ruff, pyright, pytest - house Python tooling.
+- **Runtime**: gateway runs Python 3.11, so test on 3.11 too - plugin code must import only the standard library plus fastapi and pydantic.
+- **Desktop**: plain ESM, no build step, SDK imports only - Hermes Desktop loads one plain file.
+- **Structure**: small modules with one responsibility each, structure planned first - house coding rule.
+- **Secrets**: none needed; if one is ever needed it comes from Infisical - house rule.
+- **Docs**: plain language, no em dash or en dash anywhere, spaced hyphen instead - house rule.
+- **Commit identity**: Theo Deyle <theo.deyle@donmor.ca>.
+- **Repo**: GSD project in this repo, pushed to GitHub `Don-Mor-Software-Group/hermes-session-tasks` (private).
+- **Deploy**: symlink the package dir into `~/.hermes/plugins/`, enable it, restart the gateway. Announce the gateway restart before it happens: it drops live Desktop connections.
+- **Boundary**: never read, write, wrap or replace `todo_list`.
+
+## Key Decisions
+
+| Decision | Rationale | Outcome |
+|----------|-----------|---------|
+| Separate from the built-in `todo_list` tool | `todo_list` is the agent's working plan; this board is Theo's remember list | - Pending |
+| One board per session, session picker, cross-session read and copy tools; no global board in v1 | Keeps v1 small; global board parked as backlog | - Pending |
+| Default pane position right, stacked with other right-side panes | Matches the other right-side panes; Theo can drag it later | - Pending |
+| Markdown checklist is the text format for import, export and agent view | Readable by agent and human, round-trips cleanly | - Pending |
+| Plugin-owned storage under `$HERMES_HOME`, never `state.db` | Keeps Hermes core data untouched | - Pending |
+| Agent asks before an ambiguous board change | Theo's list; a wrong guess costs trust | - Pending |
+
+## Evolution
+
+This document evolves at phase transitions and milestone boundaries.
+
+**After each phase transition** (via `/gsd-transition`):
+1. Requirements invalidated? Move to Out of Scope with reason
+2. Requirements validated? Move to Validated with phase reference
+3. New requirements emerged? Add to Active
+4. Decisions to log? Add to Key Decisions
+5. "What This Is" still accurate? Update if drifted
+
+**After each milestone** (via `/gsd-complete-milestone`):
+1. Full review of all sections
+2. Core Value check - still the right priority?
+3. Audit Out of Scope - reasons still valid?
+4. Update Context with current state
+
+---
+*Last updated: 2026-10-30 after initialization*
