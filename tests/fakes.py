@@ -24,12 +24,33 @@ class SessionSpec:
         return value.strip() if isinstance(value, str) else ""
 
 
+SEVEN_ROW_FIXTURE: dict[str, SessionSpec] = {
+    "root": SessionSpec(end_reason="compression"),
+    "comp1": SessionSpec(parent="root", end_reason="compression"),
+    "comp2": SessionSpec(parent="comp1"),
+    "br": SessionSpec(parent="comp2", model_config={"_branched_from": "comp2"}),
+    "dg": SessionSpec(parent="comp2", model_config={"_delegate_from": "comp2"}),
+    "rs": SessionSpec(parent="comp2", model_config={"_reset_from": "comp2"}),
+    "plain": SessionSpec(),
+}
+
+
+class ReaderBoom(RuntimeError):
+    """Raised by a fake reader method that a test chose to break."""
+
+
 class FakeSessionReader:
-    def __init__(self, specs: dict[str, SessionSpec]) -> None:
+    def __init__(self, specs: dict[str, SessionSpec], raise_in: str | None = None) -> None:
         self._specs = specs
+        self._raise_in = raise_in
         self.closed = False
 
+    def _maybe_raise(self, method: str) -> None:
+        if self._raise_in == method:
+            raise ReaderBoom(method)
+
     def get_session(self, session_id: str) -> dict[str, Any] | None:
+        self._maybe_raise("get_session")
         spec = self._specs.get(session_id)
         if spec is None:
             return None
@@ -47,6 +68,7 @@ class FakeSessionReader:
         return row
 
     def is_explicit_fork_child(self, session_id: str) -> bool:
+        self._maybe_raise("is_explicit_fork_child")
         spec = self._specs.get(session_id)
         if spec is None:
             return False
@@ -59,6 +81,7 @@ class FakeSessionReader:
         )
 
     def get_compression_lineage(self, session_id: str) -> list[str]:
+        self._maybe_raise("get_compression_lineage")
         if session_id not in self._specs:
             return []
         if self.is_explicit_fork_child(session_id):
@@ -98,12 +121,13 @@ class FakeSessionReader:
 class FakeReaderFactory:
     """Callable that opens a fake reader. It counts opens and keeps each reader."""
 
-    def __init__(self, specs: dict[str, SessionSpec]) -> None:
+    def __init__(self, specs: dict[str, SessionSpec], raise_in: str | None = None) -> None:
         self._specs = specs
+        self._raise_in = raise_in
         self.readers: list[FakeSessionReader] = []
 
     def __call__(self) -> FakeSessionReader:
-        reader = FakeSessionReader(self._specs)
+        reader = FakeSessionReader(self._specs, self._raise_in)
         self.readers.append(reader)
         return reader
 
@@ -114,3 +138,15 @@ class FakeReaderFactory:
     @property
     def all_closed(self) -> bool:
         return all(reader.closed for reader in self.readers)
+
+
+class RaisingReaderFactory:
+    """Callable that raises on every open, like `SessionDB` when state.db is missing."""
+
+    def __init__(self, exc: BaseException) -> None:
+        self._exc = exc
+        self.opens = 0
+
+    def __call__(self) -> FakeSessionReader:
+        self.opens += 1
+        raise self._exc
