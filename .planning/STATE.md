@@ -3,16 +3,16 @@ gsd_state_version: "1.0"
 current_phase: 1
 current_phase_name: Core, storage and session identity
 status: executing
-stopped_at: Completed 01-03-PLAN.md
-last_updated: "2026-10-30T23:31:00.753Z"
+stopped_at: Completed 01-04-PLAN.md
+last_updated: "2026-10-30T23:35:27.588Z"
 last_activity: 2026-10-30
 last_activity_desc: Phase 1 execution started
-state_head: b6f60f4961d3447cff011cb08cc00ef49aae2110
+state_head: 9c0d10a82f7e4ec3ac77ee67c80facc5477708f1
 progress:
   total_phases: 7
   completed_phases: 0
   total_plans: 6
-  completed_plans: 3
+  completed_plans: 4
   percent: 0
 ---
 
@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-10-30)
 ## Current Position
 
 Phase: 1 (Core, storage and session identity) - EXECUTING
-Plan: 4 of 6
+Plan: 5 of 6
 Status: Ready to execute
 Last activity: 2026-10-30 - Phase 1 execution started
 
@@ -59,6 +59,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 01 P01 | 3 min | 2 tasks | 11 files |
 | Phase 01 P02 | 4 min | 2 tasks | 11 files |
 | Phase 01 P03 | 9 min | 3 tasks | 9 files |
+| Phase 01 P04 | 8 min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -78,6 +79,9 @@ Recent decisions affecting current work:
 - [Phase 01]: Journal writes one row per changed item per operation; changed_ids lists each id once
 - [Phase 01]: Stale check runs before the no-op check, so a stale write of the current value returns Stale
 - [Phase 01]: connect_path retries the WAL switch on database is locked, like hermes_cli.sqlite_util.open_db
+- [Phase 01]: moved counts only lines that import; a skipped line counts once in skipped_empty or too_long - No line counts twice, so the import counts add up
+- [Phase 01]: A line under a skipped or too-long top-level entry becomes top-level - No child attaches to the wrong parent
+- [Phase 01]: hint_id is an int only for an id run of 18 digits or fewer, else None; the token strips at any length - int() on a pasted digit run never raises
 
 ### Pending Todos
 
@@ -102,6 +106,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-30T23:30:51.368Z
-Stopped at: Completed 01-03-PLAN.md
+Last session: 2026-10-30T23:35:27.511Z
+Stopped at: Completed 01-04-PLAN.md
 Resume file: None
