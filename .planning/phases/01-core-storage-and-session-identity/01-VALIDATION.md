@@ -49,11 +49,11 @@ created: "2026-10-30"
 | 01-03-03 | 01-03 | 3 | STOR-05, DEV-02 | T-01-07 | no lost write across processes, on 3.11 and on 3.14 | integration (processes) | `timeout 240 uv run pytest tests/test_race.py -q` | ❌ W0 | ⬜ pending |
 | 01-04-01 | 01-04 | 3 | STOR-08 | T-01-11, T-01-12, T-01-20 | `#12` escape, depth clamp, a line over 500 characters skipped and counted while later lines still import (D-10), empty box counted, thematic break ignored | unit | `uv run pytest tests/test_markdown.py -q` | ❌ W0 | ⬜ pending |
 | 01-04-02 | 01-04 | 3 | STOR-08 | T-01-11 | import stops at the cap and reports overflow | unit | `uv run pytest tests/test_markdown_roundtrip.py -q` | ❌ W0 | ⬜ pending |
-| 01-05-01 | 01-05 | 3 | STOR-06 | T-01-14, T-01-15, T-01-21 | missing session writes no alias, delegate stores nothing | unit with `FakeSessionReader` | `uv run pytest tests/test_lineage.py -q` | ❌ W0 | ⬜ pending |
-| 01-05-02 | 01-05 | 3 | STOR-06 | T-01-16 | branch copied once, edits stay apart | unit and processes | `timeout 240 uv run pytest tests/test_fork.py -q` | ❌ W0 | ⬜ pending |
-| 01-05-03 | 01-05 | 3 | STOR-01, STOR-06 | T-01-13, T-01-17 | reader built with `read_only=True`, file opened through `plugin_db`, fake fork flags, lineages and projected rows equal the real `SessionDB` per id, state.db bytes unchanged | unit and contract (`hermes`) | `uv run pytest tests/test_adapters.py -q`; `uv run pytest -m hermes tests/test_hermes_contract.py -q -rs` | ❌ W0 | ⬜ pending |
-| 01-06-01 | 01-06 | 4 | STOR-01, STOR-04, STOR-06, STOR-08 | - | ROADMAP criteria 1 to 4 end to end | integration | `uv run pytest tests/test_phase_flow.py -q` | ❌ W0 | ⬜ pending |
-| 01-06-02 | 01-06 | 4 | DEV-01, DEV-02 | T-01-18 | coverage at or above 80 percent on 3.11 | matrix | `./scripts/check.sh` | ❌ W0 | ⬜ pending |
+| 01-05-01 | 01-05 | 4 | STOR-06 | T-01-14, T-01-15, T-01-21 | missing session writes no alias, delegate stores nothing | unit with `FakeSessionReader` | `uv run pytest tests/test_lineage.py -q` | ❌ W0 | ⬜ pending |
+| 01-05-02 | 01-05 | 4 | STOR-06 | T-01-16 | branch copied once, edits stay apart | unit and processes | `timeout 240 uv run pytest tests/test_fork.py -q` | ❌ W0 | ⬜ pending |
+| 01-05-03 | 01-05 | 4 | STOR-01, STOR-06 | T-01-13, T-01-17 | reader built with `read_only=True`, file opened through `plugin_db`, fake fork flags, lineages and projected rows equal the real `SessionDB` per id, state.db bytes unchanged | unit and contract (`hermes`) | `uv run pytest tests/test_adapters.py -q`; `uv run pytest -m hermes tests/test_hermes_contract.py -q -rs` | ❌ W0 | ⬜ pending |
+| 01-06-01 | 01-06 | 5 | STOR-01, STOR-04, STOR-06, STOR-08 | - | ROADMAP criteria 1 to 4 end to end | integration | `uv run pytest tests/test_phase_flow.py -q` | ❌ W0 | ⬜ pending |
+| 01-06-02 | 01-06 | 5 | DEV-01, DEV-02 | T-01-18 | coverage at or above 80 percent on 3.11 | matrix | `./scripts/check.sh` | ❌ W0 | ⬜ pending |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
