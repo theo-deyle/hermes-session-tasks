@@ -6,7 +6,7 @@ import sqlite3
 from collections.abc import Sequence
 from dataclasses import dataclass
 
-from . import rows, schema
+from . import aliases, rows, schema
 from .db import ConnFactory, read_txn, write_txn
 from .model import (
     Actor,
@@ -56,6 +56,7 @@ class BoardStore:
         row = rows.read_board(conn, root_id)
         if row is None:
             row = rows.create_board(conn, root_id, now)
+            aliases.put_alias(conn, root_id, root_id)
         new_rev = row.rev + 1
         next_id = row.next_item_id
         changed: list[int] = []
