@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-10-30)
 ## Current Position
 
 Phase: 1 (Core, storage and session identity) — READY TO EXECUTE
-Plan: 0 of TBD in current phase
+Plan: 0 of 6 in current phase
 Status: Ready to execute
 Last activity: 2026-10-30 - Roadmap created, 43 of 43 v1 requirements mapped
 
