@@ -63,9 +63,7 @@ def test_compression_tip_reads_the_root_board(db_path: Path, clock: Clock) -> No
         "tip": SessionSpec(parent="root"),
     }
     resolver = make_resolver(connect, specs, clock)
-    store.apply(
-        resolver.resolve("root").root_id, [AddItem("Call John")], actor="agent", base_rev=0
-    )
+    store.apply(resolver.resolve("root").root_id, [AddItem("Call John")], actor="agent", base_rev=0)
 
     resolution = resolver.resolve("tip")
     board = store.get_board(resolution.root_id)
@@ -85,9 +83,7 @@ def test_blank_or_non_string_session_id_raises_invalid_session(
         resolver.resolve(session_id)
 
 
-def test_unknown_root_reads_empty_board_and_creates_no_rows(
-    db_path: Path, clock: Clock
-) -> None:
+def test_unknown_root_reads_empty_board_and_creates_no_rows(db_path: Path, clock: Clock) -> None:
     store = BoardStore(make_connect(db_path), clock)
 
     board = store.get_board("nobody")
