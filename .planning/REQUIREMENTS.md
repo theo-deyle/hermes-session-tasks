@@ -9,14 +9,14 @@ Requirements for the first release. Each maps to a roadmap phase.
 
 ### Storage and board model
 
-- [ ] **STOR-01**: Each session has its own board, stored in a plugin-owned SQLite file under `$HERMES_HOME/plugin-data/hermes-session-tasks/`, never in `state.db`.
+- [x] **STOR-01**: Each session has its own board, stored in a plugin-owned SQLite file under `$HERMES_HOME/plugin-data/hermes-session-tasks/`, never in `state.db`.
 - [x] **STOR-02**: An item has an id, text, checked state, parent id, position, created and updated timestamps, and who made the last change (agent or user).
 - [x] **STOR-03**: An item can have subtasks (depth is set in discuss-phase; the model keeps `parent_id` so the depth can change later).
-- [ ] **STOR-04**: Every board has a revision number. A write that targets an item changed since the caller's base revision is rejected and returns the current board.
+- [x] **STOR-04**: Every board has a revision number. A write that targets an item changed since the caller's base revision is rejected and returns the current board.
 - [x] **STOR-05**: Writes are safe when the agent tool and the pane write at the same time from different gateway processes (SQLite transaction, no in-process lock).
-- [ ] **STOR-06**: A board follows its session through context compression and branches, so Theo does not lose the list mid-session.
+- [x] **STOR-06**: A board follows its session through context compression and branches, so Theo does not lose the list mid-session.
 - [ ] **STOR-07**: When Hermes deletes a session, the plugin removes that session's board; an archived session keeps its board.
-- [ ] **STOR-08**: The board round-trips to and from a markdown checklist (`- [ ]`, `- [x]`, indented subtasks) with a stdlib-only renderer and parser.
+- [x] **STOR-08**: The board round-trips to and from a markdown checklist (`- [ ]`, `- [x]`, indented subtasks) with a stdlib-only renderer and parser.
 
 ### Agent tools
 
@@ -61,8 +61,8 @@ Requirements for the first release. Each maps to a roadmap phase.
 
 ### Dev and deploy
 
-- [ ] **DEV-01**: The repo is a uv project with ruff, pyright and pytest, and the tests pass on Python 3.11 and 3.14.
-- [ ] **DEV-02**: Tool handlers, hooks, store and routes have tests that run without a gateway, including a two-process concurrent write test.
+- [x] **DEV-01**: The repo is a uv project with ruff, pyright and pytest, and the tests pass on Python 3.11 and 3.14.
+- [x] **DEV-02**: Tool handlers, hooks, store and routes have tests that run without a gateway, including a two-process concurrent write test.
 - [ ] **DEV-03**: The pane file passes `node --check` and an import allowlist test.
 - [ ] **DEV-04**: The package dir is symlinked into `~/.hermes/plugins/`, enabled with the Hermes CLI, and the gateway restart is announced before it happens.
 - [ ] **DEV-05**: The Desktop half (`desktop/plugin.js`) is installed on the Mac and the Windows PC by a copy script, the pane shows a banner when its version does not match the backend, and the README gives the steps for each machine.
@@ -107,14 +107,14 @@ Each v1 requirement maps to exactly one phase.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| STOR-01 | Phase 1 | Pending |
+| STOR-01 | Phase 1 | Complete |
 | STOR-02 | Phase 1 | Complete |
 | STOR-03 | Phase 1 | Complete |
-| STOR-04 | Phase 1 | Pending |
+| STOR-04 | Phase 1 | Complete |
 | STOR-05 | Phase 1 | Complete |
-| STOR-06 | Phase 1 | Pending |
+| STOR-06 | Phase 1 | Complete |
 | STOR-07 | Phase 5 | Pending |
-| STOR-08 | Phase 1 | Pending |
+| STOR-08 | Phase 1 | Complete |
 | TOOL-01 | Phase 2 | Pending |
 | TOOL-02 | Phase 2 | Pending |
 | TOOL-03 | Phase 6 | Pending |
@@ -144,8 +144,8 @@ Each v1 requirement maps to exactly one phase.
 | PANE-11 | Phase 4 | Pending |
 | PANE-12 | Phase 4 | Pending |
 | PANE-13 | Phase 4 | Pending |
-| DEV-01 | Phase 1 | Pending |
-| DEV-02 | Phase 1 | Pending |
+| DEV-01 | Phase 1 | Complete |
+| DEV-02 | Phase 1 | Complete |
 | DEV-03 | Phase 3 | Pending |
 | DEV-04 | Phase 7 | Pending |
 | DEV-05 | Phase 3 | Pending |
