@@ -33,7 +33,7 @@ Not in this phase: agent tools and skill (Phase 2), REST routes (Phase 3), pane 
 ### Import rules
 - **D-08:** A plain bullet with no checkbox (`- text`, `* text`, `+ text`) becomes an unchecked item. Uppercase `[X]` counts as checked. Headings, paragraphs and blank lines are ignored.
 - **D-09:** A checkbox line with empty text is skipped and counted in the import result. Item text is one line; newlines collapse to a space on write.
-- **D-10:** Caps: 100 items per board and 500 characters per item. The store enforces both. An import that would pass a cap stops at the cap and reports the overflow count. - **Reversibility:** reversible - a constant in `model`; raising it needs no migration.
+- **D-10:** Caps: 100 items per board and 500 characters per item. The store enforces both. An import that would pass the 100-item cap stops at the cap and reports the overflow count. A line over 500 characters is skipped and counted in the import result; later lines still import. (Clarified 2026-10-30 in plan-phase: the stop rule is for the item count, the skip rule is for the per-item length.) - **Reversibility:** reversible - a constant in `model`; raising it needs no migration.
 
 ### Claude's Discretion
 - SQLite schema shape, `user_version` migration, `BEGIN IMMEDIATE` write helper, journal size (research says last 100 rows), alias table layout.
