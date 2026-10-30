@@ -324,3 +324,28 @@ def test_compressed_delegate_tip_resolves_to_the_delegator_root(
 
     assert resolver.resolve("dg2") == Resolution("root", "compression")
     assert query(db_path, "SELECT root_id FROM aliases WHERE session_id = 'dg2'") == [("root",)]
+
+
+def test_compaction_hook_for_a_delegate_aliases_the_new_id_to_the_delegator_root(
+    resolver_for: ResolverFor, db_path: Path
+) -> None:
+    resolver, _ = resolver_for(COMPACTED_DELEGATE_FIXTURE)
+
+    resolver.record_compaction("dg2", "dg")
+
+    assert query(db_path, "SELECT session_id, root_id FROM aliases") == [("dg2", "root")]
+    assert resolver.resolve("dg2") == Resolution("root", "compression")
+
+
+def test_compaction_hook_with_a_looping_delegate_chain_falls_back_to_the_old_id(
+    resolver_for: ResolverFor, db_path: Path
+) -> None:
+    resolver, factory = resolver_for({
+        "x": SessionSpec(parent="y", source="tool"),
+        "y": SessionSpec(parent="x", source="tool"),
+    })
+
+    resolver.record_compaction("z", "x")
+
+    assert query(db_path, "SELECT session_id, root_id FROM aliases") == [("z", "x")]
+    assert factory.all_closed

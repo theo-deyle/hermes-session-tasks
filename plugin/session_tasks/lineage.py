@@ -141,6 +141,9 @@ class SessionResolver:
         walk = _Walk(self.open_reader)
         try:
             root_id = self._root_of_old(old_id, walk)
+        except _LineageLoop as loop:
+            log.warning("session lineage loops or is too long at %r; using the old id", loop)
+            root_id = old_id
         finally:
             walk.close()
         if root_id == new_id:
@@ -153,12 +156,8 @@ class SessionResolver:
             return aliases.get_alias(conn, session_id)
 
     def _root_of_old(self, old_id: str, walk: _Walk) -> str:
-        known = self._alias_of(old_id)
-        if known is not None:
-            return known
-        reader = walk.reader()
-        lineage = reader.get_compression_lineage(old_id) if reader is not None else []
-        return lineage[0] if lineage else old_id
+        """Use the same rule as `resolve`, so plain, compression, branch and delegate agree."""
+        return self._resolve(old_id, walk).root_id
 
     def _resolve(self, session_id: str, walk: _Walk) -> Resolution:
         known = self._alias_of(session_id)

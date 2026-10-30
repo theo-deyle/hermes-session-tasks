@@ -297,3 +297,19 @@ def test_branch_compressed_before_its_first_touch_still_gets_the_parent_copy(
     assert branch.forked_from == PARENT
     sql = "SELECT session_id, root_id FROM aliases WHERE session_id LIKE 'br%' ORDER BY 1"
     assert query(db_path, sql) == [("br", BRANCH), ("br2", BRANCH)]
+
+
+def test_compaction_hook_for_a_branch_not_yet_touched_copies_the_parent_board(
+    store: BoardStore, resolver_for: ResolverFor, db_path: Path
+) -> None:
+    parent = seed_parent(store)
+    resolver, _ = resolver_for(COMPRESSED_BRANCH_FIXTURE)
+
+    resolver.record_compaction("br2", BRANCH)
+    resolution = resolver.resolve("br2")
+    branch = store.get_board(BRANCH)
+
+    assert resolution == Resolution(BRANCH, "compression")
+    assert render(branch, include_ids=False) == render(parent, include_ids=False)
+    assert query(db_path, f"SELECT COUNT(*) FROM boards WHERE root_id = '{BRANCH}'") == [(1,)]
+    assert query(db_path, "SELECT root_id FROM aliases WHERE session_id = 'br2'") == [(BRANCH,)]
