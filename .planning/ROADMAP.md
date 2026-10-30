@@ -39,7 +39,13 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. A board written before a context compression shows the same items after it. A branch of a session shows its parent's items.
   4. A board converts to a markdown checklist and back with no loss, including subtasks.
   5. `uv sync` builds the project. ruff, pyright and pytest pass on Python 3.11 and 3.14 with no gateway running. The store tests include the two-process write test.
-**Plans**: TBD
+**Plans**: 5 plans in 3 waves
+Plans:
+- [ ] 01-01-PLAN.md - First end to end test (session id to SQLite board to markdown), uv toolchain, pin gate, 3.11 and 3.14 matrix, layout guards (wave 1)
+- [ ] 01-02-PLAN.md - Store: all item ops, subtasks, caps, revision rule, journal, two- and four-process race tests (wave 2)
+- [ ] 01-03-PLAN.md - Markdown: escape rule, parser, import planning at the cap, seeded round trip (wave 2)
+- [ ] 01-04-PLAN.md - Lineage: compression alias, branch fork copy, delegate and reset, Hermes adapters and contract tests (wave 2)
+- [ ] 01-05-PLAN.md - Phase gate: integration test per ROADMAP criterion, 80 percent coverage gate (wave 3)
 **Research**: Needed for the lineage part only. Topics: `post_compaction` on a live Desktop, whether the tool `session_id` and `focusedStoredSessionId` stay equal after `/compress`, how a branch looks in `state.db`. The store and markdown code need none.
 
 ### Phase 2: Agent tools and skill
@@ -127,7 +133,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Core, storage and session identity | 0/TBD | Not started | - |
+| 1. Core, storage and session identity | 0/5 | Planned | - |
 | 2. Agent tools and skill | 0/TBD | Not started | - |
 | 3. REST router and client install spike | 0/TBD | Not started | - |
 | 4. Pane | 0/TBD | Not started | - |
