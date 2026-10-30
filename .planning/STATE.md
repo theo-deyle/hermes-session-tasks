@@ -3,16 +3,16 @@ gsd_state_version: "1.0"
 current_phase: 1
 current_phase_name: Core, storage and session identity
 status: executing
-stopped_at: Completed 01-01-PLAN.md
-last_updated: "2026-10-30T23:16:28.628Z"
+stopped_at: Completed 01-02-PLAN.md
+last_updated: "2026-10-30T23:21:41.668Z"
 last_activity: 2026-10-30
 last_activity_desc: Phase 1 execution started
-state_head: df66f9a582385b46b56158f48848c3f365a90a2c
+state_head: b406c88e2dc0ad335efc0f778dea6f52b1df9410
 progress:
   total_phases: 7
   completed_phases: 0
   total_plans: 6
-  completed_plans: 1
+  completed_plans: 2
   percent: 0
 ---
 
@@ -23,14 +23,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-10-30)
 
 **Core value:** Items the agent lists for Theo stay visible and editable in the pane for the whole session, so Theo never scrolls up or asks the agent to repeat itself.
-**Current focus:** Phase 1 — Core, storage and session identity
+**Current focus:** Phase 1 - Core, storage and session identity
 
 ## Current Position
 
-Phase: 1 (Core, storage and session identity) — EXECUTING
-Plan: 2 of 6
+Phase: 1 (Core, storage and session identity) - EXECUTING
+Plan: 3 of 6
 Status: Ready to execute
-Last activity: 2026-10-30 — Phase 1 execution started
+Last activity: 2026-10-30 - Phase 1 execution started
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -57,6 +57,7 @@ Progress: [░░░░░░░░░░] 0%
 | Plan | Duration | Tasks | Files |
 |------|----------|-------|-------|
 | Phase 01 P01 | 3 min | 2 tasks | 11 files |
+| Phase 01 P02 | 4 min | 2 tasks | 11 files |
 
 ## Accumulated Context
 
@@ -71,6 +72,8 @@ Recent decisions affecting current work:
 - [Roadmap]: Phases 2 and 3 need no strict order, but Phase 3 follows Phase 2 so the event check can use a real tool write.
 - [Phase 01]: Core modules use relative imports only; the layout guards fail an absolute session_tasks import
 - [Phase 01]: Lazy-import guard flags every non-stdlib import outside the public Hermes allowlist
+- [Phase 01]: clean_text measures the 500 char cap on the sanitised text - The sanitised text is what the store keeps.
+- [Phase 01]: An empty op batch writes nothing and returns Applied at the current rev - No board row appears from a no-op write.
 
 ### Pending Todos
 
@@ -95,6 +98,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-30T23:16:28.562Z
-Stopped at: Completed 01-01-PLAN.md
+Last session: 2026-10-30T23:21:41.621Z
+Stopped at: Completed 01-02-PLAN.md
 Resume file: None

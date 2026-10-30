@@ -39,13 +39,13 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. A board written before a context compression shows the same items after it. A branch of a session shows its parent's items.
   4. A board converts to a markdown checklist and back with no loss, including subtasks.
   5. `uv sync` builds the project. ruff, pyright and pytest pass on Python 3.11 and 3.14 with no gateway running. The store tests include the two-process write test.
-**Plans**: 1/6 plans executed in 5 waves
+**Plans**: 2/6 plans executed in 5 waves
 Plans:
 **Wave 1**
 - [x] 01-01-PLAN.md - uv toolchain, pin gate, 3.11 and 3.14 matrix, test harness, layout and real-home guards (wave 1)
 
 **Wave 2** *(blocked on Wave 1 completion)*
-- [ ] 01-02-PLAN.md - First end to end test (session id to SQLite board to markdown), then the alias table and shared store fixtures (wave 2)
+- [x] 01-02-PLAN.md - First end to end test (session id to SQLite board to markdown), then the alias table and shared store fixtures (wave 2)
 
 **Wave 3** *(blocked on Wave 2 completion)*
 - [ ] 01-03-PLAN.md - Store: all item ops, subtasks, caps, revision rule, journal, two- and four-process race tests (wave 3)
@@ -143,7 +143,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Core, storage and session identity | 1/6 | In Progress | - |
+| 1. Core, storage and session identity | 2/6 | In Progress | - |
 | 2. Agent tools and skill | 0/TBD | Not started | - |
 | 3. REST router and client install spike | 0/TBD | Not started | - |
 | 4. Pane | 0/TBD | Not started | - |
