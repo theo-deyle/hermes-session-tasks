@@ -2,14 +2,20 @@
 
 from __future__ import annotations
 
+import json
+import logging
 import sqlite3
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any, Literal, Protocol, TypeAlias
 
 from . import aliases, rows, schema
 from .db import ConnFactory, read_txn, write_txn
 from .model import Clock, InvalidSession, utc_now
+
+MAX_LINEAGE_HOPS = 20
+
+log = logging.getLogger(__name__)
 
 
 class SessionReader(Protocol):
@@ -35,6 +41,70 @@ class Resolution:
     forked_from: str | None = None
 
 
+class _LineageLoop(Exception):
+    """A parent chain loops or is longer than `MAX_LINEAGE_HOPS`."""
+
+
+@dataclass
+class _Walk:
+    """State of one top-level resolve: at most one reader, and the ids seen so far."""
+
+    open_reader: ReaderFactory
+    visited: set[str] = field(default_factory=set)
+    _reader: SessionReader | None = None
+    _unreadable: bool = False
+
+    def reader(self) -> SessionReader | None:
+        """Open the reader on first use. None means there is no state.db to read."""
+        if self._reader is None and not self._unreadable:
+            try:
+                self._reader = self.open_reader()
+            except sqlite3.OperationalError:
+                self._unreadable = True
+        return self._reader
+
+    def visit(self, session_id: str) -> None:
+        if session_id in self.visited or len(self.visited) >= MAX_LINEAGE_HOPS:
+            raise _LineageLoop(session_id)
+        self.visited.add(session_id)
+
+    def close(self) -> None:
+        if self._reader is not None:
+            self._reader.close()
+
+
+def _check_id(session_id: object) -> str:
+    if not isinstance(session_id, str) or not session_id.strip():
+        raise InvalidSession("session id must be a non-empty string")
+    return session_id
+
+
+def _text(value: object) -> str:
+    return value.strip() if isinstance(value, str) else ""
+
+
+def _model_config(row: dict[str, Any]) -> dict[str, Any]:
+    """Decode `model_config`. A non-string, invalid or non-dict value counts as empty."""
+    raw = row.get("model_config")
+    if not isinstance(raw, str):
+        return {}
+    try:
+        decoded = json.loads(raw)
+    except ValueError:
+        return {}
+    return decoded if isinstance(decoded, dict) else {}
+
+
+def _branched_from(row: dict[str, Any]) -> str:
+    """Return the `_branched_from` marker: the top-level key first, then `model_config`."""
+    return _text(row.get("_branched_from")) or _text(_model_config(row).get("_branched_from"))
+
+
+def _delegator(row: dict[str, Any]) -> str:
+    """Return the id of the session that started a delegate (subagent) session."""
+    return _text(_model_config(row).get("_delegate_from")) or _text(row.get("parent_session_id"))
+
+
 @dataclass(frozen=True)
 class SessionResolver:
     connect: ConnFactory
@@ -44,33 +114,83 @@ class SessionResolver:
     def resolve(self, session_id: str) -> Resolution:
         """Return the board root for a session. Never defaults to an empty or shared key.
 
-        A known alias answers with no reader. An alias miss walks the compression lineage
-        with one reader. A compression tip gets an alias once its root has a board.
+        A known alias answers with no reader. An alias miss uses one reader per call.
+        A compression tip gets an alias once its root has a board. A branch gets a copy
+        of its parent board on its first touch. A delegate (subagent) session answers
+        with its delegator's root and gets nothing of its own.
         """
-        if not isinstance(session_id, str) or not session_id.strip():
-            raise InvalidSession("session id must be a non-empty string")
-        with schema.open_db(self.connect) as conn:
-            with read_txn(conn):
-                known = aliases.get_alias(conn, session_id)
-            if known is not None:
-                return Resolution(known, "plain" if known == session_id else "compression")
-            found = self._walk(session_id)
-            if found.kind == "compression":
-                _remember(conn, session_id, found.root_id)
-            return found
-
-    def _walk(self, session_id: str) -> Resolution:
-        reader = self.open_reader()
+        walk = _Walk(self.open_reader)
         try:
-            lineage = reader.get_compression_lineage(session_id)
+            return self._resolve(_check_id(session_id), walk)
+        except _LineageLoop as loop:
+            log.warning("session lineage loops or is too long at %r; using the session id", loop)
+            return Resolution(session_id, "plain")
         finally:
-            reader.close()
+            walk.close()
+
+    def record_compaction(self, session_id: str, old_session_id: str) -> None:
+        """Alias the new session id to the board root of the session it replaced.
+
+        Phase 2 calls this from the `post_compaction` hook.
+        """
+        new_id = _check_id(session_id)
+        old_id = old_session_id.strip() if isinstance(old_session_id, str) else ""
+        if not old_id or old_id == new_id:
+            return
+        walk = _Walk(self.open_reader)
+        try:
+            root_id = self._root_of_old(old_id, walk)
+        finally:
+            walk.close()
+        if root_id == new_id:
+            return
+        with schema.open_db(self.connect) as conn, write_txn(conn):
+            aliases.put_alias(conn, new_id, root_id)
+
+    def _alias_of(self, session_id: str) -> str | None:
+        with schema.open_db(self.connect) as conn, read_txn(conn):
+            return aliases.get_alias(conn, session_id)
+
+    def _root_of_old(self, old_id: str, walk: _Walk) -> str:
+        known = self._alias_of(old_id)
+        if known is not None:
+            return known
+        reader = walk.reader()
+        lineage = reader.get_compression_lineage(old_id) if reader is not None else []
+        return lineage[0] if lineage else old_id
+
+    def _resolve(self, session_id: str, walk: _Walk) -> Resolution:
+        known = self._alias_of(session_id)
+        if known is not None:
+            return Resolution(known, "plain" if known == session_id else "compression")
+        reader = walk.reader()
+        if reader is None:
+            return Resolution(session_id, "plain")
+        walk.visit(session_id)
+        row = reader.get_session(session_id)
+        if row is None:
+            return Resolution(session_id, "plain")
+        if not reader.is_explicit_fork_child(session_id):
+            return self._compression(session_id, reader)
+        branched = _branched_from(row)
+        if branched:
+            return self._branch(session_id, branched, walk)
+        delegator = _delegator(row)
+        if not delegator:
+            return Resolution(session_id, "plain")
+        return Resolution(self._resolve(delegator, walk).root_id, "delegate")
+
+    def _compression(self, session_id: str, reader: SessionReader) -> Resolution:
+        lineage = reader.get_compression_lineage(session_id)
         root_id = lineage[0] if lineage else session_id
-        kind: ResolutionKind = "compression" if root_id != session_id else "plain"
-        return Resolution(root_id, kind)
+        if root_id == session_id:
+            return Resolution(session_id, "plain")
+        with schema.open_db(self.connect) as conn, write_txn(conn):
+            if rows.read_board(conn, root_id) is not None:
+                aliases.put_alias(conn, session_id, root_id)
+        return Resolution(root_id, "compression")
 
-
-def _remember(conn: sqlite3.Connection, session_id: str, root_id: str) -> None:
-    with write_txn(conn):
-        if rows.read_board(conn, root_id) is not None:
-            aliases.put_alias(conn, session_id, root_id)
+    def _branch(self, session_id: str, branched: str, walk: _Walk) -> Resolution:
+        """Resolve the parent first. The copy runs after every recursive resolve is done."""
+        parent_root = self._resolve(branched, walk).root_id
+        return Resolution(session_id, "branch", forked_from=parent_root)
