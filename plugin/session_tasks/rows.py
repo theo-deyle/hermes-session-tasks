@@ -104,3 +104,65 @@ def next_position(conn: sqlite3.Connection, root_id: str, parent_id: int | None)
         sql = f"SELECT MAX(position) FROM {ITEMS} WHERE root_id = ? AND parent_id = ?"
         row = conn.execute(sql, (root_id, parent_id)).fetchone()
     return 0 if row is None or row[0] is None else int(row[0]) + 1
+
+
+def _item_from_row(row: tuple[object, ...]) -> Item:
+    return Item(
+        id=cast(int, row[0]),
+        parent_id=cast("int | None", row[1]),
+        position=cast(int, row[2]),
+        text=cast(str, row[3]),
+        checked=bool(row[4]),
+        rev=cast(int, row[5]),
+        updated_by=cast(Actor, row[6]),
+        created_at=cast(str, row[7]),
+        updated_at=cast(str, row[8]),
+    )
+
+
+def read_item(conn: sqlite3.Connection, root_id: str, item_id: int) -> Item | None:
+    sql = f"SELECT {ITEM_COLUMNS} FROM {ITEMS} WHERE root_id = ? AND id = ?"
+    row = conn.execute(sql, (root_id, item_id)).fetchone()
+    return None if row is None else _item_from_row(row)
+
+
+def update_item(conn: sqlite3.Connection, root_id: str, item: Item) -> None:
+    """Write the fields an operation can change: text, checked, rev, writer and time."""
+    sql = (
+        f"UPDATE {ITEMS} SET text = ?, checked = ?, rev = ?, updated_by = ?, updated_at = ? "
+        "WHERE root_id = ? AND id = ?"
+    )
+    params = (
+        item.text,
+        int(item.checked),
+        item.rev,
+        item.updated_by,
+        item.updated_at,
+        root_id,
+        item.id,
+    )
+    conn.execute(sql, params)
+
+
+def delete_item(conn: sqlite3.Connection, root_id: str, item_id: int) -> None:
+    """Delete one item. The foreign key cascade deletes its subtasks."""
+    conn.execute(f"DELETE FROM {ITEMS} WHERE root_id = ? AND id = ?", (root_id, item_id))
+
+
+def count_items(conn: sqlite3.Connection, root_id: str) -> int:
+    row = conn.execute(f"SELECT COUNT(*) FROM {ITEMS} WHERE root_id = ?", (root_id,)).fetchone()
+    return int(row[0])
+
+
+def read_changes(conn: sqlite3.Connection, root_id: str) -> tuple[Change, ...]:
+    sql = f"SELECT rev, actor, op, item_id, text, ts FROM {CHANGES} WHERE root_id = ? ORDER BY seq"
+    return tuple(Change(*row) for row in conn.execute(sql, (root_id,)))
+
+
+def prune_changes(conn: sqlite3.Connection, root_id: str, keep: int) -> None:
+    """Delete this board's journal rows that are older than the newest `keep` rows."""
+    sql = (
+        f"DELETE FROM {CHANGES} WHERE root_id = ? AND seq NOT IN "
+        f"(SELECT seq FROM {CHANGES} WHERE root_id = ? ORDER BY seq DESC LIMIT ?)"
+    )
+    conn.execute(sql, (root_id, root_id, keep))
