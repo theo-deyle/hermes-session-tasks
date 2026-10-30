@@ -29,6 +29,7 @@ from .model import (
     Stale,
     StaleReason,
     WriteResult,
+    check_session_id,
     clean_text,
     utc_now,
 )
@@ -190,6 +191,7 @@ class BoardStore:
 
     def get_board(self, root_id: str) -> Board:
         """Read a board in one snapshot. An unknown root gives an empty board, no row."""
+        check_session_id(root_id)
         with schema.open_db(self.connect) as conn, read_txn(conn):
             return _read_board(conn, root_id)
 
@@ -200,6 +202,7 @@ class BoardStore:
         changed after `base_rev`. A rule violation raises a `BoardError` subclass. Either
         way a rejected batch writes nothing.
         """
+        check_session_id(root_id)
         check_base_rev(base_rev)
         if not ops:
             board = self.get_board(root_id)

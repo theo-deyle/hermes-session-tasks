@@ -12,7 +12,7 @@ from typing import Any, Literal, Protocol, TypeAlias
 from . import aliases, rows, schema
 from .db import ConnFactory, read_txn, write_txn
 from .fork import fork_copy
-from .model import Clock, InvalidSession, utc_now
+from .model import Clock, check_session_id, utc_now
 
 MAX_LINEAGE_HOPS = 20
 
@@ -74,12 +74,6 @@ class _Walk:
             self._reader.close()
 
 
-def _check_id(session_id: object) -> str:
-    if not isinstance(session_id, str) or not session_id.strip():
-        raise InvalidSession("session id must be a non-empty string")
-    return session_id
-
-
 def _text(value: object) -> str:
     return value.strip() if isinstance(value, str) else ""
 
@@ -122,7 +116,7 @@ class SessionResolver:
         """
         walk = _Walk(self.open_reader)
         try:
-            return self._resolve(_check_id(session_id), walk)
+            return self._resolve(check_session_id(session_id), walk)
         except _LineageLoop as loop:
             log.warning("session lineage loops or is too long at %r; using the session id", loop)
             return Resolution(session_id, "plain")
@@ -134,7 +128,7 @@ class SessionResolver:
 
         Phase 2 calls this from the `post_compaction` hook.
         """
-        new_id = _check_id(session_id)
+        new_id = check_session_id(session_id)
         old_id = old_session_id.strip() if isinstance(old_session_id, str) else ""
         if not old_id or old_id == new_id:
             return

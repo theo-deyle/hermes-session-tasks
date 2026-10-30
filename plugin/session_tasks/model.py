@@ -167,6 +167,16 @@ class InvalidSession(ValueError):
     """The session id is empty, blank or not a string."""
 
 
+def check_session_id(value: object) -> str:
+    """Return the session id when it is a non-blank string. Else raise `InvalidSession`.
+
+    `SessionResolver` and `BoardStore` both call this, so no layer accepts a blank key.
+    """
+    if not isinstance(value, str) or not value.strip():
+        raise InvalidSession("session id must be a non-empty string")
+    return value
+
+
 def sanitize_text(text: str) -> str:
     """Return one-line text that cannot forge a second checklist line.
 

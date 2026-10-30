@@ -5,6 +5,7 @@ from __future__ import annotations
 import sqlite3
 from contextlib import closing
 from pathlib import Path
+from typing import Any
 
 import pytest
 from session_tasks import rows
@@ -15,6 +16,7 @@ from session_tasks.model import (
     Board,
     BoardFull,
     EmptyText,
+    InvalidSession,
     Item,
     RemoveItem,
     SetChecked,
@@ -237,3 +239,24 @@ def test_target_missing_returns_stale_not_found_with_the_current_board(
     assert isinstance(result, Stale)
     assert (result.reason, result.op_index, result.item_id) == ("not_found", 0, 99)
     assert result.board == before
+
+
+@pytest.mark.parametrize("bad_key", ["", "   ", "\t\n", None, 7])
+def test_store_rejects_a_blank_or_non_string_session_key(
+    store: BoardStore, db_path: Path, bad_key: Any
+) -> None:
+    with pytest.raises(InvalidSession):
+        store.apply(bad_key, [AddItem("x")], actor="agent", base_rev=0)
+    with pytest.raises(InvalidSession):
+        store.apply(bad_key, [], actor="agent", base_rev=0)
+    with pytest.raises(InvalidSession):
+        store.get_board(bad_key)
+
+    assert not db_path.exists() or query_counts(db_path) == (0, 0)
+
+
+def query_counts(db_path: Path) -> tuple[int, int]:
+    with closing(sqlite3.connect(db_path)) as conn:
+        boards = conn.execute("SELECT COUNT(*) FROM boards").fetchone()[0]
+        aliases = conn.execute("SELECT COUNT(*) FROM aliases").fetchone()[0]
+    return boards, aliases
