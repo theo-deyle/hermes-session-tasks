@@ -2,13 +2,20 @@
 
 from __future__ import annotations
 
+import functools
 import os
 import socket
+from collections.abc import Callable
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
-from typing import Any
+from typing import Any, TypeAlias
 
 import pytest
+from fakes import FakeReaderFactory, SessionSpec
+from session_tasks import paths
+from session_tasks.db import ConnFactory
+from session_tasks.lineage import SessionResolver
+from session_tasks.store import BoardStore
 
 pytest_plugins = ["home_guard"]
 
@@ -68,6 +75,33 @@ def clock() -> FakeClock:
 @pytest.fixture
 def db_path(tmp_path: Path) -> Path:
     return tmp_path / "data.db"
+
+
+@pytest.fixture
+def connect(db_path: Path) -> ConnFactory:
+    """Open the tmp data file the way production code opens it, one connection per call."""
+    return functools.partial(paths.connect_path, db_path)
+
+
+@pytest.fixture
+def store(connect: ConnFactory, clock: FakeClock) -> BoardStore:
+    return BoardStore(connect, clock)
+
+
+ResolverFor: TypeAlias = Callable[
+    [dict[str, SessionSpec]], tuple[SessionResolver, FakeReaderFactory]
+]
+
+
+@pytest.fixture
+def resolver_for(connect: ConnFactory, clock: FakeClock) -> ResolverFor:
+    """Build a resolver over fake sessions. The factory counts reader opens."""
+
+    def build(specs: dict[str, SessionSpec]) -> tuple[SessionResolver, FakeReaderFactory]:
+        factory = FakeReaderFactory(specs)
+        return SessionResolver(connect, factory, clock), factory
+
+    return build
 
 
 def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item]) -> None:
