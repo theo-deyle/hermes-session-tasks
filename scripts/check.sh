@@ -13,7 +13,12 @@ for v in 3.11 3.14; do
   uv run --python "$v" ruff check .
   uv run --python "$v" ruff format --check .
   uv run --python "$v" pyright --pythonversion "$v" --pythonpath "${UV_PROJECT_ENVIRONMENT}/bin/python"
-  timeout 300 uv run --python "$v" pytest -q
+  if [ "$v" = "3.11" ]; then
+    # Coverage gate: fail_under in pyproject.toml fails the run below 80 percent.
+    timeout 300 uv run --python "$v" pytest -q --cov --cov-report=term-missing
+  else
+    timeout 300 uv run --python "$v" pytest -q
+  fi
   echo "check: python ${v} ok"
 done
 

@@ -43,3 +43,11 @@ include = ["plugin", "tests", "scripts"]
 extraPaths = ["plugin", "tests"]
 venvPath = "."
 venv = ".venv"
+
+[tool.coverage.run]
+source = ["plugin/session_tasks"]
+branch = true
+
+[tool.coverage.report]
+fail_under = 80
+show_missing = true
