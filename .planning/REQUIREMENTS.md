@@ -103,16 +103,59 @@ Deferred. Tracked but not in the current roadmap.
 
 ## Traceability
 
-Filled during roadmap creation.
+Each v1 requirement maps to exactly one phase.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
+| STOR-01 | Phase 1 | Pending |
+| STOR-02 | Phase 1 | Pending |
+| STOR-03 | Phase 1 | Pending |
+| STOR-04 | Phase 1 | Pending |
+| STOR-05 | Phase 1 | Pending |
+| STOR-06 | Phase 1 | Pending |
+| STOR-07 | Phase 5 | Pending |
+| STOR-08 | Phase 1 | Pending |
+| TOOL-01 | Phase 2 | Pending |
+| TOOL-02 | Phase 2 | Pending |
+| TOOL-03 | Phase 6 | Pending |
+| TOOL-04 | Phase 6 | Pending |
+| TOOL-05 | Phase 6 | Pending |
+| TOOL-06 | Phase 2 | Pending |
+| TOOL-07 | Phase 2 | Pending |
+| TOOL-08 | Phase 2 | Pending |
+| AGNT-01 | Phase 2 | Pending |
+| AGNT-02 | Phase 2 | Pending |
+| AGNT-03 | Phase 2 | Pending |
+| AGNT-04 | Phase 2 | Pending |
+| AGNT-05 | Phase 5 | Pending |
+| API-01 | Phase 3 | Pending |
+| API-02 | Phase 3 | Pending |
+| API-03 | Phase 3 | Pending |
+| PANE-01 | Phase 4 | Pending |
+| PANE-02 | Phase 4 | Pending |
+| PANE-03 | Phase 4 | Pending |
+| PANE-04 | Phase 4 | Pending |
+| PANE-05 | Phase 4 | Pending |
+| PANE-06 | Phase 4 | Pending |
+| PANE-07 | Phase 4 | Pending |
+| PANE-08 | Phase 4 | Pending |
+| PANE-09 | Phase 6 | Pending |
+| PANE-10 | Phase 6 | Pending |
+| PANE-11 | Phase 4 | Pending |
+| PANE-12 | Phase 4 | Pending |
+| PANE-13 | Phase 4 | Pending |
+| DEV-01 | Phase 1 | Pending |
+| DEV-02 | Phase 1 | Pending |
+| DEV-03 | Phase 3 | Pending |
+| DEV-04 | Phase 7 | Pending |
+| DEV-05 | Phase 3 | Pending |
+| DEV-06 | Phase 7 | Pending |
 
 **Coverage:**
 - v1 requirements: 43 total
-- Mapped to phases: 0
-- Unmapped: 43
+- Mapped to phases: 43
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-10-30*
-*Last updated: 2026-10-30 after initial definition*
+*Last updated: 2026-10-30 after roadmap creation*
