@@ -69,7 +69,7 @@ Package layout:
 
 - Loads only when the id is in `plugins.enabled` in `~/.hermes/config.yaml`. Set it with `hermes config set` or `hermes plugins enable`, never by hand edit.
 - Tool handlers can declare `session_id` as a keyword and Hermes passes the calling session. Use that to key the board. Never trust a session id from the model's arguments for the current session.
-- The gateway runs Python 3.11 (`~/.hermes/hermes-agent/venv`). Plugin code that runs in the gateway must work on 3.11 and import only the standard library plus what the gateway already ships (fastapi, pydantic).
+- The brief said the gateway runs Python 3.11 (`~/.hermes/hermes-agent/venv`). Research found the live Desktop SSH gateways run Python 3.14.9 from `~/.hermes/tools/`. Plugin code must work on 3.11 and 3.14 and import only the standard library plus what the gateway already ships (fastapi, pydantic).
 - Backend routes mount only when `hermes serve` starts. A Desktop reconnect reuses the old gateway, so new routes need a gateway restart.
 - `hermes_cli.plugin_events.broadcast_plugin_event("hermes-session-tasks", "board.updated", {...})` pushes `plugin.hermes-session-tasks.board.updated` to every connected Desktop window. Call it from the tool handler and from REST writes so the pane updates live.
 - `pre_llm_call` hooks can return `{"context": "..."}` to add text to the current turn. Use this (or an equivalent the research finds) so the agent sees Theo's own edits. Keep the injected text small and only send it when needed, so token cost and prompt caching stay sane.
@@ -95,7 +95,7 @@ Package layout:
 ## Constraints
 
 - **Tech stack**: uv for the dev environment, ruff, pyright, pytest - house Python tooling.
-- **Runtime**: gateway runs Python 3.11, so test on 3.11 too - plugin code must import only the standard library plus fastapi and pydantic.
+- **Runtime**: the Desktop SSH gateways on devpc run Python 3.14.9 (verified 2026-10-30, `~/.hermes/tools/python-3.14.9+20261021-linux-x64`); the `~/.hermes/hermes-agent/venv` is Python 3.11.16. Plugin code must run and be tested on both 3.11 and 3.14, and import only the standard library plus fastapi and pydantic.
 - **Desktop**: plain ESM, no build step, SDK imports only - Hermes Desktop loads one plain file.
 - **Structure**: small modules with one responsibility each, structure planned first - house coding rule.
 - **Secrets**: none needed; if one is ever needed it comes from Infisical - house rule.
