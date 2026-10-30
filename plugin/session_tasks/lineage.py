@@ -172,7 +172,7 @@ class SessionResolver:
         if row is None:
             return Resolution(session_id, "plain")
         if not reader.is_explicit_fork_child(session_id):
-            return self._compression(session_id, reader)
+            return self._compression(session_id, reader, walk)
         branched = _branched_from(row)
         if branched:
             return self._branch(session_id, branched, walk)
@@ -181,11 +181,19 @@ class SessionResolver:
             return Resolution(session_id, "plain")
         return Resolution(self._resolve(delegator, walk).root_id, "delegate")
 
-    def _compression(self, session_id: str, reader: SessionReader) -> Resolution:
+    def _compression(self, session_id: str, reader: SessionReader, walk: _Walk) -> Resolution:
+        """Resolve a compression child through its chain root.
+
+        The chain root can be a branch (it needs its parent copy) or a delegate (it uses the
+        delegator root). `_resolve` on that root does both.
+        """
         lineage = reader.get_compression_lineage(session_id)
-        root_id = lineage[0] if lineage else session_id
-        if root_id == session_id:
+        chain_root = lineage[0] if lineage else session_id
+        if chain_root == session_id:
             return Resolution(session_id, "plain")
+        root_id = chain_root
+        if reader.is_explicit_fork_child(chain_root):
+            root_id = self._resolve(chain_root, walk).root_id
         with schema.open_db(self.connect) as conn, write_txn(conn):
             if rows.read_board(conn, root_id) is not None:
                 aliases.put_alias(conn, session_id, root_id)

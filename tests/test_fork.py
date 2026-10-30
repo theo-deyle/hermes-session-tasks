@@ -6,6 +6,7 @@ import logging
 import multiprocessing as mp
 import sqlite3
 from contextlib import closing
+from dataclasses import replace
 from pathlib import Path
 from typing import Any
 
@@ -273,3 +274,26 @@ def test_two_processes_resolving_one_branch_copy_it_once(store: BoardStore, db_p
         (3,),
         (4,),
     ]
+
+
+COMPRESSED_BRANCH_FIXTURE: dict[str, SessionSpec] = {
+    **SEVEN_ROW_FIXTURE,
+    "br": replace(SEVEN_ROW_FIXTURE["br"], end_reason="compression"),
+    "br2": SessionSpec(parent="br"),
+}
+
+
+def test_branch_compressed_before_its_first_touch_still_gets_the_parent_copy(
+    store: BoardStore, resolver_for: ResolverFor, db_path: Path
+) -> None:
+    parent = seed_parent(store)
+    resolver, _ = resolver_for(COMPRESSED_BRANCH_FIXTURE)
+
+    resolution = resolver.resolve("br2")
+    branch = store.get_board(BRANCH)
+
+    assert resolution == Resolution(BRANCH, "compression")
+    assert render(branch, include_ids=False) == render(parent, include_ids=False)
+    assert branch.forked_from == PARENT
+    sql = "SELECT session_id, root_id FROM aliases WHERE session_id LIKE 'br%' ORDER BY 1"
+    assert query(db_path, sql) == [("br", BRANCH), ("br2", BRANCH)]

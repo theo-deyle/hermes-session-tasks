@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import sqlite3
 from contextlib import closing
+from dataclasses import replace
 from pathlib import Path
 from typing import Any
 
@@ -306,3 +307,20 @@ def test_record_compaction_with_a_blank_session_id_raises_invalid_session(
         resolver.record_compaction(session_id, "old")
 
     assert table_counts(db_path) == dict.fromkeys(TABLES, 0)
+
+
+COMPACTED_DELEGATE_FIXTURE: dict[str, SessionSpec] = {
+    **SEVEN_ROW_FIXTURE,
+    "dg": replace(SEVEN_ROW_FIXTURE["dg"], end_reason="compression"),
+    "dg2": SessionSpec(parent="dg"),
+}
+
+
+def test_compressed_delegate_tip_resolves_to_the_delegator_root(
+    store: BoardStore, resolver_for: ResolverFor, db_path: Path
+) -> None:
+    add_item(store, "root")
+    resolver, _ = resolver_for(COMPACTED_DELEGATE_FIXTURE)
+
+    assert resolver.resolve("dg2") == Resolution("root", "compression")
+    assert query(db_path, "SELECT root_id FROM aliases WHERE session_id = 'dg2'") == [("root",)]
