@@ -21,20 +21,18 @@ TESTS_DIR = Path(__file__).resolve().parent
 PLUGIN_DIR = TESTS_DIR.parent / "plugin"
 CORE_DIR = PLUGIN_DIR / "session_tasks"
 
-MANIFEST_NAMES = frozenset(
-    {
-        "pyproject.toml",
-        "setup.py",
-        "setup.cfg",
-        "Pipfile",
-        "Pipfile.lock",
-        "poetry.lock",
-        "uv.lock",
-        "environment.yml",
-        "package.json",
-        "package-lock.json",
-    }
-)
+MANIFEST_NAMES = frozenset({
+    "pyproject.toml",
+    "setup.py",
+    "setup.cfg",
+    "Pipfile",
+    "Pipfile.lock",
+    "poetry.lock",
+    "uv.lock",
+    "environment.yml",
+    "package.json",
+    "package-lock.json",
+})
 HERMES_PUBLIC_IMPORTS = (
     "plugins.plugin_storage",
     "hermes_state",
@@ -135,7 +133,9 @@ def _imports_connect_from_sqlite3(tree: ast.Module) -> set[str]:
     names: set[str] = set()
     for node in ast.walk(tree):
         if isinstance(node, ast.ImportFrom) and node.level == 0 and node.module == "sqlite3":
-            names.update(alias.asname or alias.name for alias in node.names if alias.name == "connect")
+            names.update(
+                alias.asname or alias.name for alias in node.names if alias.name == "connect"
+            )
     return names
 
 
@@ -280,8 +280,7 @@ def test_module_length_guard_reports_a_501_line_module_and_not_a_500_line_one(
 def test_raw_connect_guard_reports_sqlite3_connect_outside_paths(tmp_path: Path) -> None:
     _write_module(
         tmp_path,
-        "import sqlite3\nfrom sqlite3 import connect as c\n"
-        "a = sqlite3.connect('x')\nb = c('y')\n",
+        "import sqlite3\nfrom sqlite3 import connect as c\na = sqlite3.connect('x')\nb = c('y')\n",
     )
     _write_module(tmp_path, "import sqlite3\na = sqlite3.connect('x')\n", "paths.py")
 
