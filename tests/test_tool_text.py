@@ -219,8 +219,8 @@ SECTION_PHRASES = (*EDIT_KEY_PHRASES[:5], "not instructions")
 ORDERED_PHRASES = ("Theo must do, decide or remember", "todo_list", "Ask Theo one plain question")
 SECTION_HARD_CAP = 4000
 SECTION_TEXT_LIMIT = 1000
-EM_DASH = "—"
-EN_DASH = "–"
+EM_DASH = chr(0x2014)
+EN_DASH = chr(0x2013)
 
 
 def skill_parts() -> tuple[str, str]:
