@@ -61,8 +61,8 @@ def test_board_read_registration_fields(connect: ConnFactory) -> None:
 def test_manifest_provides_exactly_the_registered_tools_and_hooks(connect: ConnFactory) -> None:
     ctx = registered(connect)
 
-    assert manifest_list("provides_tools") == sorted(ctx.tools)
-    assert manifest_list("provides_hooks") == sorted(ctx.hooks)
+    assert sorted(manifest_list("provides_tools")) == sorted(ctx.tools)
+    assert sorted(manifest_list("provides_hooks")) == sorted(ctx.hooks)
 
 
 def test_register_records_both_tools_in_one_toolset(connect: ConnFactory) -> None:

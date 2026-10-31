@@ -6,7 +6,7 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any, Protocol
 
-from . import paths, session_reader, tool_text
+from . import hooks, paths, session_reader, tool_text
 from .board_tools import BoardTools
 from .db import ConnFactory
 from .lineage import ReaderFactory, SessionResolver
@@ -46,7 +46,7 @@ def register(
     connect: ConnFactory = paths.connect,
     open_reader: ReaderFactory = session_reader.open_session_reader,
 ) -> None:
-    """Register the plugin tools. Hermes calls this once with its own `connect` and reader."""
+    """Register tools, hooks, prompt section and skill. Hermes calls this once."""
     store = BoardStore(connect)
     resolver = SessionResolver(connect, open_reader)
     tools = BoardTools(store, resolver)
@@ -57,3 +57,18 @@ def register(
         handler=tools.board_read,
         emoji=tool_text.TOOL_EMOJI,
     )
+    ctx.register_tool(
+        name=tool_text.BOARD_EDIT,
+        toolset=tool_text.TOOLSET,
+        schema=tool_text.BOARD_EDIT_SCHEMA,
+        handler=tools.board_edit,
+        emoji=tool_text.TOOL_EMOJI,
+    )
+    ctx.register_hook("pre_tool_call", hooks.make_pre_tool_call(store, resolver))
+    ctx.register_hook("post_compaction", hooks.make_post_compaction(resolver))
+    ctx.register_system_prompt_section(
+        tool_text.PROMPT_SECTION_ID,
+        tool_text.PROMPT_SECTION_TEXT,
+        max_chars=tool_text.PROMPT_SECTION_MAX,
+    )
+    ctx.register_skill(tool_text.SKILL_NAME, skill_path(), description=tool_text.SKILL_DESCRIPTION)

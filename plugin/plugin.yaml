@@ -4,4 +4,7 @@ description: A per-session task board for Theo. The agent adds things Theo must 
 requires_hermes: ">=0.22.5"
 provides_tools:
   - board_read
-provides_hooks: []
+  - board_edit
+provides_hooks:
+  - pre_tool_call
+  - post_compaction
