@@ -33,7 +33,7 @@ Requirements for the first release. Each maps to a roadmap phase.
 
 - [ ] **AGNT-01**: A bundled skill tells the agent to add an item when it lists something Theo must do, decide or remember, and to keep its own plan in `todo_list`.
 - [ ] **AGNT-02**: The tool descriptions carry the trigger and the `todo_list` boundary, so the agent uses the board without loading the skill.
-- [ ] **AGNT-03**: The agent asks Theo one plain question before it deletes an item, rewords an item Theo wrote, unchecks an item, changes many items at once, or is unsure which item Theo means.
+- [ ] **AGNT-03**: The agent asks Theo one plain question before it removes, unchecks or rewords an item Theo wrote on its own initiative, or when it is unsure which item Theo means. An explicit instruction from Theo in his own message is the permission: the agent then acts at once with `confirmed: true` and asks nothing.
 - [x] **AGNT-04**: When the agent's work finishes an item, the agent checks it and says so in one line.
 - [ ] **AGNT-05**: The agent sees Theo's own edits on its next turn through a `pre_llm_call` hook that injects only the changes since the agent last saw the board, and injects nothing when nothing changed.
 
