@@ -25,9 +25,9 @@ Requirements for the first release. Each maps to a roadmap phase.
 - [ ] **TOOL-03**: The agent can list the sessions that have a board, with open and total counts and last update.
 - [ ] **TOOL-04**: The agent can read another session's board by session id.
 - [ ] **TOOL-05**: The agent can copy chosen items, or all open items, from another session's board into the current board.
-- [ ] **TOOL-06**: The tools take the current session from the `session_id` Hermes passes to the handler, never from the model's arguments.
-- [ ] **TOOL-07**: Every write returns the new revision, a one-line change summary, and the board content the agent needs; a rejected stale write always returns the current board (full versus compact result is set in discuss-phase).
-- [ ] **TOOL-08**: Tool names share one prefix, avoid the word "todo", and never read, write, wrap or replace `todo_list`.
+- [x] **TOOL-06**: The tools take the current session from the `session_id` Hermes passes to the handler, never from the model's arguments.
+- [x] **TOOL-07**: Every write returns the new revision, a one-line change summary, and the board content the agent needs; a rejected stale write always returns the current board (full versus compact result is set in discuss-phase).
+- [x] **TOOL-08**: Tool names share one prefix, avoid the word "todo", and never read, write, wrap or replace `todo_list`.
 
 ### Agent behaviour
 
@@ -120,9 +120,9 @@ Each v1 requirement maps to exactly one phase.
 | TOOL-03 | Phase 6 | Pending |
 | TOOL-04 | Phase 6 | Pending |
 | TOOL-05 | Phase 6 | Pending |
-| TOOL-06 | Phase 2 | Pending |
-| TOOL-07 | Phase 2 | Pending |
-| TOOL-08 | Phase 2 | Pending |
+| TOOL-06 | Phase 2 | Complete |
+| TOOL-07 | Phase 2 | Complete |
+| TOOL-08 | Phase 2 | Complete |
 | AGNT-01 | Phase 2 | Pending |
 | AGNT-02 | Phase 2 | Pending |
 | AGNT-03 | Phase 2 | Pending |
