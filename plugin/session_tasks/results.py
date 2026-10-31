@@ -3,12 +3,14 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Sequence
 
 from .markdown import render
-from .model import Board, BoardError
+from .model import Applied, Board, BoardError, Op, Stale
 
 NO_SESSION = "no session id; the board is not available here"
 EMPTY_NOTE = "empty board"
+DELEGATE_EDIT = ""
 
 
 def describe(exc: BoardError) -> str:
@@ -35,3 +37,15 @@ def read_result(board: Board) -> str:
 
 def error_result(message: str) -> str:
     return json.dumps({"error": message}, ensure_ascii=False)
+
+
+def summary_line(rev: int, ops: Sequence[Op], changed_ids: Sequence[int]) -> str:
+    return ""
+
+
+def applied_result(applied: Applied, ops: Sequence[Op]) -> str:
+    return ""
+
+
+def stale_result(stale: Stale, base_rev: int) -> str:
+    return ""

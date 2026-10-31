@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 
 from .lineage import SessionResolver
@@ -11,10 +11,15 @@ from .results import NO_SESSION, error_result, read_result
 from .store import BoardStore
 
 
+def _no_listener(root_id: str) -> None:
+    return None
+
+
 @dataclass(frozen=True)
 class BoardTools:
     store: BoardStore
     resolver: SessionResolver
+    after_write: Callable[[str], None] = _no_listener
 
     def board_read(
         self, args: Mapping[str, object], session_id: str | None = None, **kwargs: object
@@ -27,3 +32,8 @@ class BoardTools:
         except InvalidSession:
             return error_result(NO_SESSION)
         return read_result(self.store.get_board(resolution.root_id))
+
+    def board_edit(
+        self, args: Mapping[str, object], session_id: str | None = None, **kwargs: object
+    ) -> str:
+        return error_result("")
