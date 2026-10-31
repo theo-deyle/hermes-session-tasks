@@ -8,6 +8,7 @@ one self-test that proves it reports a bad module. The tree test then proves tha
 from __future__ import annotations
 
 import ast
+import os
 import sys
 from collections.abc import Iterator
 from pathlib import Path
@@ -328,6 +329,32 @@ def test_home_guard_reports_a_new_plugin_dir_and_snapshots_a_missing_one_as_none
     assert new_entries(before, snapshot(tmp_path)) == ("plugin-data/hermes-session-tasks",)
 
 
+def test_home_guard_reports_a_rewrite_of_an_existing_file(tmp_path: Path) -> None:
+    plugin_dir = tmp_path / "plugin-data" / "hermes-session-tasks"
+    plugin_dir.mkdir(parents=True)
+    db_file = plugin_dir / "data.db"
+    db_file.write_text("x", encoding="utf-8")
+    before = snapshot(tmp_path)
+
+    db_file.write_text("longer", encoding="utf-8")
+
+    assert new_entries(before, snapshot(tmp_path)) == ("plugin-data/hermes-session-tasks/data.db",)
+
+
+def test_home_guard_reports_a_same_size_rewrite_by_its_changed_time(tmp_path: Path) -> None:
+    plugin_dir = tmp_path / "plugin-data" / "hermes-session-tasks"
+    plugin_dir.mkdir(parents=True)
+    db_file = plugin_dir / "data.db"
+    db_file.write_text("x", encoding="utf-8")
+    os.utime(db_file, ns=(1_000_000_000, 1_000_000_000))
+    before = snapshot(tmp_path)
+
+    db_file.write_text("y", encoding="utf-8")
+    os.utime(db_file, ns=(2_000_000_000, 2_000_000_000))
+
+    assert new_entries(before, snapshot(tmp_path)) == ("plugin-data/hermes-session-tasks/data.db",)
+
+
 def test_home_guard_ignores_sqlite_sidecars_and_other_paths(tmp_path: Path) -> None:
     plugin_dir = tmp_path / "plugin-data" / "hermes-session-tasks"
     plugin_dir.mkdir(parents=True)
@@ -355,6 +382,15 @@ def test_inner_writes_the_plugin_dir():
     (target / "data.db").write_text("x", encoding="utf-8")
 """
 
+INNER_REWRITES_DATA_FILE = """
+from pathlib import Path
+
+
+def test_inner_rewrites_the_data_file():
+    target = Path.home() / ".hermes" / "plugin-data" / "hermes-session-tasks" / "data.db"
+    target.write_text("a longer body", encoding="utf-8")
+"""
+
 INNER_WRITES_NOTHING = """
 def test_inner_writes_nothing():
     assert True
@@ -362,10 +398,17 @@ def test_inner_writes_nothing():
 
 
 def _run_inner_session(
-    pytester: pytest.Pytester, monkeypatch: pytest.MonkeyPatch, source: str
+    pytester: pytest.Pytester,
+    monkeypatch: pytest.MonkeyPatch,
+    source: str,
+    existing_db: bool = False,
 ) -> tuple[pytest.RunResult, str]:
     home = pytester.path / "home"
     (home / ".hermes" / "plugin-data").mkdir(parents=True)
+    if existing_db:
+        plugin_dir = home / ".hermes" / "plugin-data" / "hermes-session-tasks"
+        plugin_dir.mkdir()
+        (plugin_dir / "data.db").write_text("x", encoding="utf-8")
     monkeypatch.setenv("HOME", str(home))
     monkeypatch.delenv("HERMES_HOME", raising=False)
     monkeypatch.setenv("PYTHONPATH", str(TESTS_DIR))
@@ -382,9 +425,21 @@ def test_session_guard_fails_a_passing_run_that_writes_the_real_plugin_dir(
     assert result.ret == pytest.ExitCode.TESTS_FAILED
     assert "1 passed" in output
     assert (
-        "real Hermes home gained: plugin-data/hermes-session-tasks, "
+        "real Hermes home changed: plugin-data/hermes-session-tasks, "
         "plugin-data/hermes-session-tasks/data.db"
     ) in output
+
+
+def test_session_guard_fails_a_run_that_rewrites_an_existing_real_data_file(
+    pytester: pytest.Pytester, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    result, output = _run_inner_session(
+        pytester, monkeypatch, INNER_REWRITES_DATA_FILE, existing_db=True
+    )
+
+    assert result.ret == pytest.ExitCode.TESTS_FAILED
+    assert "1 passed" in output
+    assert "real Hermes home changed: plugin-data/hermes-session-tasks/data.db" in output
 
 
 def test_session_guard_passes_a_run_that_leaves_the_real_plugin_dir_alone(
@@ -393,4 +448,4 @@ def test_session_guard_passes_a_run_that_leaves_the_real_plugin_dir_alone(
     result, output = _run_inner_session(pytester, monkeypatch, INNER_WRITES_NOTHING)
 
     assert result.ret == pytest.ExitCode.OK
-    assert "real Hermes home gained" not in output
+    assert "real Hermes home changed" not in output
