@@ -94,7 +94,9 @@ def test_block_message_text_is_exact() -> None:
 
     assert message == (
         "board_edit: Theo must answer first for: remove of #3, uncheck of #5. "
-        "Ask him one plain question in chat, then send the same call again with confirmed true."
+        "If Theo's own message named the change, send the same call again with confirmed true. "
+        "Otherwise ask him one plain question in chat first. "
+        "After he answers, send the same call again with confirmed true."
     )
 
 

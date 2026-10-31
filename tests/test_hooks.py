@@ -90,6 +90,7 @@ def test_pre_tool_call_blocks_an_unconfirmed_remove(store: BoardStore, hook: Hoo
     assert result == {"action": "block", "message": block_message(("remove of #1",))}
     assert result is not None
     assert "remove of #1" in result["message"]
+    assert "If Theo's own message named the change" in result["message"]
 
 
 def test_pre_tool_call_blocks_an_unconfirmed_uncheck(store: BoardStore, hook: Hook) -> None:
