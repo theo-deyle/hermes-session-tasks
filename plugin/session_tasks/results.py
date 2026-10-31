@@ -8,6 +8,7 @@ from .markdown import render
 from .model import Board, BoardError
 
 NO_SESSION = "no session id; the board is not available here"
+EMPTY_NOTE = "empty board"
 
 
 def describe(exc: BoardError) -> str:
@@ -18,12 +19,17 @@ def describe(exc: BoardError) -> str:
 
 
 def read_result(board: Board) -> str:
-    """Return the board as markdown with ids, plus its revision."""
+    """Return the board as markdown with ids, plus its revision (D-15).
+
+    A board with no items adds the key `note` so the agent sees an empty board and not a fault.
+    """
     result: dict[str, object] = {
         "ok": True,
         "rev": board.rev,
         "board": render(board, include_ids=True),
     }
+    if not board.items:
+        result["note"] = EMPTY_NOTE
     return json.dumps(result, ensure_ascii=False)
 
 
