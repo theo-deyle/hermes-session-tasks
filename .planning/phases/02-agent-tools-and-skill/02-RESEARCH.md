@@ -454,15 +454,19 @@ Follow the Phase 1 pattern (`tests/test_hermes_contract.py` plus a snippet run b
 | A6 | `hermes chat --oneshot` uses the same toolsets and deferral as Desktop | Validation | The headless rate differs from Desktop; run one Desktop pass to confirm |
 | A7 | The first-sentence wording `Add to Theo's board what he must do, decide or remember.` triggers calls | Pitfall 2 | Low rate; reword and retest |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Does the prompt section replace the need to turn tool search off?**
    - What we know: deferral is verified; the section is documented and probed; the earlier research (P9) measured `clarify` falling from 18 of 18 to 7 of 18 when deferred.
    - What is unclear: the call rate of this model with the section and a deferred tool.
    - Recommendation: build the section now; run the 5 prompts; if fewer than 5 of 5 call the board, ask Theo one cost question about `tools.tool_search.enabled: off`.
+   - RESOLVED: measured by the live test in plan 02-05 Task 3 (the 5 list prompts, rule 5 of 5). Plan 02-03 builds the section. A rate under 5 of 5 goes to Theo as one cost question; no plan changes the setting.
 2. **D-12 wording conflict.** D-12 forbids "todo" in descriptions and also requires each description to name `todo_list`. Recommendation: names carry no "todo"; one `todo_list` mention per description inside the boundary sentence.
+   - RESOLVED: plan 02-03 implements it. Tool names hold no "todo", and each description holds the one token `todo_list` inside the boundary sentence (test_tool_text).
 3. **Phase 3 event seam.** API-02 (broadcast on every write) belongs to Phase 3. Recommendation: keep one `after_write` callable parameter on `BoardTools` (default no-op) so Phase 3 adds the broadcast without editing the handler.
+   - RESOLVED: plan 02-04 Task 1 implements it. `BoardTools` gets the field `after_write` with a no-op default. `board_edit` calls it once with the root id after a write that changes items, and never after a no-change batch, a stale write or an error.
 4. **Live test route.** The criterion says a fresh Desktop session. Recommendation: Claude runs the 5 prompts with `hermes chat --query-file <file> --oneshot -Q --format stream-json` (one process per prompt, real model, real plugin), reads `data.db`, then Theo does one Desktop check. The Desktop gateway restart must be announced first.
+   - RESOLVED: plan 02-05 implements the headless route. Task 1 announces the enable and the gateway restart, Task 2 enables and restarts, Task 3 runs the headless prompts. Plans 02-06 and 02-07 run the Desktop check with one request to Theo per turn.
 
 ## Environment Availability
 
