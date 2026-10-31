@@ -8,7 +8,9 @@ The `hermes` contract test pins this fake to a real `SessionDB`.
 from __future__ import annotations
 
 import json
+from collections.abc import Callable
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 
 
@@ -150,3 +152,31 @@ class RaisingReaderFactory:
     def __call__(self) -> FakeSessionReader:
         self.opens += 1
         raise self._exc
+
+
+class FakeCtx:
+    """Records what `register(ctx)` registers. It matches the Hermes plugin context by shape."""
+
+    def __init__(self) -> None:
+        self.tools: dict[str, dict[str, Any]] = {}
+        self.hooks: dict[str, list[Callable[..., Any]]] = {}
+        self.skills: list[tuple[str, Path, str]] = []
+        self.sections: list[tuple[str, str, int]] = []
+
+    def register_tool(
+        self, name: str, toolset: str, schema: dict[str, Any], handler: Callable[..., Any], **kw: Any
+    ) -> None:
+        self.tools[name] = {"toolset": toolset, "schema": schema, "handler": handler, **kw}
+
+    def register_hook(self, hook_name: str, callback: Callable[..., Any]) -> None:
+        self.hooks.setdefault(hook_name, []).append(callback)
+
+    def register_skill(
+        self, name: str, path: Path, description: str = "", frontmatter: Any = None
+    ) -> None:
+        self.skills.append((name, path, description))
+
+    def register_system_prompt_section(
+        self, id: str, content: str, *, position: str = "after_memory", max_chars: int = 4000
+    ) -> None:
+        self.sections.append((id, content, max_chars))
