@@ -34,7 +34,7 @@ Requirements for the first release. Each maps to a roadmap phase.
 - [ ] **AGNT-01**: A bundled skill tells the agent to add an item when it lists something Theo must do, decide or remember, and to keep its own plan in `todo_list`.
 - [ ] **AGNT-02**: The tool descriptions carry the trigger and the `todo_list` boundary, so the agent uses the board without loading the skill.
 - [ ] **AGNT-03**: The agent asks Theo one plain question before it deletes an item, rewords an item Theo wrote, unchecks an item, changes many items at once, or is unsure which item Theo means.
-- [ ] **AGNT-04**: When the agent's work finishes an item, the agent checks it and says so in one line.
+- [x] **AGNT-04**: When the agent's work finishes an item, the agent checks it and says so in one line.
 - [ ] **AGNT-05**: The agent sees Theo's own edits on its next turn through a `pre_llm_call` hook that injects only the changes since the agent last saw the board, and injects nothing when nothing changed.
 
 ### Backend routes
@@ -126,7 +126,7 @@ Each v1 requirement maps to exactly one phase.
 | AGNT-01 | Phase 2 | Pending |
 | AGNT-02 | Phase 2 | Pending |
 | AGNT-03 | Phase 2 | Pending |
-| AGNT-04 | Phase 2 | Pending |
+| AGNT-04 | Phase 2 | Complete |
 | AGNT-05 | Phase 5 | Pending |
 | API-01 | Phase 3 | Pending |
 | API-02 | Phase 3 | Pending |
