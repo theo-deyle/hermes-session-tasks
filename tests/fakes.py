@@ -164,7 +164,12 @@ class FakeCtx:
         self.sections: list[tuple[str, str, int]] = []
 
     def register_tool(
-        self, name: str, toolset: str, schema: dict[str, Any], handler: Callable[..., Any], **kw: Any
+        self,
+        name: str,
+        toolset: str,
+        schema: dict[str, Any],
+        handler: Callable[..., Any],
+        **kw: Any,
     ) -> None:
         self.tools[name] = {"toolset": toolset, "schema": schema, "handler": handler, **kw}
 

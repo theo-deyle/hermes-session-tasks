@@ -1,0 +1,7 @@
+name: hermes-session-tasks
+version: 0.1.0
+description: A per-session task board for Theo. The agent adds things Theo must do, decide or remember; Theo edits them in a Desktop pane.
+requires_hermes: ">=0.22.5"
+provides_tools:
+  - board_read
+provides_hooks: []
