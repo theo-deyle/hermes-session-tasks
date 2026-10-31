@@ -41,6 +41,8 @@ HERMES_PUBLIC_IMPORTS = (
     "hermes_cli.plugin_events",
 )
 MAX_MODULE_LINES = 500
+ARGUMENT_NAMES = frozenset({"args", "function_args"})
+ARGUMENT_READERS = frozenset({"get", "pop"})
 FUNCTION_NODES = (ast.FunctionDef, ast.AsyncFunctionDef, ast.Lambda)
 
 
@@ -187,6 +189,48 @@ def session_db_findings(core_dir: Path) -> list[str]:
     return findings
 
 
+def _is_arguments_name(node: ast.AST) -> bool:
+    return isinstance(node, ast.Name) and node.id in ARGUMENT_NAMES
+
+
+def _is_session_id_literal(node: ast.AST) -> bool:
+    return isinstance(node, ast.Constant) and node.value == "session_id"
+
+
+def session_id_arg_findings(core_dir: Path) -> list[str]:
+    """Report a read of `session_id` from the tool arguments (TOOL-06)."""
+    findings: list[str] = []
+    for path in _python_files(core_dir):
+        for node in ast.walk(_parse(path)):
+            if (
+                isinstance(node, ast.Subscript)
+                and _is_arguments_name(node.value)
+                and _is_session_id_literal(node.slice)
+            ):
+                findings.append(_finding(path, node, "session_id read from the tool arguments"))
+            if (
+                isinstance(node, ast.Call)
+                and isinstance(node.func, ast.Attribute)
+                and node.func.attr in ARGUMENT_READERS
+                and _is_arguments_name(node.func.value)
+                and node.args
+                and _is_session_id_literal(node.args[0])
+            ):
+                findings.append(_finding(path, node, "session_id read from the tool arguments"))
+    return findings
+
+
+def todo_mention_findings(plugin_dir: Path) -> list[str]:
+    """Report a Python file, except tool_text.py, whose source text holds "todo" in any case."""
+    findings: list[str] = []
+    for path in _python_files(plugin_dir):
+        if path.name == "tool_text.py" and path.parent.name == "session_tasks":
+            continue
+        if "todo" in path.read_text(encoding="utf-8").lower():
+            findings.append(f"{path.relative_to(plugin_dir).as_posix()}: mentions todo")
+    return findings
+
+
 def _write_module(directory: Path, source: str, name: str = "bad.py") -> None:
     (directory / name).write_text(source, encoding="utf-8")
 
@@ -220,6 +264,14 @@ def test_raw_sqlite_connect_lives_only_in_paths() -> None:
 
 def test_session_db_is_always_built_read_only() -> None:
     assert session_db_findings(CORE_DIR) == []
+
+
+def test_core_never_reads_session_id_from_the_tool_arguments() -> None:
+    assert session_id_arg_findings(CORE_DIR) == []
+
+
+def test_plugin_python_files_never_mention_todo_outside_tool_text() -> None:
+    assert todo_mention_findings(PLUGIN_DIR) == []
 
 
 # ---- self-tests: each guard reports a bad module ----
@@ -304,6 +356,30 @@ def test_session_db_guard_reports_a_writable_session_db(tmp_path: Path) -> None:
     findings = session_db_findings(tmp_path)
 
     assert len(findings) == 2
+
+
+def test_session_id_guard_reports_subscript_get_and_pop_on_the_arguments(tmp_path: Path) -> None:
+    _write_module(
+        tmp_path,
+        "def f(args, function_args, other):\n"
+        "    a = args['session_id']\n"
+        "    b = function_args.get('session_id', '')\n"
+        "    c = args.pop('session_id', None)\n"
+        "    d = other['session_id']\n"
+        "    e = args.get('text')\n"
+        "    return a, b, c, d, e\n",
+    )
+
+    assert len(session_id_arg_findings(tmp_path)) == 3
+
+
+def test_todo_guard_reports_any_letter_case_and_skips_tool_text(tmp_path: Path) -> None:
+    (tmp_path / "session_tasks").mkdir()
+    _write_module(tmp_path / "session_tasks", "x = 'ToDo'\n", "tool_text.py")
+    _write_module(tmp_path / "session_tasks", "y = 'TODO list'\n", "other.py")
+    _write_module(tmp_path, "z = 1\n", "clean.py")
+
+    assert todo_mention_findings(tmp_path) == ["session_tasks/other.py: mentions todo"]
 
 
 # ---- home guard helpers ----
