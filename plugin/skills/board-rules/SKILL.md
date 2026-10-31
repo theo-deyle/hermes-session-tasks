@@ -21,21 +21,24 @@ The board is Theo's list. It is not your plan.
 - The board is not memory.
 - The board is not the kanban_* tools.
 
+## Theo's message is his answer
+
+When Theo's own message names a remove, an uncheck, a reword or a change to many items, that message is his answer. Do it at once with confirmed true. Do not ask him a question first.
+
 ## Ask Theo first
 
-Ask Theo one plain question before you do any of these:
+Ask Theo one plain question first only in two cases:
 
-- Remove an item.
-- Uncheck an item.
-- Reword an item he wrote.
-- Change many items at once.
-- Act when you are not sure which item he means.
+- You decide on your own to remove an item, uncheck an item or reword an item he wrote.
+- You are not sure which item he means.
+
+After he answers, send the call again with confirmed true.
 
 The guard blocks a remove, an uncheck, and a reword of an item Theo wrote. The block stays until the call carries confirmed true.
 
-Set confirmed true only after Theo answers your question in chat. Never use it as a shortcut.
+Set confirmed true only when Theo's own message named the change, or after he answered your question in chat. Never set confirmed true on your own decision.
 
-Any change by Theo makes the item his. If you want to reword it later, ask first.
+Any change by Theo makes the item his. If you decide on your own to reword it later, ask first.
 
 ## When your work finishes an item
 
