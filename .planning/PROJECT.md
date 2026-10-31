@@ -12,7 +12,9 @@ Items the agent lists for Theo stay visible and editable in the pane for the who
 
 ### Validated
 
-(None yet - ship to validate)
+- ✓ A board follows its session through context compression and branches. - Phase 1
+- ✓ Writes are safe when the agent and the pane write at the same time (revision number, reject stale writes). - Phase 1
+- ✓ Board data lives on devpc under `$HERMES_HOME` in plugin-owned storage, never in `state.db`. - Phase 1
 
 ### Active
 
@@ -28,9 +30,6 @@ Items the agent lists for Theo stay visible and editable in the pane for the who
 - [ ] The pane renders the list as an interactive board, not as raw markdown.
 - [ ] The pane updates live when the agent writes to the board.
 - [ ] The agent sees Theo's own edits to the board on its next turn, with small injected context.
-- [ ] A board follows its session through context compression and branches.
-- [ ] Writes are safe when the agent and the pane write at the same time (revision number, reject stale writes).
-- [ ] Board data lives on devpc under `$HERMES_HOME` in plugin-owned storage, never in `state.db`.
 - [ ] Deploy on devpc by symlink into `~/.hermes/plugins/`, enable, restart the gateway.
 
 ### Out of Scope
@@ -112,9 +111,11 @@ Package layout:
 | Separate from the built-in `todo_list` tool | `todo_list` is the agent's working plan; this board is Theo's remember list | - Pending |
 | One board per session, session picker, cross-session read and copy tools; no global board in v1 | Keeps v1 small; global board parked as backlog | - Pending |
 | Default pane position right, stacked with other right-side panes | Matches the other right-side panes; Theo can drag it later | - Pending |
-| Markdown checklist is the text format for import, export and agent view | Readable by agent and human, round-trips cleanly | - Pending |
-| Plugin-owned storage under `$HERMES_HOME`, never `state.db` | Keeps Hermes core data untouched | - Pending |
+| Markdown checklist is the text format for import, export and agent view | Readable by agent and human, round-trips cleanly | ✓ Phase 1: hand-written parser, 500 random boards round trip with no loss |
+| Plugin-owned storage under `$HERMES_HOME`, never `state.db` | Keeps Hermes core data untouched | ✓ Phase 1: SQLite through `plugin_db`, contract test proves `state.db` bytes unchanged |
 | Agent asks before an ambiguous board change | Theo's list; a wrong guess costs trust | - Pending |
+| Session lineage through an alias table filled by the compaction hook, with a lazy `SessionDB` read-only walk as fallback | One resolve rule for plain, compression, branch and delegate sessions; a delegate reads its delegator root | ✓ Phase 1: 20-hop loop guard, branch copy once under a race |
+| Stale write returns the current board instead of an error | The caller merges and retries; no lost update across processes | ✓ Phase 1: per-item revision rule, 4-process race test |
 
 ## Evolution
 
@@ -134,4 +135,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-10-30 after initialization*
+*Last updated: 2026-10-30 after Phase 1*
