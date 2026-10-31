@@ -68,13 +68,13 @@ Plans:
   3. The tools take the session from the id Hermes passes to the handler, so a session id in the model's arguments changes nothing. The tool names share one prefix and avoid the word "todo". `todo_list` stays untouched.
   4. A live test sends 5 prompts that list things for Theo. In all 5, the agent adds the items to the board. The agent keeps its own plan in `todo_list`. The tool descriptions carry this rule, so the agent needs no skill load.
   5. The agent asks Theo one plain question before a delete, an uncheck, a reword of Theo's text or a bulk change. It asks the same question when it is unsure which item Theo means. When its work finishes an item, the agent checks the item and says so in one line.
-**Plans**: 1/7 plans executed in 6 waves
+**Plans**: 2/7 plans executed in 6 waves
 Plans:
 **Wave 1**
 - [x] 02-01-PLAN.md - First end to end test: Hermes loads the plugin and board_read returns the board with ids; board_read contract and the session and todo_list guards (wave 1)
 
 **Wave 2** *(blocked on Wave 1 completion)*
-- [ ] 02-02-PLAN.md - board_edit argument parser, the ask-before-destroy guard, pre_tool_call and post_compaction callbacks (wave 2)
+- [x] 02-02-PLAN.md - board_edit argument parser, the ask-before-destroy guard, pre_tool_call and post_compaction callbacks (wave 2)
 - [ ] 02-03-PLAN.md - Tool text: board_edit schema and descriptions, system prompt section, bundled skill (wave 2)
 
 **Wave 3** *(blocked on Wave 2 completion)*
@@ -163,7 +163,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Core, storage and session identity | 6/6 | Complete    | 2026-10-30 |
-| 2. Agent tools and skill | 1/7 | In Progress | - |
+| 2. Agent tools and skill | 2/7 | In Progress | - |
 | 3. REST router and client install spike | 0/TBD | Not started | - |
 | 4. Pane | 0/TBD | Not started | - |
 | 5. Agent sees Theo's edits | 0/TBD | Not started | - |
