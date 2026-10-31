@@ -48,8 +48,10 @@ def guarded_reasons(parsed: ParsedEdit, board: Board | None) -> tuple[str, ...]:
 
 
 def block_message(reasons: Sequence[str]) -> str:
-    """Return the text that tells the agent to ask Theo, then repeat the call with confirmed."""
+    """Return the text that tells the agent to retry with confirmed or to ask Theo first."""
     return (
         f"board_edit: Theo must answer first for: {', '.join(reasons)}. "
-        "Ask him one plain question in chat, then send the same call again with confirmed true."
+        "If Theo's own message named the change, send the same call again with confirmed true. "
+        "Otherwise ask him one plain question in chat first. "
+        "After he answers, send the same call again with confirmed true."
     )
