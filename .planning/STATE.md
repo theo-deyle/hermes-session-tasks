@@ -1,18 +1,18 @@
 ---
 gsd_state_version: "1.0"
-current_phase: 2
+current_phase: 02
 current_phase_name: Agent tools and skill
 status: executing
-stopped_at: Phase 2 context gathered
-last_updated: "2026-10-31T01:56:50.760Z"
+stopped_at: Completed 02-01-PLAN.md
+last_updated: "2026-10-31T02:05:38.756Z"
 last_activity: 2026-10-30
-last_activity_desc: Phase 01 complete, transitioned to Phase 2
-state_head: 2673e4c7a65cc59a5e86e9de9426acc815ed22fb
+last_activity_desc: Phase 02 execution started
+state_head: 3a1d66411c6de927261eb0529ed5280be15ef686
 progress:
   total_phases: 7
   completed_phases: 1
   total_plans: 13
-  completed_plans: 6
+  completed_plans: 7
   percent: 14
 ---
 
@@ -23,14 +23,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-10-30)
 
 **Core value:** Items the agent lists for Theo stay visible and editable in the pane for the whole session, so Theo never scrolls up or asks the agent to repeat itself.
-**Current focus:** Phase 1 - Core, storage and session identity
+**Current focus:** Phase 02 — Agent tools and skill
 
 ## Current Position
 
-Phase: 2 (Agent tools and skill) — READY TO EXECUTE
-Plan: Not started
+Phase: 02 (Agent tools and skill) — EXECUTING
+Plan: 2 of 7
 Status: Ready to execute
-Last activity: 2026-10-30 - Phase 01 complete, transitioned to Phase 2
+Last activity: 2026-10-30 — Phase 02 execution started
 
 Progress: [█░░░░░░░░░] 14%
 
@@ -62,6 +62,7 @@ Progress: [█░░░░░░░░░] 14%
 | Phase 01 P04 | 8 min | 2 tasks | 3 files |
 | Phase 01 P05 | 25 min | 3 tasks | 10 files |
 | Phase 01 P06 | 10 min | 2 tasks | 3 files |
+| Phase 02 P01 | 25 min | 2 tasks | 14 files |
 
 ## Accumulated Context
 
@@ -88,6 +89,8 @@ Recent decisions affecting current work:
 - [Phase 01]: A copied branch reports kind plain on later resolves; Board.forked_from keeps the origin - The alias branch to branch answers before any reader opens.
 - [Phase 01]: The state.db digest in the contract test ignores an empty state.db-wal file - A read only SessionDB open makes SQLite create an empty WAL file. Real writes land as WAL frames, so the check still fails on a write.
 - [Phase 01]: Coverage gate runs in the Python 3.11 leg only; fail_under stays 80 with 97 percent measured - The plan keeps the 3.14 leg without coverage; 197 tests pass on both
+- [Phase 02]: Dispatch snippet links and enables the plugin before importing model_tools (import runs plugin discovery once)
+- [Phase 02]: register lives in core wiring.py; plugin/__init__.py only re-exports it
 
 ### Pending Todos
 
@@ -112,6 +115,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-31T00:47:00.962Z
-Stopped at: Phase 2 context gathered
-Resume file: .planning/phases/02-agent-tools-and-skill/02-CONTEXT.md
+Last session: 2026-10-31T02:05:38.616Z
+Stopped at: Completed 02-01-PLAN.md
+Resume file: None
