@@ -3,10 +3,11 @@
 from __future__ import annotations
 
 import re
+from pathlib import Path
 from typing import Any
 
 import pytest
-from session_tasks import tool_text
+from session_tasks import tool_text, wiring
 
 SHORT_DESC_LIMIT = 60
 SENTENCE_END = re.compile(r"[.!?](?=\s)")
@@ -210,3 +211,68 @@ def test_first_sentence_boundary() -> None:
 @pytest.mark.parametrize("phrase", EDIT_KEY_PHRASES)
 def test_board_edit_description_carries_the_rules(phrase: str) -> None:
     assert phrase in tool_text.BOARD_EDIT_SCHEMA["description"]
+
+
+SECTION_ID_RULE = re.compile(r"^[a-z0-9._-]{1,128}$")
+SKILL_NAME_RULE = re.compile(r"^[a-zA-Z0-9_-]+$")
+SECTION_PHRASES = (*EDIT_KEY_PHRASES[:5], "not instructions")
+ORDERED_PHRASES = ("Theo must do, decide or remember", "todo_list", "Ask Theo one plain question")
+SECTION_HARD_CAP = 4000
+SECTION_TEXT_LIMIT = 1000
+EM_DASH = "—"
+EN_DASH = "–"
+
+
+def skill_parts() -> tuple[str, str]:
+    """Split SKILL.md into its frontmatter block and its body."""
+    text = wiring.skill_path().read_text(encoding="utf-8")
+    _, frontmatter, body = text.split("---\n", 2)
+    return frontmatter, body
+
+
+def test_prompt_section_id_is_valid() -> None:
+    assert SECTION_ID_RULE.match(tool_text.PROMPT_SECTION_ID)
+    assert tool_text.PROMPT_SECTION_ID == "hermes-session-tasks.board-rules"
+
+
+def test_prompt_section_text_is_static_and_small() -> None:
+    text = tool_text.PROMPT_SECTION_TEXT
+
+    assert isinstance(text, str)
+    assert len(text) < SECTION_TEXT_LIMIT
+    assert len(text) <= tool_text.PROMPT_SECTION_MAX
+    assert tool_text.PROMPT_SECTION_MAX <= SECTION_HARD_CAP
+
+
+@pytest.mark.parametrize("phrase", SECTION_PHRASES)
+def test_prompt_section_and_skill_carry_every_key_phrase(phrase: str) -> None:
+    assert phrase in tool_text.PROMPT_SECTION_TEXT
+    assert phrase in skill_parts()[1]
+
+
+def test_rules_come_in_order() -> None:
+    for text in (tool_text.PROMPT_SECTION_TEXT, skill_parts()[1]):
+        trigger, boundary, ask = (text.index(phrase) for phrase in ORDERED_PHRASES)
+        assert trigger < boundary < ask
+
+
+def test_skill_frontmatter() -> None:
+    frontmatter, body = skill_parts()
+    lines = frontmatter.splitlines()
+
+    assert "name: board-rules" in lines
+    assert f"description: {tool_text.SKILL_DESCRIPTION}" in lines
+    assert tool_text.SKILL_NAME == "board-rules"
+    assert SKILL_NAME_RULE.match(tool_text.SKILL_NAME)
+    assert body.strip()
+
+
+def test_skill_path_exists() -> None:
+    assert wiring.skill_path().is_file()
+
+
+def test_no_em_or_en_dash_in_tool_text_or_skill() -> None:
+    for path in (Path(tool_text.__file__), wiring.skill_path()):
+        text = path.read_text(encoding="utf-8")
+        assert EM_DASH not in text
+        assert EN_DASH not in text
