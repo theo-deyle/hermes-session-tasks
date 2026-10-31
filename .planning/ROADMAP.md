@@ -19,7 +19,7 @@ The phases start from the eight in `.planning/research/SUMMARY.md`. Research pha
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 1: Core, storage and session identity** - A safe SQLite board per session that follows its session through compression and branches.
+- [x] **Phase 1: Core, storage and session identity** - A safe SQLite board per session that follows its session through compression and branches. (completed 2026-10-30)
 - [ ] **Phase 2: Agent tools and skill** - The agent reads and edits the board, and keeps its own plan in `todo_list`.
 - [ ] **Phase 3: REST router and client install spike** - The backend routes work, and a stub pane runs on the Mac and the Windows PC.
 - [ ] **Phase 4: Pane** - Theo sees and edits the focused session's board in a right-side pane that updates live.
@@ -39,7 +39,7 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. A board written before a context compression shows the same items after it. A branch of a session shows its parent's items.
   4. A board converts to a markdown checklist and back with no loss, including subtasks.
   5. `uv sync` builds the project. ruff, pyright and pytest pass on Python 3.11 and 3.14 with no gateway running. The store tests include the two-process write test.
-**Plans**: 6/6 plans executed in 5 waves
+**Plans**: 6/6 plans complete in 5 waves
 Plans:
 **Wave 1**
 - [x] 01-01-PLAN.md - uv toolchain, pin gate, 3.11 and 3.14 matrix, test harness, layout and real-home guards (wave 1)
@@ -143,7 +143,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Core, storage and session identity | 6/6 | In Progress | - |
+| 1. Core, storage and session identity | 6/6 | Complete    | 2026-10-30 |
 | 2. Agent tools and skill | 0/TBD | Not started | - |
 | 3. REST router and client install spike | 0/TBD | Not started | - |
 | 4. Pane | 0/TBD | Not started | - |
