@@ -216,7 +216,23 @@ def test_board_edit_description_carries_the_rules(phrase: str) -> None:
 SECTION_ID_RULE = re.compile(r"^[a-z0-9._-]{1,128}$")
 SKILL_NAME_RULE = re.compile(r"^[a-zA-Z0-9_-]+$")
 SECTION_PHRASES = (*EDIT_KEY_PHRASES[:5], "not instructions")
-ORDERED_PHRASES = ("Theo must do, decide or remember", "todo_list", "Ask Theo one plain question")
+ORDERED_PHRASES = (
+    "Theo must do, decide or remember",
+    "todo_list",
+    "Theo's own message",
+    "Ask Theo one plain question",
+)
+RULE_EXPLICIT = "Theo's own message"
+RULE_OWN = "decide on your own"
+AT_ONCE = "Do it at once with confirmed true"
+ASK_ONLY = "Ask Theo one plain question first only in two cases"
+NO_SHORTCUT = "on your own decision"
+RETIRED_ASK = "plain question before you"
+CONFIRMED_DESCRIPTION = (
+    "Set true when Theo's own message named this remove, uncheck or reword, "
+    "or after he answered your question about it in chat. "
+    "Never set it true on your own decision."
+)
 SECTION_HARD_CAP = 4000
 SECTION_TEXT_LIMIT = 1000
 EM_DASH = chr(0x2014)
@@ -228,6 +244,40 @@ def skill_parts() -> tuple[str, str]:
     text = wiring.skill_path().read_text(encoding="utf-8")
     _, frontmatter, body = text.split("---\n", 2)
     return frontmatter, body
+
+
+def rule_text(surface: str) -> str:
+    """Return the text of one surface that carries the ask rule."""
+    if surface == "description":
+        return tool_text.BOARD_EDIT_DESCRIPTION
+    if surface == "section":
+        return tool_text.PROMPT_SECTION_TEXT
+    if surface == "skill":
+        return skill_parts()[1]
+    properties = tool_text.BOARD_EDIT_SCHEMA["parameters"]["properties"]
+    return str(properties["confirmed"]["description"])
+
+
+@pytest.mark.parametrize("surface", ["description", "section", "skill"])
+def test_explicit_instruction_rule_is_in_every_rule_text(surface: str) -> None:
+    text = rule_text(surface)
+
+    for phrase in (RULE_EXPLICIT, RULE_OWN, AT_ONCE, ASK_ONLY):
+        assert phrase in text
+
+
+@pytest.mark.parametrize("surface", ["description", "section", "skill"])
+def test_retired_blanket_ask_rule_is_gone(surface: str) -> None:
+    assert RETIRED_ASK not in rule_text(surface)
+
+
+@pytest.mark.parametrize("surface", ["section", "skill", "confirmed"])
+def test_confirmed_true_is_never_set_on_own_decision(surface: str) -> None:
+    assert NO_SHORTCUT in rule_text(surface)
+
+
+def test_confirmed_description_is_exact() -> None:
+    assert rule_text("confirmed") == CONFIRMED_DESCRIPTION
 
 
 def test_prompt_section_id_is_valid() -> None:
@@ -251,9 +301,10 @@ def test_prompt_section_and_skill_carry_every_key_phrase(phrase: str) -> None:
 
 
 def test_rules_come_in_order() -> None:
-    for text in (tool_text.PROMPT_SECTION_TEXT, skill_parts()[1]):
-        trigger, boundary, ask = (text.index(phrase) for phrase in ORDERED_PHRASES)
-        assert trigger < boundary < ask
+    for surface in ("description", "section", "skill"):
+        text = rule_text(surface)
+        indexes = [text.index(phrase) for phrase in ORDERED_PHRASES]
+        assert indexes == sorted(set(indexes))
 
 
 def test_skill_frontmatter() -> None:
