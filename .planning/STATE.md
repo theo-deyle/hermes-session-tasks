@@ -4,10 +4,10 @@ current_phase: 02
 current_phase_name: Agent tools and skill
 status: executing
 stopped_at: Completed 02-06-PLAN.md
-last_updated: "2026-10-31T19:15:31.963Z"
-last_activity: 2026-10-30
+last_updated: "2026-10-31T19:35:22.180Z"
+last_activity: 2026-10-31
 last_activity_desc: Phase 02 execution started
-state_head: 62bed53ca5ee544b70f315ead09f51ac5324c38f
+state_head: aff0e664983c075fddb47f16f4409d9f127aa56e
 progress:
   total_phases: 7
   completed_phases: 1
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-10-30)
 Phase: 02 (Agent tools and skill) — EXECUTING
 Plan: 7 of 7
 Status: Ready to execute
-Last activity: 2026-10-30 — Phase 02 execution started
+Last activity: 2026-10-31 - Completed quick task 261031-lbp: Ask rule: the agent asks only on its own initiative; Theo's explicit instruction is the permission
 
 Progress: [█░░░░░░░░░] 14%
 
@@ -118,6 +118,12 @@ Recent decisions affecting current work:
 - Event delivery over SSH to the Windows client was never tested. Polling covers it. Phase 3 proves it.
 - The tool `session_id` and `focusedStoredSessionId` may differ after a context rotation. Phase 1 tests a forced `/compress`.
 - A gateway restart drops live Desktop connections. The restart is announced before it happens (Phase 7).
+
+### Quick Tasks Completed
+
+| # | Description | Date | Commit | Directory |
+|---|-------------|------|--------|-----------|
+| 261031-lbp | Ask rule: the agent asks only on its own initiative; Theo's explicit instruction is the permission | 2026-10-31 | aff0e66 | [261031-lbp-ask-rule-the-agent-asks-only-on-its-own-](./quick/261031-lbp-ask-rule-the-agent-asks-only-on-its-own-/) |
 
 ## Deferred Items
 
