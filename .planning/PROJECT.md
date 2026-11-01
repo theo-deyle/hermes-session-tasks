@@ -2,11 +2,11 @@
 
 ## What This Is
 
-A Hermes Desktop plugin that gives each Hermes session a task board in a Desktop side pane. The agent writes items to the board when it lists things to do or remember. Theo adds, edits, checks off and deletes items in the pane. The board is Theo's list of things to remember, not the agent's working plan.
+A Hermes Desktop plugin that gives each Hermes session a task board in a Desktop side pane. The agent writes items to the board when it lists things to do or remember. Theo adds, edits, checks off and deletes items in the pane. The board is the shared plan of the session: Theo's reminders and the agent's own steps.
 
 ## Core Value
 
-Items the agent lists for Theo stay visible and editable in the pane for the whole session, so Theo never scrolls up or asks the agent to repeat itself.
+Items the agent lists for Theo and the agent's own steps stay visible and editable in the pane for the whole session, so Theo never scrolls up, never asks the agent to repeat itself, and sees what comes next.
 
 ## Requirements
 
@@ -38,7 +38,7 @@ Items the agent lists for Theo stay visible and editable in the pane for the who
 - Due dates, priorities, assignees - not needed for a remember list.
 - Sync to Super Productivity or GitHub - not needed in v1.
 - Changes to the Hermes Agent source tree - everything ships as a plugin.
-- Reading, writing, wrapping or replacing the built-in `todo_list` tool - `todo_list` stays the agent's own working plan.
+- Reading, writing, wrapping or replacing the built-in `todo_list` tool - the board holds the agent's plan, and the plugin never uses `todo_list`.
 
 ## Context
 
@@ -87,7 +87,7 @@ Package layout:
 
 - Board per session: items with id, text, checked state, parent id (one or more subtask levels, decide depth in discuss), order, timestamps, and who made the last change (agent or Theo).
 - Agent tools (names decided in discuss; must not collide with `todo_list`): read the current board, add items, update/check/uncheck/rename items, remove items, reorder, read another session's board, copy items from another session, list sessions that have a board. Each write returns the full board as markdown.
-- A bundled skill that tells the agent when to use the board: when it lists things to do or remember for Theo, keep the board in sync, ask before an ambiguous change, never use it as its own scratch plan.
+- A bundled skill that tells the agent when to use the board: when it lists things to do or remember for Theo, keep the board in sync, ask before an ambiguous change, put its own multi-step plan on the board and check items off.
 - Pane: shows the focused session's board, checkboxes, inline add and edit, add subtask, delete, collapse subtasks, a session picker to view other boards, import and copy as markdown. Live update when the agent writes.
 - Storage on devpc under `$HERMES_HOME` (resolve with `get_hermes_home()`), in a plugin-owned SQLite file or JSON files. Never write into `state.db`.
 
@@ -108,7 +108,7 @@ Package layout:
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
-| Separate from the built-in `todo_list` tool | `todo_list` is the agent's working plan; this board is Theo's remember list | - Pending |
+| Separate from the built-in `todo_list` tool | The board holds both Theo's reminders and the agent's own steps; `todo_list` is simply not used | - Pending |
 | One board per session, session picker, cross-session read and copy tools; no global board in v1 | Keeps v1 small; global board parked as backlog | - Pending |
 | Default pane position right, stacked with other right-side panes | Matches the other right-side panes; Theo can drag it later | - Pending |
 | Markdown checklist is the text format for import, export and agent view | Readable by agent and human, round-trips cleanly | ✓ Phase 1: hand-written parser, 500 random boards round trip with no loss |

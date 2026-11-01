@@ -4,9 +4,9 @@
 
 **hermes-session-tasks**
 
-A Hermes Desktop plugin that gives each Hermes session a task board in a Desktop side pane. The agent writes items to the board when it lists things to do or remember. Theo adds, edits, checks off and deletes items in the pane. The board is Theo's list of things to remember, not the agent's working plan.
+A Hermes Desktop plugin that gives each Hermes session a task board in a Desktop side pane. The agent writes items to the board when it lists things to do or remember. Theo adds, edits, checks off and deletes items in the pane. The board is the shared plan of the session: Theo's reminders and the agent's own steps.
 
-**Core Value:** Items the agent lists for Theo stay visible and editable in the pane for the whole session, so Theo never scrolls up or asks the agent to repeat itself.
+**Core Value:** Items the agent lists for Theo and the agent's own steps stay visible and editable in the pane for the whole session, so Theo never scrolls up, never asks the agent to repeat itself, and sees what comes next.
 
 ### Constraints
 
@@ -206,7 +206,7 @@ A Hermes Desktop plugin that gives each Hermes session a task board in a Desktop
 - Dashboard plugin APIs are served through the plugin host with buffered responses (seen in the `hermes plugins validate` output). The SQLite design already works across processes. `broadcast_plugin_event` is relayed to the parent (`sdk-doc:1867`). Not the current config.
 - Tools receive `session_id` by signature. The pane reads `host.state.focusedStoredSessionId` (`sdk/index.ts:609`). Desktop's stored id is the gateway `session_key` (`tui_gateway/server.py:1609`). That the two are equal after compression is NOT verified.
 - Hermes gives two signals for lineage: the `post_compaction` hook with `session_id` and `old_session_id`, and `SessionDB.get_conversation_root(session_id)` (`hermes_state_messages.py:1745`) with `get_compression_lineage` (`hermes_state_compression.py:914`). The stack supports an alias table keyed by session id and filled from the hook, with the lineage call as a lazy fallback. The choice belongs to discuss-phase.
-- `plugins-doc:1201` says plugin skills are not listed in the system prompt. The `register_skill` docstring (`plugins_content.py:23-27`) says they are listed in `<available_skills>`. The two disagree. Tool descriptions are always in the model's view, so the usage rules (when to add, ask before ambiguous changes, never use as scratch plan) go in the tool schemas as well as in the skill. Confidence MEDIUM.
+- `plugins-doc:1201` says plugin skills are not listed in the system prompt. The `register_skill` docstring (`plugins_content.py:23-27`) says they are listed in `<available_skills>`. The two disagree. Tool descriptions are always in the model's view, so the usage rules (when to add, ask before ambiguous changes, put its own multi-step plan on the board) go in the tool schemas as well as in the skill. Confidence MEDIUM.
 
 ## Installation
 

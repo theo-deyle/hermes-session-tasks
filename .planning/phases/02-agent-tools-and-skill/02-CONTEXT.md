@@ -6,7 +6,7 @@
 <domain>
 ## Phase Boundary
 
-The agent half of the plugin: `plugin.yaml`, `__init__.py`, two tools (`board_read`, `board_edit`), the `post_compaction` hook, a `pre_tool_call` guard, and the bundled skill. The agent reads the current session's board as markdown with ids and the revision, and edits it with a list of item-level operations. The agent writes things Theo must do, decide or remember to the board, and keeps its own plan in `todo_list`. Requirements: TOOL-01, TOOL-02, TOOL-06, TOOL-07, TOOL-08, AGNT-01, AGNT-02, AGNT-03, AGNT-04.
+The agent half of the plugin: `plugin.yaml`, `__init__.py`, two tools (`board_read`, `board_edit`), the `post_compaction` hook, a `pre_tool_call` guard, and the bundled skill. The agent reads the current session's board as markdown with ids and the revision, and edits it with a list of item-level operations. The agent writes things Theo must do, decide or remember to the board, and puts its own multi-step plan on the board (D-21). Requirements: TOOL-01, TOOL-02, TOOL-06, TOOL-07, TOOL-08, AGNT-01, AGNT-02, AGNT-03, AGNT-04.
 
 Not in this phase: REST routes and the pane (Phases 3 and 4), the `pre_llm_call` edit injection and session delete (Phase 5), cross-session tools `board_sessions` and `board_copy` (Phase 6).
 
@@ -32,6 +32,9 @@ Not in this phase: REST routes and the pane (Phases 3 and 4), the `pre_llm_call`
 
 ### Subagents
 - **D-20:** A delegate session (`delegate_task` subagent) resolves to its delegator's root board (Phase 1). In a delegate session `board_read` works and `board_edit` returns an error that tells the subagent to report the items to its delegator. Only the session Theo talks to writes the board. - **Reversibility:** reversible - one check on `Resolution.kind == "delegate"` in the edit tool.
+
+### Agent plan on the board
+- **D-21:** The board is the shared plan of the session. It holds Theo's reminders and the agent's own steps. When a job takes 3 or more steps, the agent adds its steps to the board first, then checks each one off as it finishes it, so Theo sees what is next without asking. Theo decided this on 2026-10-31 after the phase 2 verification (quick task 261031-uzq). It reverses the earlier rule that the board is never the agent's working plan. The hard boundary stays: the plugin never reads, writes, wraps or replaces `todo_list` (TOOL-08). D-17 to D-19 apply unchanged. A step the agent wrote is its own: it checks the step off and rewords it without a question. Any change by Theo makes the step his. A remove or an uncheck of any item still goes through the D-18 guard, so the agent checks a finished step off and does not remove it. - **Reversibility:** reversible - text only (tool descriptions, prompt section, skill); no code or data change.
 
 ### Claude's Discretion
 - Exact description text for both tools: the trigger sentence first ("Add an item when you list something Theo must do, decide or remember"), then the `todo_list` boundary, then the ask rule.

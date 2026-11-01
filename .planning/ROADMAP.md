@@ -20,7 +20,7 @@ The phases start from the eight in `.planning/research/SUMMARY.md`. Research pha
 Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Core, storage and session identity** - A safe SQLite board per session that follows its session through compression and branches. (completed 2026-10-30)
-- [ ] **Phase 2: Agent tools and skill** - The agent reads and edits the board, and keeps its own plan in `todo_list`.
+- [ ] **Phase 2: Agent tools and skill** - The agent reads and edits the board, and puts its own multi-step plan on the board.
 - [ ] **Phase 3: REST router and client install spike** - The backend routes work, and a stub pane runs on the Mac and the Windows PC.
 - [ ] **Phase 4: Pane** - Theo sees and edits the focused session's board in a right-side pane that updates live.
 - [ ] **Phase 5: Agent sees Theo's edits** - The agent learns of Theo's changes on its next turn, and a deleted session loses its board.
@@ -59,14 +59,14 @@ Plans:
 **Research**: Needed for the lineage part only. Topics: `post_compaction` on a live Desktop, whether the tool `session_id` and `focusedStoredSessionId` stay equal after `/compress`, how a branch looks in `state.db`. The store and markdown code need none.
 
 ### Phase 2: Agent tools and skill
-**Goal**: The agent writes the things Theo must do, decide or remember to the board. The agent keeps its own plan in `todo_list`.
+**Goal**: The agent writes the things Theo must do, decide or remember to the board. The agent also puts its own multi-step plan on the board and checks each step off as it finishes it.
 **Depends on**: Phase 1
 **Requirements**: TOOL-01, TOOL-02, TOOL-06, TOOL-07, TOOL-08, AGNT-01, AGNT-02, AGNT-03, AGNT-04
 **Success Criteria** (what must be TRUE):
   1. In a fresh Desktop session on devpc, the agent reads the board as markdown with item ids and the revision. The agent adds, renames, checks, unchecks and removes items in one call with a list of item-level operations.
   2. No replace-all write exists. Every write returns the new revision and a one-line summary. A stale write returns the current board.
   3. The tools take the session from the id Hermes passes to the handler, so a session id in the model's arguments changes nothing. The tool names share one prefix and avoid the word "todo". `todo_list` stays untouched.
-  4. A live test sends 5 prompts that list things for Theo. In all 5, the agent adds the items to the board. The agent keeps its own plan in `todo_list`. The tool descriptions carry this rule, so the agent needs no skill load.
+  4. A live test sends 5 prompts that list things for Theo. In all 5, the agent adds the items to the board. When the agent gets a job of 3 or more steps, it writes its steps to the board first and checks them off as it finishes; the own-job headless run measures this. The tool descriptions carry this rule, so the agent needs no skill load.
   5. The agent asks Theo one plain question before a delete, an uncheck, a reword of Theo's text or a bulk change. It asks the same question when it is unsure which item Theo means. When its work finishes an item, the agent checks the item and says so in one line.
 **Plans**: 7/7 plans executed in 6 waves
 Plans:

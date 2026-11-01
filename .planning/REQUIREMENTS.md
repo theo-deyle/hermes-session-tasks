@@ -31,8 +31,8 @@ Requirements for the first release. Each maps to a roadmap phase.
 
 ### Agent behaviour
 
-- [x] **AGNT-01**: A bundled skill tells the agent to add an item when it lists something Theo must do, decide or remember, and to keep its own plan in `todo_list`.
-- [x] **AGNT-02**: The tool descriptions carry the trigger and the `todo_list` boundary, so the agent uses the board without loading the skill.
+- [x] **AGNT-01**: A bundled skill tells the agent to add an item when it lists something Theo must do, decide or remember, and to put its own multi-step plan on the board and check each step off as it finishes it.
+- [x] **AGNT-02**: The tool descriptions carry the trigger, the own-plan rule and the `todo_list` boundary, so the agent uses the board without loading the skill.
 - [x] **AGNT-03**: The agent asks Theo one plain question before it removes, unchecks or rewords an item Theo wrote on its own initiative, or when it is unsure which item Theo means. An explicit instruction from Theo in his own message is the permission: the agent then acts at once with `confirmed: true` and asks nothing.
 - [x] **AGNT-04**: When the agent's work finishes an item, the agent checks it and says so in one line.
 - [ ] **AGNT-05**: The agent sees Theo's own edits on its next turn through a `pre_llm_call` hook that injects only the changes since the agent last saw the board, and injects nothing when nothing changed.
@@ -90,7 +90,7 @@ Deferred. Tracked but not in the current roadmap.
 
 | Feature | Reason |
 |---------|--------|
-| Reading, writing, wrapping or replacing `todo_list` | `todo_list` is the agent's own working plan; Theo decided the board stays separate |
+| Reading, writing, wrapping or replacing `todo_list` | `todo_list` is not used; the board holds the agent's plan |
 | Due dates, reminders, priorities, assignees, labels | A remember list, not a scheduler; the date goes in the item text |
 | In-progress or cancelled item states | Those belong to the agent's plan; a checkbox has two states |
 | Replace-all write in the agent tools | One bad call wipes Theo's edits |
