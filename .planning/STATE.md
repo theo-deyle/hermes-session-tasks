@@ -3,16 +3,16 @@ gsd_state_version: "1.0"
 current_phase: 03
 current_phase_name: REST router and client install spike
 status: executing
-stopped_at: Completed 03-07-PLAN.md
-last_updated: "2026-11-01T18:41:13.894Z"
+stopped_at: Completed 03-08-PLAN.md
+last_updated: "2026-11-01T20:22:37.725Z"
 last_activity: 2026-11-01
 last_activity_desc: Phase 02 complete, transitioned to Phase 3
-state_head: aadd9084c8dfd6784eaaf9dc9f8600d4ff5d3e36
+state_head: dc5bb95cff375d460f774c24ddf3a8f1a4c6020a
 progress:
   total_phases: 7
   completed_phases: 2
   total_plans: 25
-  completed_plans: 20
+  completed_plans: 21
   percent: 29
 ---
 
@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-10-30)
 ## Current Position
 
 Phase: 03 (REST router and client install spike) — EXECUTING
-Plan: 7 of 12 complete (03-01 done)
+Plan: 8 of 12 complete (03-01 done)
 Status: Ready to execute
 Last activity: 2026-11-01 — Completed 03-01 (pre_llm_call nudge, own-job harness)
 
@@ -77,6 +77,7 @@ Progress: [███░░░░░░░] 29%
 | Phase 03 P03-05 | 27 min | 2 tasks | 9 files |
 | Phase 03 P03-06 | 22 min | 3 tasks | 5 files |
 | Phase 03 P07 | 12min | 2 tasks | 0 files |
+| Phase 03 P08 | 1h 36m | 3 tasks | 0 files |
 
 ## Accumulated Context
 
@@ -126,6 +127,8 @@ Recent decisions affecting current work:
 - [Phase 03]: 03-06: the pane harness runs under node --experimental-vm-modules; RestRelay.base_url is bare and the test adds PREFIX
 - [Phase 03]: 03-06: the pane drops a board reply for a session that is no longer focused; events read other chat until a board reply sets the root
 - [Phase 03]: Round 1 passed 3 of 3 with the plan 03-01 NUDGE_LINE; no wording round, tool_text.py unchanged
+- [Phase 03]: 03-08: no messaging gateway restart in the rest of Phase 3; the one Phase 3 restart was for 03-07 with Theo's go; DEV-04 in Phase 7 owns the next announced restart
+- [Phase 03]: 03-08: a Desktop quit and reopen reattaches to the backend in backend.lock.json and starts no new process; only a backend restart refreshes the plugin Python half; every Mac command uses the SSH alias devbox
 
 ### Pending Todos
 
@@ -157,6 +160,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-11-01T18:41:13.626Z
-Stopped at: Completed 03-07-PLAN.md
+Last session: 2026-11-01T20:22:37.440Z
+Stopped at: Completed 03-08-PLAN.md
 Resume file: None
