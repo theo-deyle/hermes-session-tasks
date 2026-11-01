@@ -41,6 +41,7 @@ HERMES_PUBLIC_IMPORTS = (
     "hermes_cli.plugin_events",
 )
 MAX_MODULE_LINES = 500
+DASHBOARD_THIRD_PARTY = frozenset({"fastapi", "pydantic"})
 ARGUMENT_NAMES = frozenset({"args", "function_args"})
 ARGUMENT_READERS = frozenset({"get", "pop"})
 FUNCTION_NODES = (ast.FunctionDef, ast.AsyncFunctionDef, ast.Lambda)
@@ -121,6 +122,19 @@ def async_def_findings(core_dir: Path) -> list[str]:
         for node in ast.walk(_parse(path))
         if isinstance(node, ast.AsyncFunctionDef)
     ]
+
+
+def dashboard_import_findings(dashboard_dir: Path) -> list[str]:
+    """Module-level imports of the path-loaded dashboard: stdlib, fastapi or pydantic, never relative."""
+    findings: list[str] = []
+    for path in _python_files(dashboard_dir):
+        for node in _walk_outside_functions(_parse(path)):
+            if isinstance(node, ast.ImportFrom) and node.level > 0:
+                findings.append(_finding(path, node, "relative import"))
+            for module in _imported_modules(node):
+                if not _is_stdlib(module) and module.split(".")[0] not in DASHBOARD_THIRD_PARTY:
+                    findings.append(_finding(path, node, f"module level import of {module}"))
+    return findings
 
 
 def module_length_findings(core_dir: Path, limit: int = MAX_MODULE_LINES) -> list[str]:
