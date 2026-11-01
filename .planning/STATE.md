@@ -3,16 +3,16 @@ gsd_state_version: "1.0"
 current_phase: 03
 current_phase_name: REST router and client install spike
 status: executing
-stopped_at: Completed 03-05-PLAN.md
-last_updated: "2026-11-01T04:57:51.388Z"
+stopped_at: Completed 03-06-PLAN.md
+last_updated: "2026-11-01T05:10:58.291Z"
 last_activity: 2026-11-01
 last_activity_desc: Phase 02 complete, transitioned to Phase 3
-state_head: 68f90f7be0a12287e8a0deed8131da7f1695c208
+state_head: be0e21c312fb03961c3c83f91ca517563ab1c208
 progress:
   total_phases: 7
   completed_phases: 2
   total_plans: 25
-  completed_plans: 18
+  completed_plans: 19
   percent: 29
 ---
 
@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-10-30)
 ## Current Position
 
 Phase: 03 (REST router and client install spike) — EXECUTING
-Plan: 5 of 12 complete (03-01 done)
+Plan: 6 of 12 complete (03-01 done)
 Status: Ready to execute
 Last activity: 2026-11-01 — Completed 03-01 (pre_llm_call nudge, own-job harness)
 
@@ -75,6 +75,7 @@ Progress: [███░░░░░░░] 29%
 | Phase 03 P03-03 | 8 min | 3 tasks | 3 files |
 | Phase 03 P03-04 | 5 min | 2 tasks | 4 files |
 | Phase 03 P03-05 | 27 min | 2 tasks | 9 files |
+| Phase 03 P03-06 | 22 min | 3 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -121,6 +122,8 @@ Recent decisions affecting current work:
 - [Phase 03]: 03-04: dashboard layout guard allows only stdlib, fastapi and pydantic at module level, never relative
 - [Phase 03]: 03-05: board.updated payload is session_id, root_id, rev, actor only; listener bound per actor via events.listener; publish runs after commit and a fault never fails a write
 - [Phase 03]: 03-05: the dispatch test stubs tui_gateway.server so the bare Hermes process does not import the gateway stack; the real broadcast_plugin_event stays in the path
+- [Phase 03]: 03-06: the pane harness runs under node --experimental-vm-modules; RestRelay.base_url is bare and the test adds PREFIX
+- [Phase 03]: 03-06: the pane drops a board reply for a session that is no longer focused; events read other chat until a board reply sets the root
 
 ### Pending Todos
 
@@ -152,6 +155,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-11-01T04:57:51.141Z
-Stopped at: Completed 03-05-PLAN.md
+Last session: 2026-11-01T05:10:58.013Z
+Stopped at: Completed 03-06-PLAN.md
 Resume file: None
