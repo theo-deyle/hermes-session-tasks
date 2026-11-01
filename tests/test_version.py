@@ -107,3 +107,22 @@ def test_meta_with_no_manifest_answers_unknown(tmp_path: Path) -> None:
     assert body["ok"] is True
     assert body["plugin_id"] == paths.PLUGIN_NAME
     assert body["api_version"] == version.API_VERSION
+
+
+PLUGIN_JS = ROOT / "plugin" / "desktop" / "plugin.js"
+JS_PLUGIN_VERSION = re.compile(r"^const PLUGIN_VERSION = '([^']+)'$", re.MULTILINE)
+JS_API_VERSION = re.compile(r"^const API_VERSION = (\d+)$", re.MULTILINE)
+
+
+def test_pane_plugin_version_matches_the_manifest() -> None:
+    found = JS_PLUGIN_VERSION.search(PLUGIN_JS.read_text(encoding="utf-8"))
+
+    assert found is not None, "plugin.js has no PLUGIN_VERSION constant"
+    assert found.group(1) == manifest_value("version")
+
+
+def test_pane_api_version_matches_the_backend() -> None:
+    found = JS_API_VERSION.search(PLUGIN_JS.read_text(encoding="utf-8"))
+
+    assert found is not None, "plugin.js has no API_VERSION constant"
+    assert int(found.group(1)) == version.API_VERSION

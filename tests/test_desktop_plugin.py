@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 import shutil
 import subprocess
 from collections.abc import Iterator
@@ -249,3 +250,93 @@ def test_item_text_stays_plain_text(rig: Rig, tmp_path: Path) -> None:
     result = rig.run(tmp_path)
 
     assert "[ ] #1 <b>bold</b>" in result["lines"]
+
+
+# The Desktop loader's own import regex: apps/desktop/src/contrib/runtime-loader.ts:72.
+IMPORT_RE = re.compile(r"""(from\s*|import\s*\(\s*|import\s+)(['"])([^'"]+)\2""")
+ALLOWED_IMPORTS = frozenset({"@hermes/plugin-sdk", "react", "react/jsx-runtime"})
+COLOUR_RE = re.compile(r"#[0-9a-fA-F]{3,8}\b|\brgba?\s*\(")
+
+
+def import_specifiers(source: str) -> list[str]:
+    """Every module name the loader regex finds. Stricter than the loader: it scans text too."""
+    return [match.group(3) for match in IMPORT_RE.finditer(source)]
+
+
+def import_findings(source: str) -> list[str]:
+    """The specifiers that are not on the allowlist."""
+    return [name for name in import_specifiers(source) if name not in ALLOWED_IMPORTS]
+
+
+def node_check(source: str) -> subprocess.CompletedProcess[str]:
+    """Syntax-check `source` as an ES module read from stdin (RESEARCH Pitfall 1)."""
+    return subprocess.run(
+        ["node", "--input-type=module", "--check"],
+        input=source,
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=60,
+    )
+
+
+@pytest.fixture(scope="module")
+def plugin_source() -> str:
+    return PLUGIN_JS.read_text(encoding="utf-8")
+
+
+def test_plugin_passes_the_stdin_module_check(plugin_source: str) -> None:
+    checked = node_check(plugin_source)
+
+    assert checked.returncode == 0, checked.stderr
+
+
+def test_truncated_plugin_fails_the_check(plugin_source: str) -> None:
+    checked = node_check(plugin_source[: len(plugin_source) // 2])
+
+    assert checked.returncode != 0
+
+
+def test_jsx_fails_the_check() -> None:
+    checked = node_check("export default () => <div/>\n")
+
+    assert checked.returncode != 0
+
+
+def test_imports_are_on_the_allowlist(plugin_source: str) -> None:
+    found = import_specifiers(plugin_source)
+
+    assert found
+    assert import_findings(plugin_source) == []
+
+
+@pytest.mark.parametrize(
+    ("source", "offender"),
+    [
+        ("import x from 'lodash'\n", "lodash"),
+        ("const m = import('x')\n", "x"),
+        ('import "side-effect"\n', "side-effect"),
+    ],
+    ids=["static", "dynamic", "bare"],
+)
+def test_allowlist_rejects_other_imports(source: str, offender: str) -> None:
+    assert import_findings(source) == [offender]
+
+
+def test_plugin_has_no_colour_literal(plugin_source: str) -> None:
+    assert COLOUR_RE.search(plugin_source) is None
+
+
+def test_colour_scan_catches_literals() -> None:
+    assert COLOUR_RE.search("color: #fff") is not None
+    assert COLOUR_RE.search("color: rgba(0, 0, 0, 0.5)") is not None
+    assert COLOUR_RE.search("text-(--ui-text-secondary) #1 #${id}") is None
+
+
+def test_plugin_sets_no_raw_html_and_uses_no_socket(plugin_source: str) -> None:
+    for banned in ("dangerouslySetInnerHTML", "innerHTML", "ctx.socket"):
+        assert banned not in plugin_source
+
+
+def test_plugin_never_names_todo(plugin_source: str) -> None:
+    assert "todo" not in plugin_source.lower()
