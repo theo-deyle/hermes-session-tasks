@@ -3,16 +3,16 @@ gsd_state_version: "1.0"
 current_phase: 03
 current_phase_name: REST router and client install spike
 status: executing
-stopped_at: Completed 03-01-PLAN.md
-last_updated: "2026-11-01T04:15:17.952Z"
-last_activity: 2026-10-31
+stopped_at: Completed 03-02-PLAN.md
+last_updated: "2026-11-01T04:22:00.906Z"
+last_activity: 2026-11-01
 last_activity_desc: Phase 02 complete, transitioned to Phase 3
-state_head: 6381146b709d1734ac4dbf8e9b9ed6faccfc24b5
+state_head: ebacc98d6bef2828d3e2dacbbd4bd546620f8a8b
 progress:
   total_phases: 7
   completed_phases: 2
   total_plans: 25
-  completed_plans: 14
+  completed_plans: 15
   percent: 29
 ---
 
@@ -28,8 +28,8 @@ See: .planning/PROJECT.md (updated 2026-10-30)
 ## Current Position
 
 Phase: 03 (REST router and client install spike) — EXECUTING
-Plan: 1 of 12 complete (03-01 done)
-Status: Executing Phase 3
+Plan: 2 of 12 complete (03-01 done)
+Status: Ready to execute
 Last activity: 2026-11-01 — Completed 03-01 (pre_llm_call nudge, own-job harness)
 
 Progress: [███░░░░░░░] 29%
@@ -71,6 +71,7 @@ Progress: [███░░░░░░░] 29%
 | Phase 02 P06 | 60 min | 3 tasks | 0 files |
 | Phase 02 P07 | 10 min | 3 tasks | 1 files |
 | Phase 03 P01 | 9 min | 3 tasks | 14 files |
+| Phase 03 P02 | 4 min | 2 tasks | 12 files |
 
 ## Accumulated Context
 
@@ -109,6 +110,8 @@ Recent decisions affecting current work:
 - [Phase 02]: 02-05: success criterion 5 live half is met (remove, uncheck, unclear, bulk, reword of Theo's text, finish all pass). Ten test boards remain in the real data.db. — The plan allows no data.db write beyond the reword seed.
 - [Phase 02]: A Desktop backend started before a plugin enable keeps the old plugin set until Desktop is reopened; a session created before the plugin loaded keeps its old system prompt, so the prompt section reaches only sessions created after the backend has the plugin (Phase 7 rollout).
 - [Phase 03]: 03-01: nudge line is static text with the single digit 3; the board block escapes < in item lines and caps item lines at 2000 characters
+- [Phase 03]: 03-02: GET /board, GET /boards and POST /board/edit ship in plugin_api.py; every edit outcome is HTTP 200 with ok true or false, transport faults keep 4xx; EditBody forbids extra fields so confirmed returns 422 (D-24)
+- [Phase 03]: 03-02: plugin_api.py loads core under key hermes_session_tasks_core; a new-batch subtask needs parent_ref, not parent_id
 
 ### Pending Todos
 
@@ -140,6 +143,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-11-01T04:15:17.723Z
-Stopped at: Completed 03-01-PLAN.md
+Last session: 2026-11-01T04:22:00.632Z
+Stopped at: Completed 03-02-PLAN.md
 Resume file: None
