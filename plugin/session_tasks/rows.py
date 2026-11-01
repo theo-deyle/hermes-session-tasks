@@ -26,6 +26,15 @@ class BoardRow:
     updated_at: str
 
 
+@dataclass(frozen=True, slots=True)
+class BoardSummary:
+    root_id: str
+    rev: int
+    open: int
+    total: int
+    updated_at: str
+
+
 def read_board(conn: sqlite3.Connection, root_id: str) -> BoardRow | None:
     sql = f"SELECT {BOARD_COLUMNS} FROM {BOARDS} WHERE root_id = ?"
     row = conn.execute(sql, (root_id,)).fetchone()
@@ -175,3 +184,14 @@ def prune_changes(conn: sqlite3.Connection, root_id: str, keep: int) -> None:
         f"(SELECT seq FROM {CHANGES} WHERE root_id = ? ORDER BY seq DESC LIMIT ?)"
     )
     conn.execute(sql, (root_id, root_id, keep))
+
+
+def list_board_summaries(conn: sqlite3.Connection) -> tuple[BoardSummary, ...]:
+    """Return one summary per board, newest first. A board with no items counts total 0."""
+    sql = (
+        "SELECT b.root_id, b.rev, "
+        "COALESCE(SUM(CASE WHEN i.checked = 0 THEN 1 ELSE 0 END), 0), "
+        f"COUNT(i.id), b.updated_at FROM {BOARDS} b LEFT JOIN {ITEMS} i ON i.root_id = b.root_id "
+        "GROUP BY b.root_id ORDER BY b.updated_at DESC, b.root_id ASC"
+    )
+    return tuple(BoardSummary(*row) for row in conn.execute(sql))

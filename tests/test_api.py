@@ -300,7 +300,7 @@ def test_equal_texts_stay_two_items(rig: Rig) -> None:
 
 
 def test_items_come_in_display_order(rig: Rig) -> None:
-    body = rig.edit([add_op("a"), add_op("b"), add_op("c", parent_id=1)]).json()
+    body = rig.edit([add_op("a"), add_op("b"), add_op("c", parent_ref=0)]).json()
 
     items = body["board"]["items"]
     assert [item["id"] for item in items] == [1, 3, 2]

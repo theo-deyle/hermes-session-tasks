@@ -197,6 +197,11 @@ class BoardStore:
         with schema.open_db(self.connect) as conn, read_txn(conn):
             return _read_board(conn, root_id)
 
+    def list_boards(self) -> tuple[rows.BoardSummary, ...]:
+        """List every board root, newest first, with its open and total item counts."""
+        with schema.open_db(self.connect) as conn, read_txn(conn):
+            return rows.list_board_summaries(conn)
+
     def user_touched_ids(self, root_id: str) -> frozenset[int]:
         """Return the ids of items that Theo ever changed, read from the changes journal.
 

@@ -97,7 +97,7 @@ def applied_result(applied: Applied) -> str:
     return json.dumps(result, ensure_ascii=False)
 
 
-def _stale_text(stale: Stale, base_rev: int) -> str:
+def stale_text(stale: Stale, base_rev: int) -> str:
     if stale.reason == "not_found":
         return f"not found: #{stale.item_id} is not on the board (op {stale.op_index})"
     if stale.item_id is None:
@@ -108,7 +108,7 @@ def _stale_text(stale: Stale, base_rev: int) -> str:
 def stale_result(stale: Stale, base_rev: int) -> str:
     """Return a failure that carries the current board, so the agent can retry (D-14)."""
     result: dict[str, object] = {
-        "error": _stale_text(stale, base_rev),
+        "error": stale_text(stale, base_rev),
         "stale": True,
         "reason": stale.reason,
         "op_index": stale.op_index,

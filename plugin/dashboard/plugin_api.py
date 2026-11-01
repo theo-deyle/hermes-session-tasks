@@ -16,11 +16,22 @@ from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, Query
 from fastapi.responses import JSONResponse
+from pydantic import BaseModel, ConfigDict, Field, StrictInt
 
 CORE_KEY = "hermes_session_tasks_core"
 SESSION_ID_MAX = 256
 
 router = APIRouter()
+
+
+class EditBody(BaseModel):
+    """The body of POST /board/edit. An unknown field, such as `confirmed`, is refused (D-24)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    session_id: str = Field(min_length=1, max_length=SESSION_ID_MAX)
+    ops: list[Any]
+    base_rev: StrictInt | None = None
 
 
 def load_core() -> ModuleType:
@@ -63,4 +74,16 @@ def read_board(
     api: ApiDep,
 ) -> JSONResponse:
     reply = api.read(session_id)
+    return JSONResponse(reply.body, status_code=reply.status)
+
+
+@router.get("/boards")
+def list_boards(api: ApiDep) -> JSONResponse:
+    reply = api.list_boards()
+    return JSONResponse(reply.body, status_code=reply.status)
+
+
+@router.post("/board/edit")
+def edit_board(body: EditBody, api: ApiDep) -> JSONResponse:
+    reply = api.edit(body.session_id, body.ops, body.base_rev)
     return JSONResponse(reply.body, status_code=reply.status)
