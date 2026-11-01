@@ -97,6 +97,7 @@ def test_pane_shows_the_board_from_the_real_routes(rig: Rig, tmp_path: Path) -> 
     assert contribution["id"] == "pane"
     assert contribution["area"] == "panes"
     assert contribution["data"]["placement"] == "right"
+    assert contribution["data"]["dock"] == {"pane": "workspace", "pos": "right"}
     assert contribution["data"]["width"] == "320px"
 
 

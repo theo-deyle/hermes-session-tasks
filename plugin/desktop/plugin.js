@@ -187,7 +187,7 @@ export default {
       id: 'pane',
       area: 'panes',
       title: 'Session tasks',
-      data: { placement: 'right', width: '320px' },
+      data: { placement: 'right', dock: { pane: 'workspace', pos: 'right' }, width: '320px' },
       render: () => jsx(Pane, { ctx })
     })
   }
