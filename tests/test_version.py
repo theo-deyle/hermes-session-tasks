@@ -77,7 +77,9 @@ def test_missing_manifest_gives_unknown(
     assert len(warnings) == 1
 
 
-def test_unreadable_manifest_gives_unknown(tmp_path: Path, caplog: pytest.LogCaptureFixture) -> None:
+def test_unreadable_manifest_gives_unknown(
+    tmp_path: Path, caplog: pytest.LogCaptureFixture
+) -> None:
     (tmp_path / "plugin.yaml").mkdir()
 
     with caplog.at_level(logging.WARNING):

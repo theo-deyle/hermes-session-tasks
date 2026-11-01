@@ -87,3 +87,9 @@ def list_boards(api: ApiDep) -> JSONResponse:
 def edit_board(body: EditBody, api: ApiDep) -> JSONResponse:
     reply = api.edit(body.session_id, body.ops, body.base_rev)
     return JSONResponse(reply.body, status_code=reply.status)
+
+
+@router.get("/meta")
+def read_meta() -> JSONResponse:
+    """Version handshake. It uses no `get_api`, so it opens no data file."""
+    return JSONResponse(core_module("version").meta())
