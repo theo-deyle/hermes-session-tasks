@@ -98,4 +98,3 @@ def test_manifest_names_the_api_file_and_hides_the_tab() -> None:
         "api": "plugin_api.py",
         "tab": {"hidden": True},
     }
-
