@@ -409,7 +409,7 @@ def test_readme_names_the_windows_home_and_the_reload() -> None:
 def test_readme_warns_that_closing_the_pane_disables_the_plugin() -> None:
     text = readme_text()
 
-    assert "closing the only pane" in text
+    assert "closing the only pane" in text.lower()
     assert "Reset layout" in text
 
 
