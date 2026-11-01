@@ -93,8 +93,9 @@ Plans:
 ### Phase 3: REST router and client install spike
 **Goal**: The pane's backend routes work. A stub pane installs and runs on the Mac and on the Windows PC. This proves the install path before the real pane exists.
 **Depends on**: Phase 2
-**Requirements**: API-01, API-02, API-03, DEV-03, DEV-05
+**Requirements**: API-01, API-02, API-03, DEV-03, DEV-05, AGNT-01 (own-plan half, routed from Phase 2)
 **Success Criteria** (what must be TRUE):
+  0. A `pre_llm_call` hook injects the live board and one nudge line ("your steps go on the board") into every turn, pulled forward from Phase 5. The own-job headless run passes in at least 3 of 3: the agent writes its steps to the board and checks them off. Routed from Phase 2 on 2026-10-31 (D-21): rule text alone gave 0 of 3.
   1. A stub pane copied by script shows in Desktop on the Mac and on the Windows PC. The README gives the install steps for each machine.
   2. The stub reads a board through `ctx.rest` from the routes under `/api/plugins/hermes-session-tasks/`. A write through a route returns the new revision. A stale write returns the current board.
   3. A write from an agent tool and a write from a route both broadcast `board.updated` with the session id and revision. The stub on each machine shows whether the event arrived.

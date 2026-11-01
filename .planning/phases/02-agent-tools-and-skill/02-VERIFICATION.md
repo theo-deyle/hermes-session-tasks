@@ -1,7 +1,7 @@
 ---
 phase: 02-agent-tools-and-skill
 verified: 2026-10-31T23:59:00Z
-status: gaps_found
+status: passed
 score: 8/10 must-haves verified
 covered_files:
   - ".planning/phases/02-agent-tools-and-skill/02-01-PLAN.md"
@@ -51,7 +51,7 @@ covered_files:
   - "tests/test_tool_text.py"
 covered_digest: "v4:sha256:e06d0778b633d4515641ff0dd0e2489f89788b4186a983dd7b3479d878cb9e74"
 behavior_unverified: 1
-overrides_applied: 0
+overrides_applied: 1
 gaps:
   - truth: "The agent keeps its own plan in todo_list (ROADMAP success criterion 4, sentence 2; phase goal sentence 2)"
     status: failed
@@ -63,6 +63,11 @@ gaps:
       - "A stronger own-job probe: the 02-05 prompt (four counting steps) was solved with one shell call, so it never needed a plan. Re-measure with a job that needs a real multi-step plan, at least 3 runs."
       - "Or a recorded override from Theo that accepts the boundary (zero board writes on an own job) as the intent, because the plugin cannot make the model call todo_list."
 deferred: []
+overrides:
+  - must_have: "The agent keeps its own plan in todo_list (now, per D-21: the agent writes its own multi-step plan to the board)"
+    reason: "Re-measured on 2026-10-31 after the D-21 text change: 3 headless six-step runs, the prompt section loaded (960 characters) in each, 0 board_edit calls and 0 todo_list calls. The model does not search for a deferred tool on its own job. Rule text alone cannot change that. Theo decided to close phase 2 and route the fix to Phase 3: a pre_llm_call hook injects the live board and one nudge line into every turn, and the own-job runs are measured again there."
+    accepted_by: "Theo Deyle"
+    accepted_at: "2026-10-31T22:45:00-04:00"
 behavior_unverified_items:
   - truth: "Under the amended D-17 and D-18, the agent asks on its own initiative, and acts at once when Theo's message names an uncheck, a reword or a bulk change"
     test: "In a fresh Desktop or headless session with items on the board, (a) send a message that names an uncheck, then a reword, then a bulk change, and (b) send a task whose natural step is to drop an item and see whether the agent asks first."
@@ -210,6 +215,10 @@ Open for Theo, not a gap: the 02-05 cost question on `tools.tool_search.enabled`
 Process notes with no status effect: 02-VALIDATION.md is `nyquist_compliant: false` with 2 escalated items, which agrees with this report. 02-SECURITY.md reports `threats_open: 0`. The 10 test boards from the live runs stay in the real `data.db` (02-05 decision). Review items IN-01 to IN-04 stay open as Info.
 
 ---
+
+## Override and routing (2026-10-31)
+
+Theo closed the phase with one override on the own-plan truth. The gap moves to Phase 3 as a `pre_llm_call` hook that injects the live board and a nudge line each turn, with the own-job re-measure (3 runs, pass when the agent writes its steps to the board and checks them off). The second re-measure under D-21 (3 runs, 0 board_edit calls) is in the session scratchpad `live-gap-ownjob2`.
 
 _Verified: 2026-10-31_
 _Verifier: Claude (gsd-verifier)_
