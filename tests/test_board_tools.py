@@ -424,20 +424,26 @@ DELEGATE_SPECS = {
 }
 
 
-def recording_tools(store: BoardStore, resolver_for: ResolverFor, calls: list[str]) -> BoardTools:
+def recording_tools(
+    store: BoardStore, resolver_for: ResolverFor, calls: list[tuple[str, str, int]]
+) -> BoardTools:
     resolver, _ = resolver_for(DELEGATE_SPECS)
-    return BoardTools(store, resolver, after_write=calls.append)
+
+    def record(root_id: str, session_id: str, rev: int) -> None:
+        calls.append((root_id, session_id, rev))
+
+    return BoardTools(store, resolver, after_write=record)
 
 
 def test_after_write_runs_once_with_the_root_after_a_change(
     store: BoardStore, resolver_for: ResolverFor
 ) -> None:
-    calls: list[str] = []
+    calls: list[tuple[str, str, int]] = []
     tools = recording_tools(store, resolver_for, calls)
 
     edit(tools, {"ops": [add_op("a")]})
 
-    assert calls == ["s1"]
+    assert calls == [("s1", "s1", 1)]
 
 
 @pytest.mark.parametrize(
@@ -455,7 +461,7 @@ def test_after_write_runs_once_with_the_root_after_a_change(
 def test_after_write_stays_silent_when_nothing_changed(
     store: BoardStore, resolver_for: ResolverFor, args: dict[str, object], session_id: str | None
 ) -> None:
-    calls: list[str] = []
+    calls: list[tuple[str, str, int]] = []
     tools = recording_tools(store, resolver_for, calls)
     store.apply("s1", [AddItem("a")], actor="agent", base_rev=0)
     store.apply("s1", [SetText(1, "b")], actor="user", base_rev=1)
@@ -468,7 +474,7 @@ def test_after_write_stays_silent_when_nothing_changed(
 def test_a_failing_after_write_still_returns_the_applied_result(
     store: BoardStore, resolver_for: ResolverFor, caplog: pytest.LogCaptureFixture
 ) -> None:
-    def boom(root_id: str) -> None:
+    def boom(root_id: str, session_id: str, rev: int) -> None:
         raise RuntimeError("listener down")
 
     resolver, _ = resolver_for({})

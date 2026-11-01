@@ -39,6 +39,21 @@ def registered(connect: ConnFactory) -> FakeCtx:
     return ctx
 
 
+def test_register_wires_the_agent_publisher(connect: ConnFactory) -> None:
+    calls: list[tuple[str, str, int, str]] = []
+
+    def publish(root_id: str, session_id: str, rev: int, actor: str) -> None:
+        calls.append((root_id, session_id, rev, actor))
+
+    ctx = FakeCtx()
+    register(ctx, connect=connect, open_reader=FakeReaderFactory({}), publish=publish)
+
+    out = ctx.tools["board_edit"]["handler"]({"ops": [{"op": "add", "text": "a"}]}, session_id="s1")
+
+    assert json.loads(out)["ok"] is True
+    assert calls == [("s1", "s1", 1, "agent")]
+
+
 def test_register_wires_board_read_end_to_end(connect: ConnFactory, store: BoardStore) -> None:
     ctx = registered(connect)
     store.apply("s1", [AddItem("Call John")], actor="agent", base_rev=0)

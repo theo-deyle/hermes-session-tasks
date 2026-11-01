@@ -2,15 +2,18 @@
 
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
 
-from . import edit_args, paths, session_reader
+from . import edit_args, events, paths, session_reader
 from .board_json import board_dict
 from .db import ConnFactory
 from .lineage import ReaderFactory, Resolution, SessionResolver
 from .model import Applied, BoardError, InvalidSession, Stale
 from .results import DELEGATE_EDIT, NO_SESSION, describe, stale_text, summary_line
 from .store import BoardStore
+
+log = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True, slots=True)
@@ -61,10 +64,15 @@ def _applied_reply(applied: Applied, root_id: str) -> ApiReply:
     return ApiReply(200, body)
 
 
+def _no_listener(root_id: str, session_id: str, rev: int) -> None:
+    return None
+
+
 @dataclass(frozen=True)
 class BoardApi:
     store: BoardStore
     resolver: SessionResolver
+    after_write: events.WriteListener = _no_listener
 
     def _resolve(self, session_id: str) -> Resolution | None:
         """Return the resolution, or None when the session id is blank or invalid."""
@@ -121,12 +129,23 @@ class BoardApi:
             return _invalid(exc.op_index, str(exc), describe(exc))
         if isinstance(result, Stale):
             return _stale_reply(result, base, root_id)
+        if result.changed_ids:
+            # The write is committed already. A listener fault must not turn it into an error.
+            try:
+                self.after_write(root_id, session_id, result.rev)
+            except Exception:
+                log.warning("board after_write listener failed", exc_info=True)
         return _applied_reply(result, root_id)
 
 
 def build(
     connect: ConnFactory = paths.connect,
     open_reader: ReaderFactory = session_reader.open_session_reader,
+    publish: events.Publisher = events.publish,
 ) -> BoardApi:
     """Build the api over the production adapters. The router calls this on every request."""
-    return BoardApi(BoardStore(connect), SessionResolver(connect, open_reader))
+    return BoardApi(
+        BoardStore(connect),
+        SessionResolver(connect, open_reader),
+        after_write=events.listener("user", publish),
+    )

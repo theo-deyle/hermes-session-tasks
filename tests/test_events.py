@@ -39,6 +39,7 @@ plugin_dir, checkout_dir = sys.argv[1:3]
 sys.path.insert(0, checkout_dir)
 sys.path.insert(0, plugin_dir)
 from hermes_cli.plugin_events import plugin_event_name
+from session_tasks import events
 
 print(plugin_event_name(events.PLUGIN_ID, events.EVENT))
 events.publish("a", "a", 1, "user")

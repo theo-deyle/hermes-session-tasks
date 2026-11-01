@@ -3,10 +3,11 @@
 from __future__ import annotations
 
 import logging
-from collections.abc import Callable, Mapping
+from collections.abc import Mapping
 from dataclasses import dataclass
 
 from . import edit_args
+from .events import WriteListener
 from .lineage import SessionResolver
 from .model import BoardError, InvalidSession, Stale
 from .results import (
@@ -23,7 +24,7 @@ from .store import BoardStore
 log = logging.getLogger(__name__)
 
 
-def _no_listener(root_id: str) -> None:
+def _no_listener(root_id: str, session_id: str, rev: int) -> None:
     return None
 
 
@@ -31,7 +32,7 @@ def _no_listener(root_id: str) -> None:
 class BoardTools:
     store: BoardStore
     resolver: SessionResolver
-    after_write: Callable[[str], None] = _no_listener
+    after_write: WriteListener = _no_listener
 
     def board_read(
         self, args: Mapping[str, object], session_id: str | None = None, **kwargs: object
@@ -77,7 +78,7 @@ class BoardTools:
             # The write is committed already. A listener fault must not turn it into an
             # error result, or the agent would repeat the adds.
             try:
-                self.after_write(resolution.root_id)
+                self.after_write(resolution.root_id, session_id, result.rev)
             except Exception:
                 log.warning("board after_write listener failed", exc_info=True)
         return applied_result(result)

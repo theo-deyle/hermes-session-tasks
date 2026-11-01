@@ -6,7 +6,7 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any, Protocol
 
-from . import hooks, paths, session_reader, tool_text
+from . import events, hooks, paths, session_reader, tool_text
 from .board_tools import BoardTools
 from .db import ConnFactory
 from .lineage import ReaderFactory, SessionResolver
@@ -45,11 +45,12 @@ def register(
     *,
     connect: ConnFactory = paths.connect,
     open_reader: ReaderFactory = session_reader.open_session_reader,
+    publish: events.Publisher = events.publish,
 ) -> None:
     """Register tools, hooks, prompt section and skill. Hermes calls this once."""
     store = BoardStore(connect)
     resolver = SessionResolver(connect, open_reader)
-    tools = BoardTools(store, resolver)
+    tools = BoardTools(store, resolver, after_write=events.listener("agent", publish))
     ctx.register_tool(
         name=tool_text.BOARD_READ,
         toolset=tool_text.TOOLSET,
