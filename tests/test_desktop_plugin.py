@@ -240,7 +240,7 @@ def test_banner_on_backend_mismatch(
 def test_meta_failure_shows_backend_not_reached(rig: Rig, tmp_path: Path) -> None:
     result = rig.run(tmp_path, restOverrides={"/meta": "__error__"})
 
-    assert "backend not reached" in result["lines"]
+    assert "backend not reached: 500: forced failure" in result["lines"]
     assert MISMATCH_LINE not in result["lines"]
 
 

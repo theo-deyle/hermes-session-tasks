@@ -14,7 +14,7 @@ const API_VERSION = 1
 const POLL_MS = 6000
 const EVENT_TYPE = 'plugin.hermes-session-tasks.board.updated'
 const TEST_ITEM_TEXT = 'test item added by the pane'
-const META_FAILED = { ok: false }
+const metaFailed = error => ({ ok: false, message: String(error && error.message ? error.message : error) })
 const MISMATCH_LINE = 'Version mismatch: update the desktop plugin on this machine'
 const WRITE_NOT_RUN = 'write test: not run'
 const LINE_CLASS = 'whitespace-pre-wrap break-words text-(--ui-text-secondary)'
@@ -54,7 +54,7 @@ function staleSummary(reply) {
 
 function backendLine(meta) {
   if (meta === null) return 'backend checking'
-  if (meta.ok !== true) return 'backend not reached'
+  if (meta.ok !== true) return `backend not reached: ${meta.message || 'no detail'}`
   return `backend ${meta.backend_version}, api ${meta.api_version}`
 }
 
@@ -99,7 +99,7 @@ function Pane({ ctx }) {
     ctx
       .rest('/meta')
       .then(body => live && setMeta(body))
-      .catch(() => live && setMeta(META_FAILED))
+      .catch(error => live && setMeta(metaFailed(error)))
     return () => {
       live = false
     }
