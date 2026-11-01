@@ -20,8 +20,8 @@ Requirements for the first release. Each maps to a roadmap phase.
 
 ### Agent tools
 
-- [ ] **TOOL-01**: The agent can read the current session's board as markdown with item ids and the revision.
-- [ ] **TOOL-02**: The agent can add, rename, check, uncheck and remove items in one call with a list of item-level operations. No replace-all write.
+- [x] **TOOL-01**: The agent can read the current session's board as markdown with item ids and the revision.
+- [x] **TOOL-02**: The agent can add, rename, check, uncheck and remove items in one call with a list of item-level operations. No replace-all write.
 - [ ] **TOOL-03**: The agent can list the sessions that have a board, with open and total counts and last update.
 - [ ] **TOOL-04**: The agent can read another session's board by session id.
 - [ ] **TOOL-05**: The agent can copy chosen items, or all open items, from another session's board into the current board.
@@ -31,9 +31,9 @@ Requirements for the first release. Each maps to a roadmap phase.
 
 ### Agent behaviour
 
-- [ ] **AGNT-01**: A bundled skill tells the agent to add an item when it lists something Theo must do, decide or remember, and to keep its own plan in `todo_list`.
-- [ ] **AGNT-02**: The tool descriptions carry the trigger and the `todo_list` boundary, so the agent uses the board without loading the skill.
-- [ ] **AGNT-03**: The agent asks Theo one plain question before it removes, unchecks or rewords an item Theo wrote on its own initiative, or when it is unsure which item Theo means. An explicit instruction from Theo in his own message is the permission: the agent then acts at once with `confirmed: true` and asks nothing.
+- [x] **AGNT-01**: A bundled skill tells the agent to add an item when it lists something Theo must do, decide or remember, and to keep its own plan in `todo_list`.
+- [x] **AGNT-02**: The tool descriptions carry the trigger and the `todo_list` boundary, so the agent uses the board without loading the skill.
+- [x] **AGNT-03**: The agent asks Theo one plain question before it removes, unchecks or rewords an item Theo wrote on its own initiative, or when it is unsure which item Theo means. An explicit instruction from Theo in his own message is the permission: the agent then acts at once with `confirmed: true` and asks nothing.
 - [x] **AGNT-04**: When the agent's work finishes an item, the agent checks it and says so in one line.
 - [ ] **AGNT-05**: The agent sees Theo's own edits on its next turn through a `pre_llm_call` hook that injects only the changes since the agent last saw the board, and injects nothing when nothing changed.
 
@@ -115,17 +115,17 @@ Each v1 requirement maps to exactly one phase.
 | STOR-06 | Phase 1 | Complete |
 | STOR-07 | Phase 5 | Pending |
 | STOR-08 | Phase 1 | Complete |
-| TOOL-01 | Phase 2 | Pending |
-| TOOL-02 | Phase 2 | Pending |
+| TOOL-01 | Phase 2 | Complete |
+| TOOL-02 | Phase 2 | Complete |
 | TOOL-03 | Phase 6 | Pending |
 | TOOL-04 | Phase 6 | Pending |
 | TOOL-05 | Phase 6 | Pending |
 | TOOL-06 | Phase 2 | Complete |
 | TOOL-07 | Phase 2 | Complete |
 | TOOL-08 | Phase 2 | Complete |
-| AGNT-01 | Phase 2 | Pending |
-| AGNT-02 | Phase 2 | Pending |
-| AGNT-03 | Phase 2 | Pending |
+| AGNT-01 | Phase 2 | Complete |
+| AGNT-02 | Phase 2 | Complete |
+| AGNT-03 | Phase 2 | Complete |
 | AGNT-04 | Phase 2 | Complete |
 | AGNT-05 | Phase 5 | Pending |
 | API-01 | Phase 3 | Pending |
