@@ -54,7 +54,7 @@ Not used: `Badge`, `Skeleton`, `ErrorState`, `Select`, `Dialog`, `cn`. A load st
 
 ## Spacing Scale
 
-All values are multiples of 4px. The pane styles layout with inline `style` objects that carry these values. It uses no Tailwind class (see Color).
+All values are multiples of 4px. The pane styles layout with the Tailwind utility classes the Desktop ships (`flex`, `gap-2`, `p-3`, `pl-6`, `min-h-8`), the same way the SDK doc example and hermes-memory-ui do. Inline `style` is for the two values no shipped class carries (the 320px width lives in the registration data).
 
 | Token | Value | Usage |
 |-------|-------|-------|
@@ -83,7 +83,7 @@ Row layout, left to right:
 
 ## Typography
 
-The pane sets two sizes. Both equal the Desktop defaults for the components used. The pane sets them through inline `style` (`fontSize`, `fontWeight`, `lineHeight`) because no Tailwind class is allowed.
+The pane sets two sizes. Both equal the Desktop defaults for the components used. The pane sets them with the shipped classes `text-xs`, `text-sm` and `font-medium`.
 
 | Role | Size | Weight | Line Height |
 |------|------|--------|-------------|
@@ -99,7 +99,7 @@ The pane sets two sizes. Both equal the Desktop defaults for the components used
 
 ## Color
 
-PANE-13 applies. Colour comes only from Hermes theme variables, set through inline `style`. No hex, no `rgb()`, no named colour, no Tailwind class, no custom palette, no `color-mix`.
+PANE-13 applies. Colour comes only from Hermes theme variables, either as `text-(--ui-text-secondary)` in a class or as `var(--ui-text-secondary)` in `style`. No hex, no `rgb()`, no named colour, no Tailwind colour class (`text-red-500`, `bg-zinc-800`), no custom palette, no `color-mix`.
 
 Theme variables the pane uses (and nothing else):
 
@@ -123,7 +123,7 @@ Rules:
 1. Open item text inherits the Desktop foreground colour. The pane sets no colour on it.
 2. A checked item is muted by two cues together: line-through and `var(--ui-text-secondary)`. Do not move it and do not hide it (D-33).
 3. The SDK components read other theme variables inside themselves (for example the ghost button hover fill). Those are not pane code and need no listing.
-4. The Phase 3 test `test_plugin_has_no_colour_literal` stays and keeps passing. Add a check that the source holds no Tailwind colour class and no `className` string at all.
+4. The Phase 3 test `test_plugin_has_no_colour_literal` stays and keeps passing. Add a check that no class name carries a Tailwind palette colour (regex over `className` strings for `-(red|green|blue|zinc|gray|neutral|slate|amber|emerald|rose|sky|white|black)`).
 
 ---
 
@@ -212,7 +212,7 @@ The rules below restate D-30 to D-34 and add only the detail the executor needs.
 
 ### Hover and focus reveal
 
-1. Hover state lives in React state (`onMouseEnter`, `onMouseLeave`). Keyboard focus inside a row (`onFocus`, `onBlur` on the row) reveals the same buttons. No CSS hover class is used.
+1. Hover reveal uses the shipped `group` and `group-hover:opacity-100` classes on the row, with `opacity-0` on the buttons. Keyboard focus inside a row uses `focus-within:opacity-100` the same way. No React hover state.
 2. Hidden buttons use `visibility: 'hidden'`, so they keep their space and leave the tab order. Visible buttons are tabbable.
 
 ### Live update and poll (PANE-08, PANE-01)
@@ -280,7 +280,7 @@ These values were not fixed by CONTEXT.md or REQUIREMENTS.md. The spec took the 
 
 1. Two type sizes (12px and 14px) and two weights (400 and 500), taken from the SDK control and text defaults.
 2. Done text colour is `var(--ui-text-secondary)`. D-33 asks only for "a muted colour".
-3. No Tailwind class anywhere. The Phase 3 pane used Tailwind layout classes and the `text-(--ui-text-secondary)` form. This spec replaces them with inline `style`, so the PANE-13 colour rule is literal and no layout depends on a class that Desktop may not compile for a disk plugin.
+3. Tailwind utility classes the Desktop ships are allowed for layout, size and the `text-(--ui-*)` colour form, as the SDK doc example (`desktop-plugin-sdk.md:100-129`) and hermes-memory-ui use them. The Phase 3 test pane rendered with them on the Mac, so they are compiled into Desktop. A class the Desktop does not ship does nothing; the executor checks a new class in the running pane before relying on it that Desktop may not compile for a disk plugin.
 4. Subtask count `{done}/{total}` on a parent row. REQUIREMENTS.md "Out of Scope" says to show a count instead of auto-checking a parent.
 5. Blur on the add line keeps the text and does not save. D-30 names only Enter and Escape.
 6. A no-chat state with the copy `Open a chat to see its items.`, shown through the same `EmptyState`.
