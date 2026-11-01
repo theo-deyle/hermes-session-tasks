@@ -112,6 +112,8 @@ class Applied:
     board: Board
     rev: int
     changed_ids: tuple[int, ...]
+    # One (op, item id) pair per journal row of this batch. A cascade remove adds one per subtask.
+    entries: tuple[tuple[ChangeOp, int], ...] = ()
 
 
 @dataclass(frozen=True, slots=True)

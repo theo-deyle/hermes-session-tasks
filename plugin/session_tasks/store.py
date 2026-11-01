@@ -60,12 +60,14 @@ class _Batch:
     pre: Board
     next_id: int
     changed: list[int] = field(default_factory=list)
+    entries: list[tuple[ChangeOp, int]] = field(default_factory=list)
     added: dict[int, int] = field(default_factory=dict)
 
     def journal(self, op: ChangeOp, item_id: int, text: str) -> None:
         change = Change(self.new_rev, self.actor, op, item_id, text, self.now)
         rows.insert_change(self.conn, self.root_id, change)
         self.changed.append(item_id)
+        self.entries.append((op, item_id))
 
 
 def _read_board(conn: sqlite3.Connection, root_id: str) -> Board:
@@ -248,4 +250,4 @@ class BoardStore:
         rows.save_board(conn, root_id, batch.new_rev, batch.next_id, now)
         rows.prune_changes(conn, root_id, JOURNAL_KEEP)
         changed_ids = tuple(dict.fromkeys(batch.changed))
-        return Applied(_read_board(conn, root_id), batch.new_rev, changed_ids)
+        return Applied(_read_board(conn, root_id), batch.new_rev, changed_ids, tuple(batch.entries))

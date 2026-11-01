@@ -6,15 +6,10 @@ import json
 
 import pytest
 from session_tasks.model import (
-    AddItem,
     Applied,
     Board,
     BoardError,
     Item,
-    Op,
-    RemoveItem,
-    SetChecked,
-    SetText,
     Stale,
 )
 from session_tasks.results import (
@@ -58,16 +53,16 @@ def item(
 
 
 def test_summary_line_counts_each_kind_in_fixed_order() -> None:
-    ops: list[Op] = [
-        RemoveItem(9),
-        SetChecked(2, False),
-        SetChecked(3, True),
-        SetText(1, "x"),
-        AddItem("a"),
-        AddItem("b"),
+    entries = [
+        ("remove", 9),
+        ("uncheck", 2),
+        ("check", 3),
+        ("text", 1),
+        ("add", 10),
+        ("add", 11),
     ]
 
-    line = summary_line(7, ops, (1, 2, 3, 9, 10, 11))
+    line = summary_line(7, entries)
 
     assert (
         line
@@ -76,13 +71,19 @@ def test_summary_line_counts_each_kind_in_fixed_order() -> None:
 
 
 def test_summary_line_with_no_changed_ids_says_no_change() -> None:
-    assert summary_line(4, [SetChecked(1, True)], ()) == "rev 4: no change"
+    assert summary_line(4, ()) == "rev 4: no change"
+
+
+def test_summary_line_counts_an_item_once_per_kind() -> None:
+    entries = [("check", 1), ("text", 1), ("text", 1), ("remove", 2), ("remove", 3)]
+
+    assert summary_line(5, entries) == "rev 5: renamed 1 item, checked 1 item, removed 2 items"
 
 
 def test_applied_result_is_a_str_without_error_or_board() -> None:
     board = Board("s1", 1, 2, (item(1, "Call John"),))
 
-    out = applied_result(Applied(board, 1, (1,)), [AddItem("Call John")])
+    out = applied_result(Applied(board, 1, (1,), (("add", 1),)))
 
     assert isinstance(out, str)
     data = json.loads(out)
@@ -94,7 +95,7 @@ def test_applied_result_is_a_str_without_error_or_board() -> None:
 def test_applied_result_escapes_text_that_looks_like_an_id() -> None:
     board = Board("s1", 1, 2, (item(1, "#5 sneaky"),))
 
-    data = json.loads(applied_result(Applied(board, 1, (1,)), [AddItem("#5 sneaky")]))
+    data = json.loads(applied_result(Applied(board, 1, (1,), (("add", 1),))))
 
     assert data["changed"] == ["- [ ] #1 \\#5 sneaky"]
 

@@ -108,6 +108,7 @@ def test_removing_a_parent_removes_its_subtasks_and_journals_each_one(
         removals = [c for c in rows.read_changes(conn, ROOT) if c.op == "remove"]
     assert result.board.items == ()
     assert result.changed_ids == (1, 2, 3)
+    assert result.entries == (("remove", 1), ("remove", 2), ("remove", 3))
     assert [(c.item_id, c.text, c.rev) for c in removals] == [
         (1, "parent", 2),
         (2, "one", 2),

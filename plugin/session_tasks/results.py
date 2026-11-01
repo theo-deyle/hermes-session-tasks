@@ -3,20 +3,14 @@
 from __future__ import annotations
 
 import json
-from collections import Counter
 from collections.abc import Sequence
 from dataclasses import replace
 
 from .markdown import render
 from .model import (
-    AddItem,
     Applied,
     Board,
     BoardError,
-    Op,
-    RemoveItem,
-    SetChecked,
-    SetText,
     Stale,
 )
 
@@ -55,32 +49,33 @@ def error_result(message: str) -> str:
 
 
 _KIND_ORDER = ("added", "renamed", "checked", "unchecked", "removed")
-
-
-def _kind(op: Op) -> str:
-    match op:
-        case AddItem():
-            return "added"
-        case SetText():
-            return "renamed"
-        case SetChecked(checked=True):
-            return "checked"
-        case SetChecked():
-            return "unchecked"
-        case RemoveItem():
-            return "removed"
+_KIND_OF: dict[str, str] = {
+    "add": "added",
+    "text": "renamed",
+    "check": "checked",
+    "uncheck": "unchecked",
+    "remove": "removed",
+}
 
 
 def _count_text(verb: str, count: int) -> str:
     return f"{verb} {count} item" if count == 1 else f"{verb} {count} items"
 
 
-def summary_line(rev: int, ops: Sequence[Op], changed_ids: Sequence[int]) -> str:
-    """Return one line such as `rev 7: added 3 items`. Counts follow the submitted ops."""
-    if not changed_ids:
+def summary_line(rev: int, entries: Sequence[tuple[str, int]]) -> str:
+    """Return one line such as `rev 7: added 3 items`. Counts follow the journaled changes.
+
+    An item counts once for each kind of change. A no-op op adds nothing, and a cascade
+    remove counts every removed item.
+    """
+    items_by_kind: dict[str, set[int]] = {verb: set() for verb in _KIND_ORDER}
+    for op, item_id in entries:
+        verb = _KIND_OF.get(op)
+        if verb is not None:
+            items_by_kind[verb].add(item_id)
+    parts = [_count_text(verb, len(ids)) for verb, ids in items_by_kind.items() if ids]
+    if not parts:
         return f"rev {rev}: no change"
-    counts = Counter(_kind(op) for op in ops)
-    parts = [_count_text(verb, counts[verb]) for verb in _KIND_ORDER if counts[verb]]
     return f"rev {rev}: " + ", ".join(parts)
 
 
@@ -91,12 +86,12 @@ def _changed_line(board: Board, item_id: int) -> str:
     return render(replace(board, items=(item,)), include_ids=True).rstrip("\n")
 
 
-def applied_result(applied: Applied, ops: Sequence[Op]) -> str:
+def applied_result(applied: Applied) -> str:
     """Return the new rev, a one-line summary and one agent-view line per changed item (D-13)."""
     result: dict[str, object] = {
         "ok": True,
         "rev": applied.rev,
-        "summary": summary_line(applied.rev, ops, applied.changed_ids),
+        "summary": summary_line(applied.rev, applied.entries),
         "changed": [_changed_line(applied.board, item_id) for item_id in applied.changed_ids],
     }
     return json.dumps(result, ensure_ascii=False)

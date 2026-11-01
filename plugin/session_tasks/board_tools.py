@@ -80,4 +80,4 @@ class BoardTools:
                 self.after_write(resolution.root_id)
             except Exception:
                 log.warning("board after_write listener failed", exc_info=True)
-        return applied_result(result, parsed.ops)
+        return applied_result(result)
