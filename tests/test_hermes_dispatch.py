@@ -94,3 +94,13 @@ def test_hermes_dispatches_board_edit_guard_hooks_prompt_and_skill(hermes_home: 
         "board_read": first_sentence(tool_text.BOARD_READ_DESCRIPTION),
         "board_edit": first_sentence(tool_text.BOARD_EDIT_DESCRIPTION),
     }
+
+
+def test_hermes_dispatch_of_a_write_broadcasts_board_updated(hermes_home: Path) -> None:
+    out = run_snippet(hermes_home)
+
+    name = "plugin.hermes-session-tasks.board.updated"
+    assert out["broadcasts"] == [
+        [name, {"session_id": "s1", "root_id": "s1", "rev": 2, "actor": "agent"}],
+        [name, {"session_id": "s1", "root_id": "s1", "rev": 3, "actor": "agent"}],
+    ]

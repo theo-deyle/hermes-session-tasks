@@ -12,6 +12,7 @@ import json
 import os
 import sys
 from pathlib import Path
+from types import ModuleType
 
 sys.dont_write_bytecode = True
 PLUGIN_DIR, CHECKOUT_DIR = sys.argv[1:3]
@@ -31,6 +32,21 @@ def link_and_enable(home: Path) -> None:
 link_and_enable(Path(os.environ["HERMES_HOME"]))
 sys.path.insert(0, CHECKOUT_DIR)
 sys.path.insert(0, PLUGIN_DIR)
+
+# A board write publishes `board.updated`. Hermes sends it through `tui_gateway.server`, and
+# importing that module in this bare process pulls in the whole gateway stack. A recording
+# stand-in keeps the real `broadcast_plugin_event` and its name check in the path.
+BROADCASTS: list[list[object]] = []
+
+
+def record_broadcast(name: str, payload: dict[str, object]) -> None:
+    BROADCASTS.append([name, payload])
+
+
+_gateway_server = ModuleType("tui_gateway.server")
+_gateway_server._broadcast_global_event = record_broadcast  # type: ignore[attr-defined]
+sys.modules["tui_gateway"] = ModuleType("tui_gateway")
+sys.modules["tui_gateway.server"] = _gateway_server
 
 import hermes_cli.plugins as hermes_plugins  # noqa: E402  # pyright: ignore[reportMissingImports]
 from hermes_cli.plugins_dispatch import (  # noqa: E402  # pyright: ignore[reportMissingImports]
@@ -114,6 +130,7 @@ def main() -> None:
     result["section_rendered"] = format_system_prompt_sections(sections)
     result["skills"] = sorted(hermes_plugins.get_plugin_manager()._plugin_skills)
     result["catalog_lines"] = catalog_lines()
+    result["broadcasts"] = BROADCASTS
     print(json.dumps(result))
 
 
