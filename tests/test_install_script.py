@@ -230,7 +230,7 @@ def test_relative_hermes_home_is_refused(rig: Rig) -> None:
     assert not rig.log.exists()
 
 
-@pytest.mark.parametrize("host", ["-oProxyCommand=touch x", "dev pc", "devpc;rm", ""])
+@pytest.mark.parametrize("host", ["-oProxyCommand=touch x", "dev pc", "devpc;rm"])
 def test_bad_host_is_refused(rig: Rig, host: str) -> None:
     home = rig.root / "home"
 
@@ -240,6 +240,20 @@ def test_bad_host_is_refused(rig: Rig, host: str) -> None:
     assert "refusing" in result.stderr
     assert not rig.log.exists()
     assert not home.exists()
+
+
+def test_empty_host_name_is_refused(rig: Rig) -> None:
+    command = f". '{SCRIPT}'; Test-DevpcHost -Name ''"
+    result = subprocess.run(
+        ["pwsh", "-NoProfile", "-NonInteractive", "-Command", command],
+        env=script_env(rig),
+        capture_output=True,
+        text=True,
+        timeout=TIMEOUT_SECONDS,
+        check=False,
+    )
+
+    assert result.stdout.strip() == "False", result.stdout + result.stderr
 
 
 @pytest.mark.parametrize("host", ["theo@devpc", "devpc.tail1234.ts.net"])

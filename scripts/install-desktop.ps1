@@ -47,8 +47,76 @@ function Write-Problem {
   [Console]::Error.WriteLine("error: $Message")
 }
 
+function Get-HomeRoot {
+  # Desktop maps a home inside a "profiles" folder to the parent of that folder.
+  param([string]$Path)
+  $full = [System.IO.Path]::GetFullPath($Path)
+  $trimmed = $full.TrimEnd([char]'/', [char]'\')
+  if ($trimmed -eq '') { return $full }
+  $parent = [System.IO.Path]::GetDirectoryName($trimmed)
+  if ($parent -and ([System.IO.Path]::GetFileName($parent) -ieq 'profiles')) {
+    return [System.IO.Path]::GetDirectoryName($parent)
+  }
+  return $trimmed
+}
+
+function Resolve-HermesHome {
+  # The home rule of Desktop (apps/desktop/electron/data-paths.mjs). Every input is a parameter,
+  # so a test can reach the Windows branch on Linux.
+  param(
+    [string]$EnvHome = '',
+    [bool]$OnWindows = $false,
+    [string]$RegistryHome = '',
+    [string]$LocalAppData = '',
+    [string]$UserHome = '',
+    [string]$Suffix = '',
+    [bool]$DefaultExists = $false,
+    [bool]$LegacyExists = $false
+  )
+  if ($EnvHome) { return Get-HomeRoot $EnvHome }
+  if ($OnWindows) {
+    if ($RegistryHome) { return Get-HomeRoot $RegistryHome }
+    $default = (Join-Path $LocalAppData 'hermes') + $Suffix
+    # The legacy home applies to an ordinary install only: no suffix, no default folder yet.
+    if ((-not $Suffix) -and (-not $DefaultExists) -and $LegacyExists) {
+      return Join-Path $UserHome '.hermes'
+    }
+    return $default
+  }
+  return (Join-Path $UserHome '.hermes') + $Suffix
+}
+
 function Get-DesktopHome {
-  return $HermesHome
+  if ($HermesHome) {
+    if (-not [System.IO.Path]::IsPathRooted($HermesHome)) {
+      Write-Problem "HermesHome must be a full path, not '$HermesHome'"
+      return $null
+    }
+    return $HermesHome
+  }
+  $envHome = [Environment]::GetEnvironmentVariable('HERMES_HOME')
+  $onWindows = [bool]$IsWindows
+  $registryHome = ''
+  if ($onWindows -and ($null -eq $envHome)) {
+    # Explorer can miss a setx change, so Desktop reads the user registry value too.
+    $registryHome = [string](Get-ItemPropertyValue -Path 'HKCU:\Environment' -Name 'HERMES_HOME' -ErrorAction SilentlyContinue)
+  }
+  $localAppData = "$env:LOCALAPPDATA".Trim()
+  if (-not $localAppData) { $localAppData = Join-Path $HOME 'AppData\Local' }
+  $suffix = "$env:HERMES_DATA_DIR_SUFFIX"
+  $defaultHome = (Join-Path $localAppData 'hermes') + $suffix
+  return Resolve-HermesHome `
+    -EnvHome "$envHome" -OnWindows $onWindows -RegistryHome $registryHome `
+    -LocalAppData $localAppData -UserHome $HOME -Suffix $suffix `
+    -DefaultExists (Test-Path -LiteralPath $defaultHome) `
+    -LegacyExists (Test-Path -LiteralPath (Join-Path $HOME '.hermes'))
+}
+
+function Test-DevpcHost {
+  param([string]$Name)
+  if ([string]::IsNullOrEmpty($Name)) { return $false }
+  if ($Name.StartsWith('-')) { return $false }
+  return ($Name -match '^[A-Za-z0-9._@-]+\z')
 }
 
 function Copy-RemoteFile {
@@ -63,13 +131,21 @@ function Copy-RemoteFile {
 }
 
 function Install-PanePlugin {
-  param([string]$DesktopHome, [string]$DevpcHost)
+  param([string]$DesktopHome, [string]$DevpcHost, [switch]$DryRun)
   $slot = Join-Path (Join-Path $DesktopHome 'desktop-plugins') $PluginId
   $target = Join-Path $slot 'plugin.js'
   $temp = Join-Path $slot $TempName
   Write-Host "home: $DesktopHome"
   Write-Host "slot: $slot"
   Write-Host "copy: ${DevpcHost}:$RemotePath"
+  if ($DryRun) {
+    Write-Host 'dry run: nothing written'
+    return 0
+  }
+  if (Test-Path -LiteralPath $target -PathType Container) {
+    Write-Problem "refusing to replace ${target}: it is a directory"
+    return 1
+  }
   New-Item -ItemType Directory -Path $slot -Force | Out-Null
   $moved = $false
   try {
@@ -96,8 +172,13 @@ function Install-PanePlugin {
 }
 
 function Invoke-Main {
+  if (-not (Test-DevpcHost -Name $DevpcHost)) {
+    Write-Problem "refusing DevpcHost '$DevpcHost': use only letters, digits, '.', '_', '@', '-', and no leading '-'"
+    return 1
+  }
   $desktopHome = Get-DesktopHome
-  return (Install-PanePlugin -DesktopHome $desktopHome -DevpcHost $DevpcHost)
+  if (-not $desktopHome) { return 1 }
+  return (Install-PanePlugin -DesktopHome $desktopHome -DevpcHost $DevpcHost -DryRun:$DryRun)
 }
 
 if ($MyInvocation.InvocationName -ne '.') { exit (Invoke-Main) }
