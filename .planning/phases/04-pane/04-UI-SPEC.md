@@ -30,11 +30,11 @@ The pane is the only screen. It has one empty state, one notice line and one con
 
 ## Component Inventory
 
-Enumerated by `grep -cE "^export " ~/.hermes/hermes-agent/apps/desktop/src/sdk/index.ts` - 120 export statements - `@hermes/plugin-sdk` (Hermes Agent v0.22.5, resolved by `git -C ~/.hermes/hermes-agent describe --tags`; `apps/desktop/package.json` says 0.0.0) - 2026-11-01.
+Enumerated by `grep -cE "^export " ~/.hermes/hermes-agent/apps/desktop/src/sdk/index.ts` - 120 export statements (the unit is export statements, not components; the SDK has no component count of its own) - `@hermes/plugin-sdk@0.22.5` (the Hermes Agent release tag, because the package.json inside the monorepo carries a placeholder 0.0.0) - 2026-11-01.
 
 Cross-check: `ls ~/.hermes/hermes-agent/apps/desktop/src/components/ui/*.tsx | wc -l` gives 98 files. The SDK re-exports only some of them, so the two numbers measure different things and do not conflict.
 
-The table lists the components this pane uses. It is a non-exhaustive list of known-good components, not a closed allowlist. The PANE-13 rule still limits the pane to these nine imports from the SDK plus `host` and `useValue` for state.
+The table lists the components this pane uses. It is a non-exhaustive list of known-good components, not a closed allowlist. PANE-13 limits the import packages (`@hermes/plugin-sdk`, `react`, `react/jsx-runtime`), not the component list; any SDK export may be added when a task needs it.
 
 | Component | Import path | Notes |
 |-----------|-------------|-------|
@@ -54,13 +54,13 @@ Not used: `Badge`, `Skeleton`, `ErrorState`, `Select`, `Dialog`, `cn`. A load st
 
 ## Spacing Scale
 
-All values are multiples of 4px. The pane styles layout with the Tailwind utility classes the Desktop ships (`flex`, `gap-2`, `p-3`, `pl-6`, `min-h-8`), the same way the SDK doc example and hermes-memory-ui do. Inline `style` is for the two values no shipped class carries (the 320px width lives in the registration data).
+All values are multiples of 4px. The pane styles layout with the Tailwind utility classes the Desktop ships (`flex`, `gap-2`, `p-2`, `pl-6`, `min-h-8`), the same way the SDK doc example and hermes-memory-ui do. Inline `style` is for the two values no shipped class carries (the 320px width lives in the registration data).
 
 | Token | Value | Usage |
 |-------|-------|-------|
 | xs | 4px | Gap between chevron, checkbox and text. Vertical padding of a row. |
 | sm | 8px | Gap between the header title and the copy button. Gap above the add line. |
-| md | 12px | Pane padding on all four sides. Header padding. |
+| md | 8px | Pane padding on all four sides. Header padding. |
 | lg | 24px | Subtask indent. Chevron column. Icon button size. Checkbox hit area. |
 
 Exceptions (each one sets a size the SDK does not set):
@@ -142,7 +142,7 @@ Rules:
 | Write failed notice | `Could not save that change. Try again.` |
 | Load failed notice | `Could not load the board. Retrying.` |
 | Version mismatch notice (D-29, kept from Phase 3) | `Version mismatch: update the desktop plugin on this machine` |
-| Destructive confirmation | Delete item with subtasks: title `Delete this item?`, description `Delete this item and its {n} subtasks?` (`1 subtask` when n is 1), confirm label `Delete`, cancel label is the SDK default. `destructive` is on. |
+| Destructive confirmation | Delete item with subtasks: title `Delete this item?`, description `Delete this item and its {n} subtasks?` (`1 subtask` when n is 1), confirm label `Delete item and subtasks`, cancel label is the SDK default. `destructive` is on. The dialog opens with focus on Cancel when the SDK allows it; Enter then cancels, not deletes. |
 | Icon button labels (Tip and aria-label) | `Add subtask`, `Delete item`, `Collapse subtasks`, `Expand subtasks`, `Copy as markdown` |
 | Checkbox aria-label | The item text |
 
@@ -246,7 +246,7 @@ Keep the Phase 3 registration with the name and title changed: `ctx.register({ i
 
 ## UI Considerations
 
-Applicable state considerations resolved: 7 covered, 2 backstop, 1 unresolved.
+Applicable state considerations resolved: 8 covered, 2 backstop, 0 unresolved.
 
 | Category | Element(s) | Status | Resolution / Reason |
 |----------|------------|--------|---------------------|
@@ -259,7 +259,7 @@ Applicable state considerations resolved: 7 covered, 2 backstop, 1 unresolved.
 | populated | done items | ✅ covered | A checked row stays in place with line-through and `var(--ui-text-secondary)`. |
 | overflow | 100 items (`MAX_ITEMS`), long list | 🧪 backstop | `ScrollArea` scrolls the list. At 100 items the backend rejects an add and the notice shows the write failed copy with the typed text restored. A pane test adds an item to a full board and checks both. |
 | overflow | 320px width with plus and trash visible | 🧪 backstop | At 320px a top-level row keeps about 180px for text. A VM harness test with a 500 character text and a live Mac check confirm the row wraps and does not push the buttons out. |
-| concurrent | add line typed while a stale add restores its text | ⚠ unresolved | Planner assumption: writes from one pane run one at a time. A stale add restores its text to the line only when the line is empty. When the line holds newer text, the restored text goes in front of it, joined by a space. Rare at about five users. |
+| concurrent | add line typed while a stale add restores its text | ✓ covered | Decision: writes from one pane run one at a time. A stale add restores its text to the line only when the line is empty. When the line holds newer text, the newer text wins and the stale add's text shows in the notice line (`Not saved: {text}`) for a few seconds. |
 
 ---
 
@@ -287,6 +287,10 @@ These values were not fixed by CONTEXT.md or REQUIREMENTS.md. The spec took the 
 7. The write failed and load failed notices, which D-34 does not name.
 
 ---
+
+## Focal Point
+
+The header line (`{open} of {total} open`) is the primary visual anchor of the pane. It sits first, at 14px and weight 500, and every other element uses 12px or weight 400.
 
 ## Checker Sign-Off
 
