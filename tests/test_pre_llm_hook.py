@@ -122,7 +122,7 @@ def test_block_caps_item_lines_at_2000_characters(hook: Hook, store: BoardStore)
 
     assert 0 < len(kept) < 100
     assert sum(len(line) + 1 for line in kept) <= nudge.BLOCK_MAX_CHARS
-    assert [line.split(" ", 3)[3][:3] for line in kept] == [f"{i:03d}" for i in range(len(kept))]
+    assert [line.split(" ", 4)[4][:3] for line in kept] == [f"{i:03d}" for i in range(len(kept))]
     assert notice == f"{hidden} more items, call board_read"
     assert len(out) <= OUTPUT_LIMIT
 
