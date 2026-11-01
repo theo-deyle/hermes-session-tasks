@@ -40,8 +40,12 @@ def _check(
     resolution = resolver.resolve(session_id)
     if resolution.kind == "delegate":
         return None
-    board = store.get_board(resolution.root_id) if guard.needs_board(parsed) else None
-    reasons = guard.guarded_reasons(parsed, board)
+    board = None
+    user_touched: frozenset[int] = frozenset()
+    if guard.needs_board(parsed):
+        board = store.get_board(resolution.root_id)
+        user_touched = store.user_touched_ids(resolution.root_id)
+    reasons = guard.guarded_reasons(parsed, board, user_touched)
     return _block(guard.block_message(reasons)) if reasons else None
 
 

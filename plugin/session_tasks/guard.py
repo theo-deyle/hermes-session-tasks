@@ -1,7 +1,8 @@
 """The hard guard rule: which `board_edit` ops need Theo's answer first (D-18, D-19).
 
 A remove, an uncheck and a reword of an item that Theo touched are guarded. Adds and
-checks are never guarded. These are pure functions. They do no I/O.
+checks are never guarded. An item counts as touched by Theo when its last writer is Theo
+or when the changes journal holds a change by him. These are pure functions. They do no I/O.
 """
 
 from __future__ import annotations
@@ -28,7 +29,7 @@ def needs_board(parsed: ParsedEdit) -> bool:
     return any(isinstance(op, SetText) for op in parsed.ops)
 
 
-def _reason(op: Op, board: Board | None) -> str | None:
+def _reason(op: Op, board: Board | None, user_touched: frozenset[int]) -> str | None:
     if isinstance(op, RemoveItem):
         return f"remove of #{op.item_id}"
     if isinstance(op, SetChecked):
@@ -36,14 +37,22 @@ def _reason(op: Op, board: Board | None) -> str | None:
     if isinstance(op, SetText):
         # With no board, the author is unknown. Err toward asking.
         item = None if board is None else board.item(op.item_id)
-        if board is None or (item is not None and item.updated_by == "user"):
+        if board is None or (
+            item is not None and (item.updated_by == "user" or item.id in user_touched)
+        ):
             return f"reword of #{op.item_id}"
     return None
 
 
-def guarded_reasons(parsed: ParsedEdit, board: Board | None) -> tuple[str, ...]:
-    """Return one short reason per guarded op, in op order."""
-    reasons = (_reason(op, board) for op in parsed.ops)
+def guarded_reasons(
+    parsed: ParsedEdit, board: Board | None, user_touched: frozenset[int] = frozenset()
+) -> tuple[str, ...]:
+    """Return one short reason per guarded op, in op order.
+
+    `user_touched` holds the ids of items that Theo ever changed, so an agent change
+    after his does not lift the guard.
+    """
+    reasons = (_reason(op, board, user_touched) for op in parsed.ops)
     return tuple(reason for reason in reasons if reason is not None)
 
 

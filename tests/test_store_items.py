@@ -260,3 +260,21 @@ def query_counts(db_path: Path) -> tuple[int, int]:
         boards = conn.execute("SELECT COUNT(*) FROM boards").fetchone()[0]
         aliases = conn.execute("SELECT COUNT(*) FROM aliases").fetchone()[0]
     return boards, aliases
+
+
+def test_user_touched_ids_keep_theos_mark_after_an_agent_change(store: BoardStore) -> None:
+    store.apply(ROOT, [AddItem("Theo's"), AddItem("Mine")], actor="agent", base_rev=0)
+    store.apply(ROOT, [SetChecked(1, True)], actor="user", base_rev=1)
+    store.apply(ROOT, [SetChecked(1, False)], actor="agent", base_rev=2)
+
+    assert store.get_board(ROOT).item(1) is not None
+    assert store.user_touched_ids(ROOT) == frozenset({1})
+
+
+def test_user_touched_ids_is_empty_for_an_unknown_board(store: BoardStore) -> None:
+    assert store.user_touched_ids("nothing-here") == frozenset()
+
+
+def test_user_touched_ids_rejects_a_blank_session(store: BoardStore) -> None:
+    with pytest.raises(InvalidSession):
+        store.user_touched_ids(" ")

@@ -195,6 +195,16 @@ class BoardStore:
         with schema.open_db(self.connect) as conn, read_txn(conn):
             return _read_board(conn, root_id)
 
+    def user_touched_ids(self, root_id: str) -> frozenset[int]:
+        """Return the ids of items that Theo ever changed, read from the changes journal.
+
+        `updated_by` only names the last writer. This set keeps Theo's mark after an agent
+        change. The journal keeps the newest `JOURNAL_KEEP` rows, so an older touch can drop out.
+        """
+        check_session_id(root_id)
+        with schema.open_db(self.connect) as conn, read_txn(conn):
+            return rows.read_user_touched_ids(conn, root_id)
+
     def apply(self, root_id: str, ops: Sequence[Op], *, actor: Actor, base_rev: int) -> WriteResult:
         """Apply a batch of operations in one write transaction, all or nothing.
 

@@ -61,6 +61,15 @@ def test_reword_of_an_item_only_the_agent_touched_is_not_guarded() -> None:
     assert guarded_reasons(parsed(SetText(2, "new")), board(item(2, "agent"))) == ()
 
 
+def test_reword_of_an_agent_item_that_theo_touched_before_is_guarded() -> None:
+    touched = frozenset({2})
+
+    reasons = guarded_reasons(parsed(SetText(2, "new")), board(item(2, "agent")), touched)
+
+    assert reasons == ("reword of #2",)
+    assert guarded_reasons(parsed(SetText(3, "new")), board(item(3, "agent")), touched) == ()
+
+
 def test_reword_of_an_id_not_on_the_board_is_not_guarded() -> None:
     assert guarded_reasons(parsed(SetText(9, "new")), board(item(2, "user"))) == ()
 

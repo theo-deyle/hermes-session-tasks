@@ -159,6 +159,15 @@ def read_changes(conn: sqlite3.Connection, root_id: str) -> tuple[Change, ...]:
     return tuple(Change(*row) for row in conn.execute(sql, (root_id,)))
 
 
+def read_user_touched_ids(conn: sqlite3.Connection, root_id: str) -> frozenset[int]:
+    """Return the ids of items that Theo changed, as the journal records it."""
+    sql = (
+        f"SELECT DISTINCT item_id FROM {CHANGES} "
+        "WHERE root_id = ? AND actor = 'user' AND item_id IS NOT NULL"
+    )
+    return frozenset(int(row[0]) for row in conn.execute(sql, (root_id,)))
+
+
 def prune_changes(conn: sqlite3.Connection, root_id: str, keep: int) -> None:
     """Delete this board's journal rows that are older than the newest `keep` rows."""
     sql = (
