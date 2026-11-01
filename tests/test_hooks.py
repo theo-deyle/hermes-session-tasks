@@ -167,6 +167,20 @@ def test_pre_tool_call_guards_a_reword_of_an_item_theo_touched(
     assert run(hook, reword_mine) is None
 
 
+def test_pre_tool_call_guards_a_reword_after_the_agent_checked_theos_item(
+    store: BoardStore, hook: Hook
+) -> None:
+    store.apply("s1", [AddItem("Call John")], actor="user", base_rev=0)
+    store.apply("s1", [SetChecked(1, True)], actor="agent", base_rev=1)
+    reword = {"ops": [{"op": "set_text", "item_id": 1, "text": "x"}], "base_rev": 2}
+
+    assert run(hook, reword) == {
+        "action": "block",
+        "message": block_message(("reword of #1",)),
+    }
+    assert run(hook, {**reword, "confirmed": True}) is None
+
+
 def test_pre_tool_call_blocks_one_guarded_op_among_many_adds(store: BoardStore, hook: Hook) -> None:
     seed_agent_item(store)
     ops: list[dict[str, object]] = [{"op": "add", "text": f"a{n}"} for n in range(5)]
