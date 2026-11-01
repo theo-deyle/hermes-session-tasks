@@ -3,16 +3,16 @@ gsd_state_version: "1.0"
 current_phase: 03
 current_phase_name: REST router and client install spike
 status: executing
-stopped_at: Completed 03-04-PLAN.md
-last_updated: "2026-11-01T04:39:09.134Z"
+stopped_at: Completed 03-05-PLAN.md
+last_updated: "2026-11-01T04:57:51.388Z"
 last_activity: 2026-11-01
 last_activity_desc: Phase 02 complete, transitioned to Phase 3
-state_head: 5ace69b05ef6bab31568bfb73782504cbea2257e
+state_head: 68f90f7be0a12287e8a0deed8131da7f1695c208
 progress:
   total_phases: 7
   completed_phases: 2
   total_plans: 25
-  completed_plans: 17
+  completed_plans: 18
   percent: 29
 ---
 
@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-10-30)
 ## Current Position
 
 Phase: 03 (REST router and client install spike) — EXECUTING
-Plan: 4 of 12 complete (03-01 done)
+Plan: 5 of 12 complete (03-01 done)
 Status: Ready to execute
 Last activity: 2026-11-01 — Completed 03-01 (pre_llm_call nudge, own-job harness)
 
@@ -74,6 +74,7 @@ Progress: [███░░░░░░░] 29%
 | Phase 03 P02 | 4 min | 2 tasks | 12 files |
 | Phase 03 P03-03 | 8 min | 3 tasks | 3 files |
 | Phase 03 P03-04 | 5 min | 2 tasks | 4 files |
+| Phase 03 P03-05 | 27 min | 2 tasks | 9 files |
 
 ## Accumulated Context
 
@@ -118,6 +119,8 @@ Recent decisions affecting current work:
 - [Phase 03]: 03-03: Windows branch of the Desktop home rule is tested through Resolve-HermesHome parameters on Linux only; real runs are plans 03-08 and 03-10
 - [Phase 03]: 03-04: read_backend_version catches UnicodeDecodeError as well as OSError, so GET /meta never answers 5xx on a bad manifest
 - [Phase 03]: 03-04: dashboard layout guard allows only stdlib, fastapi and pydantic at module level, never relative
+- [Phase 03]: 03-05: board.updated payload is session_id, root_id, rev, actor only; listener bound per actor via events.listener; publish runs after commit and a fault never fails a write
+- [Phase 03]: 03-05: the dispatch test stubs tui_gateway.server so the bare Hermes process does not import the gateway stack; the real broadcast_plugin_event stays in the path
 
 ### Pending Todos
 
@@ -149,6 +152,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-11-01T04:39:08.882Z
-Stopped at: Completed 03-04-PLAN.md
+Last session: 2026-11-01T04:57:51.141Z
+Stopped at: Completed 03-05-PLAN.md
 Resume file: None
