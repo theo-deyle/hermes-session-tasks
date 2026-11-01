@@ -23,7 +23,11 @@ python-preference = "only-managed"
 testpaths = ["tests"]
 pythonpath = ["plugin", "tests"]
 addopts = "--import-mode=importlib --strict-markers"
-filterwarnings = ["error"]
+filterwarnings = [
+    "error",
+    "ignore:Using `httpx` with `starlette.testclient`:starlette.exceptions.StarletteDeprecationWarning",
+    "ignore:The anyio.abc.BlockingPortal alias is deprecated:DeprecationWarning",
+]
 markers = ["hermes: needs the hermes-agent checkout (HERMES_AGENT_REPO); skipped when absent"]
 
 [tool.ruff]
