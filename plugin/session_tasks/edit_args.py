@@ -23,6 +23,9 @@ OP_FIELDS: Mapping[str, frozenset[str]] = MappingProxyType({
     "remove": frozenset({"op", "item_id"}),
 })
 
+MAX_WHOLE = 2**63 - 1
+MAX_WHOLE_DIGITS = len(str(MAX_WHOLE))
+
 OPS_NOT_LIST = "ops must be a JSON list of operations"
 BASE_REV_BAD = "base_rev must be a whole number of 0 or more"
 BASE_REV_MISSING = (
@@ -42,15 +45,21 @@ class ParsedEdit:
 
 
 def _whole(value: object) -> int | None:
-    """Return a whole number from an int (not a bool) or a string of ASCII digits."""
+    """Return a whole number from 0 to `MAX_WHOLE` from an int (not a bool) or ASCII digits.
+
+    A value outside the SQLite integer range gives None, so it never reaches the store.
+    """
     if isinstance(value, bool):
         return None
-    if isinstance(value, int):
-        return value
     if isinstance(value, str):
         digits = value.strip()
-        if digits.isascii() and digits.isdigit():
-            return int(digits)
+        if not (digits.isascii() and digits.isdigit()):
+            return None
+        if len(digits.lstrip("0")) > MAX_WHOLE_DIGITS:
+            return None
+        value = int(digits)
+    if isinstance(value, int) and 0 <= value <= MAX_WHOLE:
+        return value
     return None
 
 

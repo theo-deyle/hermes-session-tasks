@@ -303,3 +303,9 @@ def test_parse_does_not_clean_text() -> None:
     parsed = parse({"ops": [{"op": "add", "text": "  spaced \n out  "}]})
 
     assert parsed.ops == (AddItem("  spaced \n out  "),)
+
+
+def test_a_zero_padded_digit_string_still_parses() -> None:
+    parsed = parse({"ops": [{"op": "remove", "item_id": "0" * 30 + "5"}], "base_rev": 1})
+
+    assert parsed.ops == (RemoveItem(5),)
