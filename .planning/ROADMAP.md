@@ -101,28 +101,35 @@ Plans:
   3. A write from an agent tool and a write from a route both broadcast `board.updated` with the session id and revision. The stub on each machine shows whether the event arrived.
   4. The `/meta` route returns the backend version and the API version. The stub shows a banner when its own version differs from the backend.
   5. The stub file passes `node --check` and an import allowlist test that permits only `@hermes/plugin-sdk`, `react` and `react/jsx-runtime`.
-**Plans**: 9 plans in 6 waves
+**Plans**: 12 plans in 8 waves
 Plans:
 **Wave 1**
 - [ ] 03-01-PLAN.md - Own-plan nudge: pre_llm_call hook end to end through Hermes, board block escape and cap, own-job harness tracked with its pass rule (wave 1)
-- [ ] 03-02-PLAN.md - Routes: host-style load of plugin_api.py, GET /board, POST /board/edit with structured 200 replies, GET /boards, GET /meta (wave 1)
+- [ ] 03-02-PLAN.md - Board routes: host-style load of plugin_api.py, GET /board, POST /board/edit with structured 200 replies, GET /boards (wave 1)
 - [ ] 03-03-PLAN.md - Copy script install-desktop.ps1 (home rule per OS, guards, dry run) and the README steps for the Mac and the Windows PC (wave 1)
 
 **Wave 2** *(blocked on Wave 1 completion)*
-- [ ] 03-04-PLAN.md - board.updated from tool and route writes, publish after commit, never fails a write (wave 2)
-- [ ] 03-05-PLAN.md - Test pane plugin.js through the real routes in a node VM: board, events, poll, write test, banner, syntax and import checks, version drift (wave 2)
+- [ ] 03-04-PLAN.md - GET /meta with the backend and API versions, layout guards over the dashboard (wave 2)
+- [ ] 03-05-PLAN.md - board.updated from tool and route writes, publish after commit, never fails a write (wave 2)
 
 **Wave 3** *(blocked on Wave 2 completion)*
-- [ ] 03-06-PLAN.md - Own-job headless runs with the real model, 3 of 3, up to three wording rounds (wave 3)
+- [ ] 03-06-PLAN.md - Test pane plugin.js through the real routes in a node VM: board, events, poll, write test, banner, syntax and import checks, version drift (wave 3)
+- [ ] 03-07-PLAN.md - Own-job headless runs with the real model, 3 of 3, up to three wording rounds (wave 3)
 
 **Wave 4** *(blocked on Wave 3 completion)*
-- [ ] 03-07-PLAN.md - Live check on the Mac: install, Desktop restart named first, test pane lines, both events, stale reply, each checked against data.db (wave 4)
+- [ ] 03-08-PLAN.md - Mac part 1: devpc gates and gateway decision, install command, announced Desktop restart (wave 4)
 
 **Wave 5** *(blocked on Wave 4 completion)*
-- [ ] 03-08-PLAN.md - Live check on the Windows PC, then README facts from both runs (wave 5)
+- [ ] 03-09-PLAN.md - Mac part 2: test pane lines, agent write event, write test and stale reply, each checked against data.db (wave 5)
 
 **Wave 6** *(blocked on Wave 5 completion)*
-- [ ] 03-09-PLAN.md - One-line ask, then delete the test boards on Theo's yes, final gates (wave 6)
+- [ ] 03-10-PLAN.md - Windows PC part 1: install command, announced Desktop restart, test pane lines (wave 6)
+
+**Wave 7** *(blocked on Wave 6 completion)*
+- [ ] 03-11-PLAN.md - Windows PC part 2: agent write event, write test, then README facts from both machines (wave 7)
+
+**Wave 8** *(blocked on Wave 7 completion)*
+- [ ] 03-12-PLAN.md - One plain question, then delete the test boards on Theo's recorded yes, final gates (wave 8)
 **Research**: Needed. Topics: stale-write transport (HTTP 409 or a structured 200) in a live Desktop, event delivery over SSH to the Mac and the Windows PC, how `plugin.js` reaches each machine from a private repo.
 **UI hint**: yes
 
@@ -186,7 +193,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 |-------|----------------|--------|-----------|
 | 1. Core, storage and session identity | 6/6 | Complete    | 2026-10-30 |
 | 2. Agent tools and skill | 7/7 | Complete    | 2026-10-31 |
-| 3. REST router and client install spike | 0/9 | Not started | - |
+| 3. REST router and client install spike | 0/12 | Not started | - |
 | 4. Pane | 0/TBD | Not started | - |
 | 5. Agent sees Theo's edits | 0/TBD | Not started | - |
 | 6. Cross-session boards | 0/TBD | Not started | - |

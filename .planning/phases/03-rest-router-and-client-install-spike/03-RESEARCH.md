@@ -606,22 +606,26 @@ Run the regex over the file, take group 3, and assert every match is in `ALLOWED
 | A9 | Stopping a `serve` process makes the Desktop client respawn it from new code | Pitfall 9 | Medium. Docstring says the reconnect path respawns it. Not run. |
 | A10 | The IPC hop drops `statusCode` as a property | Answer 2 | Low. The renderer's own code matches the message text instead. |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Where is each machine's Hermes home?**
    - Known: Desktop resolves it as in Answer 5.
    - Unclear: whether the Windows PC uses `%LOCALAPPDATA%\hermes` or the legacy `~\.hermes`, and which SSH alias it uses.
    - Recommendation: the script prints the resolved path and takes `-HermesHome` and `-DevpcHost`. Theo's first run on each machine settles it.
+   - RESOLVED: plans 03-08 (Mac) and 03-10 (Windows PC) settle it. The script prints the resolved home on its `home:` line, and `-DevpcHost` takes the ssh name of each machine.
 
 2. **Cost of D-27 against P1.**
    - Known: the board replays on each later turn. The cap limits it. Phase 5 narrows it.
    - Recommendation: keep D-27, cap the block, record the measured prompt growth in the 3 own-job runs.
+   - RESOLVED: plan 03-01 caps the item lines of the board block at 2000 characters; plan 03-07 records the nudge length, item counts and turn counts for Phase 5.
 
 3. **Own-job test boards in `data.db`.**
    - Recommendation: delete the three new roots after the measurement, after a one-line ask (production data).
+   - RESOLVED: plan 03-12 Task 1 asks Theo once, for every test board of the phase; Task 2 deletes them only on his yes.
 
 4. **The restart.**
    - Recommendation: one announced stop of both `serve` processes before the live checks. Headless runs come first and need none.
+   - RESOLVED: plans 03-08 (Mac) and 03-10 (Windows PC) each hold one announced Desktop restart: Theo quits and reopens Desktop after a request that names the restart and its effect, and Claude confirms a new `serve` process with `ps`. Claude stops no `serve` process (Phase 2 rule: Desktop owns them). The messaging gateway is not restarted in Phase 3 (plan 03-08 Task 1 records why).
 
 ## Environment Availability
 
