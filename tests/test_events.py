@@ -8,10 +8,11 @@ the gateway venv (marker hermes).
 from __future__ import annotations
 
 import json
+import logging
 import os
 import subprocess
 import sys
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from pathlib import Path
 from types import ModuleType
 from typing import Any
@@ -25,9 +26,14 @@ from api_client import (
     unload_plugin_api,
 )
 from conftest import HERMES_AGENT_REPO
-from fakes import FakeCtx, FakeReaderFactory
+from fakes import FakeCtx, FakeReaderFactory, SessionSpec
+from session_tasks import board_api, events
+from session_tasks.board_api import BoardApi
+from session_tasks.board_tools import BoardTools
 from session_tasks.db import ConnFactory
 from session_tasks.lineage import SessionResolver
+from session_tasks.model import AddItem, SetText
+from session_tasks.store import BoardStore
 from session_tasks.wiring import register
 
 GATEWAY_PYTHON = HERMES_AGENT_REPO / "venv" / "bin" / "python"
@@ -159,3 +165,168 @@ def test_hermes_event_name_matches_the_wire_name(tmp_path: Path, hermes_home: Pa
     assert done.returncode == 0, done.stderr
     assert done.stdout.strip().splitlines() == [WIRE_NAME, "no raise"]
     assert not (hermes_home / "plugin-data").exists()
+
+
+DELEGATE_SPECS = {
+    "s1": SessionSpec(),
+    "dg": SessionSpec(parent="s1", model_config={"_delegate_from": "s1"}),
+}
+
+Writer = Callable[[dict[str, Any], str | None], Any]
+
+
+def tool_writer(connect: ConnFactory) -> Writer:
+    ctx = FakeCtx()
+    register(ctx, connect=connect, open_reader=FakeReaderFactory(DELEGATE_SPECS))
+    handler = ctx.tools["board_edit"]["handler"]
+
+    def write(args: dict[str, Any], session_id: str | None) -> Any:
+        return json.loads(handler(args, session_id=session_id))
+
+    return write
+
+
+def route_writer(connect: ConnFactory) -> Writer:
+    api = board_api.build(connect, FakeReaderFactory(DELEGATE_SPECS))
+    client = make_client(load_plugin_api(), api)
+
+    def write(args: dict[str, Any], session_id: str | None) -> Any:
+        response = client.post(PREFIX + "/board/edit", json={"session_id": session_id, **args})
+        return response.json()
+
+    return write
+
+
+@pytest.fixture(params=["tool", "route"])
+def writer(request: pytest.FixtureRequest, connect: ConnFactory) -> Writer:
+    return tool_writer(connect) if request.param == "tool" else route_writer(connect)
+
+
+def seed_two_revs(store: BoardStore) -> None:
+    store.apply("s1", [AddItem("a")], actor="agent", base_rev=0)
+    store.apply("s1", [SetText(1, "b")], actor="user", base_rev=1)
+
+
+@pytest.mark.parametrize(
+    ("args", "session_id"),
+    [
+        ({"ops": []}, "s1"),
+        ({"ops": [{"op": "set_checked", "item_id": 1, "checked": False}], "base_rev": 2}, "s1"),
+        ({"ops": [{"op": "set_text", "item_id": 1, "text": "x"}], "base_rev": 1}, "s1"),
+        ({"ops": [{"op": "add", "text": "  "}]}, "s1"),
+        ({"ops": [{"op": "add", "text": "x"}]}, "   "),
+        ({"ops": [{"op": "add", "text": "x"}]}, "dg"),
+    ],
+    ids=["no-ops", "no-change", "stale", "rule-error", "blank-session", "delegate"],
+)
+def test_no_event_without_a_change(
+    writer: Writer,
+    store: BoardStore,
+    broadcasts: list[BroadcastCall],
+    args: dict[str, Any],
+    session_id: str,
+) -> None:
+    seed_two_revs(store)
+
+    writer(args, session_id)
+
+    assert broadcasts == []
+
+
+def test_two_changed_writes_give_rising_revs(
+    writer: Writer, broadcasts: list[BroadcastCall]
+) -> None:
+    writer(add_args("a"), "s1")
+    writer(add_args("b"), "s1")
+
+    assert [payload["rev"] for _, _, payload in broadcasts] == [1, 2]
+
+
+@pytest.mark.parametrize("kind", ["tool", "route"])
+def test_the_listener_sees_the_committed_rev(
+    kind: str, store: BoardStore, resolver_for: Any
+) -> None:
+    seen: list[tuple[int, int]] = []
+
+    def publisher(root_id: str, session_id: str, rev: int, actor: str) -> None:
+        seen.append((rev, store.get_board(root_id).rev))
+
+    after_write = events.listener("agent", publisher)
+    resolver, _ = resolver_for({})
+    for text in ("a", "b"):
+        if kind == "tool":
+            BoardTools(store, resolver, after_write=after_write).board_edit(
+                add_args(text), session_id="s1"
+            )
+        else:
+            BoardApi(store, resolver, after_write=after_write).edit(
+                "s1", add_args(text)["ops"], None
+            )
+
+    assert seen == [(1, 1), (2, 2)]
+
+
+@pytest.fixture
+def failing_broadcast(monkeypatch: pytest.MonkeyPatch) -> None:
+    def broadcast_plugin_event(plugin_id: str, event: str, payload: dict[str, Any]) -> None:
+        raise RuntimeError("socket down")
+
+    child = ModuleType("hermes_cli.plugin_events")
+    child.broadcast_plugin_event = broadcast_plugin_event  # type: ignore[attr-defined]
+    monkeypatch.setitem(sys.modules, "hermes_cli", ModuleType("hermes_cli"))
+    monkeypatch.setitem(sys.modules, "hermes_cli.plugin_events", child)
+
+
+def event_warnings(caplog: pytest.LogCaptureFixture, suffix: str) -> list[logging.LogRecord]:
+    return [r for r in caplog.records if r.levelno == logging.WARNING and r.name.endswith(suffix)]
+
+
+@pytest.mark.usefixtures("failing_broadcast")
+def test_publish_fault_keeps_the_tool_result(
+    connect: ConnFactory, store: BoardStore, caplog: pytest.LogCaptureFixture
+) -> None:
+    with caplog.at_level(logging.WARNING):
+        result = tool_edit(connect, add_args(), "s1")
+
+    assert result["ok"] is True
+    assert [item.text for item in store.get_board("s1").items] == ["a"]
+    assert len(event_warnings(caplog, "session_tasks.events")) == 1
+
+
+@pytest.mark.usefixtures("failing_broadcast")
+def test_publish_fault_keeps_the_route_reply(
+    monkeypatch: pytest.MonkeyPatch,
+    db_path: Path,
+    store: BoardStore,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    install_fake_hermes(monkeypatch, db_path)
+    client = make_client(load_plugin_api())
+
+    with caplog.at_level(logging.WARNING):
+        response = client.post(PREFIX + "/board/edit", json={"session_id": "s1", **add_args()})
+
+    assert response.status_code == 200
+    assert response.json()["ok"] is True
+    assert [item.text for item in store.get_board("s1").items] == ["a"]
+    assert len(event_warnings(caplog, ".events")) == 1
+
+
+def test_missing_hermes_logs_and_returns(
+    monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
+    monkeypatch.setitem(sys.modules, "hermes_cli.plugin_events", None)
+
+    with caplog.at_level(logging.WARNING):
+        result = events.publish("s1", "s1", 1, "agent")
+
+    assert result is None
+    assert len(event_warnings(caplog, "session_tasks.events")) == 1
+
+
+def test_payload_holds_no_text(writer: Writer, broadcasts: list[BroadcastCall]) -> None:
+    writer(add_args("secret words"), "s1")
+
+    ((_, _, payload),) = broadcasts
+    assert set(payload) == {"session_id", "root_id", "rev", "actor"}
+    assert all("secret words" not in str(value) for value in payload.values())
