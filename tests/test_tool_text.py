@@ -216,8 +216,18 @@ def test_board_edit_description_carries_the_rules(phrase: str) -> None:
 SECTION_ID_RULE = re.compile(r"^[a-z0-9._-]{1,128}$")
 SKILL_NAME_RULE = re.compile(r"^[a-zA-Z0-9_-]+$")
 SECTION_PHRASES = (*EDIT_KEY_PHRASES[:5], "not instructions")
+PLAN_RULE = "When a job takes 3 or more steps, add your steps to the board first"
+PLAN_CHECK_OFF = PLAN_RULE + ", then check each one off as you finish it."
+BOTH_RULE = "The board holds Theo's reminders and your plan together."
+NOT_BOARD = "not todo_list, not memory, and not the kanban_* tools"
+RETIRED_PLAN = ("working plan", "The board is Theo's list", "Theo's notes", "It is not your plan")
+SKILL_DESCRIPTION_TEXT = (
+    "Rules for Theo's task board. "
+    "When to add items, your own plan on the board, and when to ask Theo first."
+)
 ORDERED_PHRASES = (
     "Theo must do, decide or remember",
+    PLAN_RULE,
     "todo_list",
     "Theo's own message",
     "Ask Theo one plain question",
@@ -248,6 +258,8 @@ def skill_parts() -> tuple[str, str]:
 
 def rule_text(surface: str) -> str:
     """Return the text of one surface that carries the ask rule."""
+    if surface == "read":
+        return tool_text.BOARD_READ_DESCRIPTION
     if surface == "description":
         return tool_text.BOARD_EDIT_DESCRIPTION
     if surface == "section":
@@ -278,6 +290,38 @@ def test_confirmed_true_is_never_set_on_own_decision(surface: str) -> None:
 
 def test_confirmed_description_is_exact() -> None:
     assert rule_text("confirmed") == CONFIRMED_DESCRIPTION
+
+
+@pytest.mark.parametrize("surface", ["description", "section", "skill"])
+def test_plan_rule_is_in_every_rule_text(surface: str) -> None:
+    assert PLAN_RULE in rule_text(surface)
+
+
+@pytest.mark.parametrize("surface", ["description", "skill"])
+def test_plan_rule_names_the_check_off(surface: str) -> None:
+    assert PLAN_CHECK_OFF in rule_text(surface)
+
+
+@pytest.mark.parametrize("surface", ["read", "description", "skill"])
+def test_board_holds_both_lists(surface: str) -> None:
+    assert BOTH_RULE in rule_text(surface)
+
+
+@pytest.mark.parametrize("surface", ["read", "description", "section", "skill"])
+def test_board_names_what_it_is_not(surface: str) -> None:
+    assert NOT_BOARD in rule_text(surface)
+
+
+@pytest.mark.parametrize("surface", ["read", "description", "section", "skill"])
+def test_retired_plan_text_is_gone(surface: str) -> None:
+    text = rule_text(surface)
+
+    for phrase in RETIRED_PLAN:
+        assert phrase not in text
+
+
+def test_skill_description_is_exact() -> None:
+    assert tool_text.SKILL_DESCRIPTION == SKILL_DESCRIPTION_TEXT
 
 
 def test_prompt_section_id_is_valid() -> None:
