@@ -66,6 +66,7 @@ def register(
     )
     ctx.register_hook("pre_tool_call", hooks.make_pre_tool_call(store, resolver))
     ctx.register_hook("post_compaction", hooks.make_post_compaction(resolver))
+    ctx.register_hook("pre_llm_call", hooks.make_pre_llm_call(store, resolver))
     ctx.register_system_prompt_section(
         tool_text.PROMPT_SECTION_ID,
         tool_text.PROMPT_SECTION_TEXT,
