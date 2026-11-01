@@ -63,6 +63,24 @@ def catalog_lines() -> dict[str, str]:
     return lines
 
 
+def pre_llm(session_id: str) -> list[str]:
+    """Fire pre_llm_call the way the agent loop does; keep the str results only."""
+    results = hermes_plugins.invoke_hook(
+        "pre_llm_call",
+        session_id=session_id,
+        task_id="t1",
+        turn_id="u1",
+        user_message="hi",
+        conversation_history=[],
+        is_first_turn=True,
+        model="m",
+        platform="cli",
+        parent_session_id="",
+        sender_id="",
+    )
+    return [item for item in results if isinstance(item, str)]
+
+
 REMOVE_ONE: dict[str, object] = {"ops": [{"op": "remove", "item_id": 1}], "base_rev": 2}
 RAW_REMOVE: dict[str, object] = {"ops": '[{"op": "remove", "item_id": 1}]', "base_rev": "2"}
 
@@ -76,6 +94,8 @@ def main() -> None:
         "no_session": call({}, None),
         "tools": sorted(registry.get_tool_names_for_toolset(TOOLSET)),
     }
+    result["pre_llm"] = pre_llm("s1")
+    result["pre_llm_blank"] = pre_llm("")
     add: dict[str, object] = {"ops": [{"op": "add", "text": "Book the van"}]}
     result["edit_add"] = call(add, "s1", "board_edit")
     result["blocked"] = call(REMOVE_ONE, "s1", "board_edit")

@@ -1,4 +1,4 @@
-"""`register(ctx)` wires both tools, both hooks, the prompt section and the skill. No gateway."""
+"""`register(ctx)` wires both tools, every hook, the prompt section and the skill. No gateway."""
 
 from __future__ import annotations
 
@@ -77,11 +77,11 @@ def test_register_records_both_tools_in_one_toolset(connect: ConnFactory) -> Non
     assert ctx.tools["board_edit"]["schema"] is tool_text.BOARD_EDIT_SCHEMA
 
 
-def test_register_records_both_hooks(connect: ConnFactory) -> None:
+def test_register_records_every_hook(connect: ConnFactory) -> None:
     ctx = registered(connect)
 
-    assert sorted(ctx.hooks) == ["post_compaction", "pre_tool_call"]
-    assert [len(callbacks) for callbacks in ctx.hooks.values()] == [1, 1]
+    assert sorted(ctx.hooks) == ["post_compaction", "pre_llm_call", "pre_tool_call"]
+    assert [len(callbacks) for callbacks in ctx.hooks.values()] == [1, 1, 1]
 
 
 def test_register_records_the_prompt_section(connect: ConnFactory) -> None:
@@ -120,3 +120,18 @@ def test_registered_edit_handler_and_hook_work_together(connect: ConnFactory) ->
     assert directive is not None
     assert directive["action"] == "block"
     assert applied["changed"] == ["- removed #1"]
+
+
+def test_registered_pre_llm_call_returns_the_nudge_and_the_board(
+    connect: ConnFactory, store: BoardStore
+) -> None:
+    ctx = registered(connect)
+    store.apply("s1", [AddItem("Call John")], actor="agent", base_rev=0)
+
+    out = ctx.hooks["pre_llm_call"][0](session_id="s1", user_message="hi", is_first_turn=True)
+
+    assert isinstance(out, str)
+    assert out.startswith(tool_text.NUDGE_LINE)
+    assert "- [ ] #1 Call John" in out
+    assert out.count('<task-board rev="1">') == 1
+    assert out.count("</task-board>") == 1
