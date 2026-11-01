@@ -162,6 +162,44 @@ def test_bool_or_other_non_integer_where_a_whole_number_belongs_raises(
 @pytest.mark.parametrize(
     "op",
     [
+        {"op": "remove", "item_id": 10**30},
+        pytest.param({"op": "remove", "item_id": "9" * 5000}, id="5000-digit-string"),
+        {"op": "remove", "item_id": 2**63},
+        {"op": "add", "text": "a", "parent_id": 10**30},
+        {"op": "add", "text": "a", "parent_ref": 10**30},
+        {"op": "remove", "item_id": -5},
+    ],
+)
+def test_integers_outside_the_sqlite_range_raise_a_whole_number_error(
+    op: dict[str, Any],
+) -> None:
+    error = raises({"ops": [{"op": "add", "text": "first"}, op], "base_rev": 1})
+
+    assert "must be a whole number" in str(error)
+    assert error.op_index == 1
+
+
+def test_the_largest_sqlite_integer_still_parses() -> None:
+    parsed = parse({"ops": [{"op": "remove", "item_id": 2**63 - 1}], "base_rev": 2**63 - 1})
+
+    assert parsed.ops == (RemoveItem(2**63 - 1),)
+    assert parsed.base_rev == 2**63 - 1
+
+
+@pytest.mark.parametrize(
+    "base_rev", [10**30, pytest.param("9" * 5000, id="5000-digit-string"), 2**63]
+)
+def test_base_rev_outside_the_sqlite_range_raises_even_on_an_add_only_call(
+    base_rev: object,
+) -> None:
+    error = raises({"ops": [{"op": "add", "text": "a"}], "base_rev": base_rev})
+
+    assert str(error) == "base_rev must be a whole number of 0 or more"
+
+
+@pytest.mark.parametrize(
+    "op",
+    [
         {"op": "remove", "item_id": 0},
         {"op": "add", "text": "a", "parent_id": -1},
         {"op": "add", "text": "a", "parent_ref": -1},
