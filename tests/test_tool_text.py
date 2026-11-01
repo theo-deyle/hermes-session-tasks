@@ -371,3 +371,24 @@ def test_no_em_or_en_dash_in_tool_text_or_skill() -> None:
         text = path.read_text(encoding="utf-8")
         assert EM_DASH not in text
         assert EN_DASH not in text
+
+
+NUDGE_LINE_MAX_CHARS = 240
+NUDGE_ALLOWED_DIGITS = "3"
+
+
+def test_nudge_line_is_one_short_line_with_the_tool_names() -> None:
+    line = tool_text.NUDGE_LINE
+
+    assert "\n" not in line
+    assert len(line) <= NUDGE_LINE_MAX_CHARS
+    assert "board_edit" in line
+    assert "tool_search" in line
+
+
+def test_nudge_line_holds_only_the_digit_of_3_or_more() -> None:
+    line = tool_text.NUDGE_LINE
+    digits = {char for char in line if char.isdigit()}
+
+    assert "3 or more" in line
+    assert digits == set(NUDGE_ALLOWED_DIGITS)
