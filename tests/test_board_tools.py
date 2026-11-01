@@ -205,8 +205,21 @@ def test_remove_of_a_parent_lists_its_subtasks_as_removed(
 
     result = edit(tools, {"ops": [{"op": "remove", "item_id": 1}], "base_rev": 1})
 
-    assert result["summary"] == "rev 2: removed 1 item"
+    assert result["summary"] == "rev 2: removed 2 items"
     assert result["changed"] == ["- removed #1", "- removed #2"]
+
+
+def test_a_repeated_no_op_check_is_counted_once(
+    store: BoardStore, resolver_for: ResolverFor
+) -> None:
+    tools, _ = tools_for(store, resolver_for)
+    store.apply("s1", [AddItem("a")], actor="agent", base_rev=0)
+    check = {"op": "set_checked", "item_id": 1, "checked": True}
+
+    result = edit(tools, {"ops": [check, check], "base_rev": 1})
+
+    assert result["summary"] == "rev 2: checked 1 item"
+    assert result["changed"] == ["- [x] #1 a"]
 
 
 def test_two_ops_on_one_item_apply_in_order(store: BoardStore, resolver_for: ResolverFor) -> None:
