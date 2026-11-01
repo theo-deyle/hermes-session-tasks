@@ -320,3 +320,7 @@ Ready for 03-09 on the Mac: the test pane is installed with the verified hash, t
 ---
 *Phase: 03-rest-router-and-client-install-spike*
 *Completed: 2026-11-01*
+
+## Correction (added by plan 03-09)
+
+The Task 3 finding "no new process after R1" was true at 15:19 local but did not hold. A fresh `hermes serve --isolated` backend did start later: pid 2809203 at 15:31:24 local, replaced by pid 2852692 at 16:01:36 local (lock file `~/.hermes/desktop-ssh/f3619ffc6faed70a5b6d5c9de87e0711/backend.lock.json`, `startedAt 2026-11-01T21:01:36Z`). Desktop reattaches to a live backend when one exists and spawns a new one when it does not. The pass verdict stands: both backends loaded the plugin at the same Python content.
