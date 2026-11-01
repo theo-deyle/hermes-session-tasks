@@ -20,7 +20,7 @@ The phases start from the eight in `.planning/research/SUMMARY.md`. Research pha
 Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Core, storage and session identity** - A safe SQLite board per session that follows its session through compression and branches. (completed 2026-10-30)
-- [ ] **Phase 2: Agent tools and skill** - The agent reads and edits the board, and puts its own multi-step plan on the board.
+- [x] **Phase 2: Agent tools and skill** - The agent reads and edits the board, and puts its own multi-step plan on the board. (completed 2026-10-31)
 - [ ] **Phase 3: REST router and client install spike** - The backend routes work, and a stub pane runs on the Mac and the Windows PC.
 - [ ] **Phase 4: Pane** - Theo sees and edits the focused session's board in a right-side pane that updates live.
 - [ ] **Phase 5: Agent sees Theo's edits** - The agent learns of Theo's changes on its next turn, and a deleted session loses its board.
@@ -68,7 +68,7 @@ Plans:
   3. The tools take the session from the id Hermes passes to the handler, so a session id in the model's arguments changes nothing. The tool names share one prefix and avoid the word "todo". `todo_list` stays untouched.
   4. A live test sends 5 prompts that list things for Theo. In all 5, the agent adds the items to the board. When the agent gets a job of 3 or more steps, it writes its steps to the board first and checks them off as it finishes; the own-job headless run measures this. The tool descriptions carry this rule, so the agent needs no skill load.
   5. The agent asks Theo one plain question before a delete, an uncheck, a reword of Theo's text or a bulk change. It asks the same question when it is unsure which item Theo means. When its work finishes an item, the agent checks the item and says so in one line.
-**Plans**: 7/7 plans executed in 6 waves
+**Plans**: 7/7 plans complete in 6 waves
 Plans:
 **Wave 1**
 - [x] 02-01-PLAN.md - First end to end test: Hermes loads the plugin and board_read returns the board with ids; board_read contract and the session and todo_list guards (wave 1)
@@ -164,7 +164,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Core, storage and session identity | 6/6 | Complete    | 2026-10-30 |
-| 2. Agent tools and skill | 7/7 | In Progress | - |
+| 2. Agent tools and skill | 7/7 | Complete    | 2026-10-31 |
 | 3. REST router and client install spike | 0/TBD | Not started | - |
 | 4. Pane | 0/TBD | Not started | - |
 | 5. Agent sees Theo's edits | 0/TBD | Not started | - |
