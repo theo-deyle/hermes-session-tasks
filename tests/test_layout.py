@@ -254,6 +254,14 @@ def test_core_defines_no_async_def() -> None:
     assert async_def_findings(CORE_DIR) == []
 
 
+def test_dashboard_defines_no_async_def() -> None:
+    assert async_def_findings(PLUGIN_DIR / "dashboard") == []
+
+
+def test_dashboard_module_level_imports_are_stdlib_fastapi_or_pydantic() -> None:
+    assert dashboard_import_findings(PLUGIN_DIR / "dashboard") == []
+
+
 def test_core_modules_stay_under_500_lines() -> None:
     assert module_length_findings(CORE_DIR) == []
 
@@ -316,6 +324,30 @@ def test_async_def_guard_reports_an_async_function(tmp_path: Path) -> None:
 
     assert len(findings) == 1
     assert "bad" in findings[0]
+
+
+def test_dashboard_import_guard_reports_relative_and_third_party_imports(
+    tmp_path: Path,
+) -> None:
+    _write_module(
+        tmp_path,
+        "import json\n"
+        "from fastapi import APIRouter\n"
+        "from pydantic import BaseModel\n"
+        "from . import x\n"
+        "import requests\n"
+        "\n"
+        "def f():\n"
+        "    import numpy\n"
+        "    from . import y\n"
+        "    return numpy, y\n",
+    )
+
+    findings = dashboard_import_findings(tmp_path)
+
+    assert len(findings) == 2
+    assert any("relative import" in f for f in findings)
+    assert any("requests" in f for f in findings)
 
 
 def test_module_length_guard_reports_a_501_line_module_and_not_a_500_line_one(
