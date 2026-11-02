@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+from conftest import HERMES_AGENT_REPO
 from pane_rig import (
     EVENT_TYPE,
     HARNESS,
@@ -306,3 +307,39 @@ def test_plugin_sets_no_raw_html_and_uses_no_socket(plugin_source: str) -> None:
 
 def test_plugin_never_names_todo(plugin_source: str) -> None:
     assert "todo" not in plugin_source.lower()
+
+
+CLASS_LITERAL_RE = re.compile(r"className:\s*'([^']*)'|const [A-Z_]+_CLASS = '([^']*)'")
+DESKTOP_SRC = HERMES_AGENT_REPO / "apps" / "desktop" / "src"
+DESKTOP_SUFFIXES = (".ts", ".tsx", ".css")
+
+
+def class_tokens(source: str) -> list[str]:
+    """Every class name in a `className` literal or a `*_CLASS` constant, in order, once each."""
+    raise NotImplementedError
+
+
+def unshipped_classes(tokens: list[str], desktop_src: Path) -> list[str]:
+    """The tokens that no Desktop source file holds. Desktop compiles only the classes it uses."""
+    raise NotImplementedError
+
+
+def test_class_tokens_reads_props_and_constants() -> None:
+    source = "const ROW_CLASS = 'flex gap-1'\njsx('div', { className: 'p-2 flex' })"
+
+    assert class_tokens(source) == ["flex", "gap-1", "p-2"]
+
+
+def test_unshipped_classes_reports_a_missing_name(tmp_path: Path) -> None:
+    (tmp_path / "view.tsx").write_text("const a = 'flex gap-1'\n", encoding="utf-8")
+
+    assert unshipped_classes(["flex", "probe-not-shipped"], tmp_path) == ["probe-not-shipped"]
+
+
+@pytest.mark.hermes
+def test_every_plugin_class_ships_in_desktop(plugin_source: str) -> None:
+    tokens = class_tokens(plugin_source)
+
+    assert tokens
+    missing = unshipped_classes(tokens, DESKTOP_SRC)
+    assert missing == [], f"classes that Desktop does not compile: {missing}"
