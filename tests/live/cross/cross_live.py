@@ -3,12 +3,17 @@
 usage:
   cross_live.py seed --session ID --title TEXT --ops JSON [--checkout DIR]
   cross_live.py board --data-db PATH --session ROOT
+  cross_live.py calls FILE
+  cross_live.py stop --home DIR
 
 `seed` runs under the gateway venv Python, because it imports the Hermes session store and the
 plugin. It creates the session row, sets its title and applies the ops through the same
 `BoardApi.edit` the pane route uses, with a no-op publisher. seed never writes the real Hermes
 home: it refuses an unset HERMES_HOME and the real `~/.hermes` before any Hermes import.
 `board` uses the standard library only and opens the data file read only.
+`calls` lists the tool uses of a stream-json run, with the rules of tests/live/own_job/analyze.py.
+`stop` stops only a test gateway whose environment names the given home, through
+`stop_test_gateway` of tests/live/delta/delta_live.py.
 
 Every subcommand prints one JSON line on success.
 Exit codes: 0 done, 1 the act did not apply, 2 usage, refusal or read error.
@@ -17,16 +22,21 @@ Exit codes: 0 done, 1 the act did not apply, 2 usage, refusal or read error.
 from __future__ import annotations
 
 import argparse
+import importlib.util
 import json
 import os
 import sqlite3
 import sys
 from collections.abc import Mapping
 from pathlib import Path
+from types import ModuleType
 from urllib.parse import quote
 
 sys.dont_write_bytecode = True
 PLUGIN_DIR = Path(__file__).resolve().parents[3] / "plugin"
+LIVE_DIR = Path(__file__).resolve().parents[1]
+ANALYZE = LIVE_DIR / "own_job" / "analyze.py"
+DELTA_LIVE = LIVE_DIR / "delta" / "delta_live.py"
 DEFAULT_CHECKOUT = Path.home() / ".hermes" / "hermes-agent"
 SOURCE = "cli"
 APPLIED = 0
@@ -163,6 +173,45 @@ def cmd_board(args: argparse.Namespace) -> int:
     return APPLIED
 
 
+def _load(name: str, path: Path) -> ModuleType:
+    """Load a sibling live script by its file path. The module is registered for dataclasses."""
+    spec = importlib.util.spec_from_file_location(name, path)
+    if spec is None or spec.loader is None:
+        raise ImportError(f"cannot load {path}")
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+def tool_calls(path: Path) -> list[dict[str, object]]:
+    """Return {name, args} for every tool use of a stream-json run, in order."""
+    analyze = _load("cross_live_analyze", ANALYZE)
+    return [
+        {"name": analyze.effective_name(event), "args": analyze.tool_arguments(event)}
+        for event in analyze.load_events(path)
+        if event.get("type") == "tool_use"
+    ]
+
+
+def cmd_calls(args: argparse.Namespace) -> int:
+    path = Path(args.file).expanduser()
+    try:
+        calls = tool_calls(path)
+    except OSError as exc:
+        return _fail(f"cannot read {path}: {exc}")
+    print(json.dumps(calls))
+    return APPLIED
+
+
+def cmd_stop(args: argparse.Namespace) -> int:
+    delta = _load("cross_live_delta", DELTA_LIVE)
+    home = Path(args.home).expanduser()
+    result = delta.stop_test_gateway(home)
+    print(json.dumps({"home": str(home), "result": result}))
+    return NOT_APPLIED if result == "refused" else APPLIED
+
+
 def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Live test tools for the cross-session check.")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -174,10 +223,14 @@ def _parser() -> argparse.ArgumentParser:
     board = sub.add_parser("board", help="print one board read only")
     board.add_argument("--data-db", required=True)
     board.add_argument("--session", required=True)
+    calls = sub.add_parser("calls", help="list the tool uses of a stream-json run")
+    calls.add_argument("file")
+    stop = sub.add_parser("stop", help="stop the gateway of one test home")
+    stop.add_argument("--home", required=True)
     return parser
 
 
-COMMANDS = {"seed": cmd_seed, "board": cmd_board}
+COMMANDS = {"seed": cmd_seed, "board": cmd_board, "calls": cmd_calls, "stop": cmd_stop}
 
 
 def main(argv: list[str] | None = None) -> int:
