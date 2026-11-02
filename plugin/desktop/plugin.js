@@ -56,7 +56,6 @@ const SUBTASK_LINE_CLASS = 'mt-2 pl-6'
 const REVEAL_CLASS = 'opacity-0 group-hover:opacity-100 group-focus-within:opacity-100'
 const ROW_BUTTON_CLASS = `${REVEAL_CLASS} shrink-0`
 const ESCAPED_HASH = /^\\*#[0-9]+(?:\s|$)/
-// The hit box of the checkbox and of the chevron: one square column.
 const HIT_CLASS = 'flex size-6 shrink-0 items-center justify-center'
 // The SDK box border fades into the dark theme; the tertiary text colour keeps it visible.
 const CHECK_CLASS = 'border-(--ui-text-tertiary)'
@@ -444,6 +443,7 @@ function Pane({ ctx }) {
     seq: 0,
     entrySeq: 0,
     visit: 0,
+    kept: {},
     addBusy: false,
     subBusy: {},
     edit: null,
@@ -670,12 +670,16 @@ function Pane({ ctx }) {
     const open = current.current.edit
     if (open !== null && open.id === item.id) return
     saveEdit()
-    changeEdit({ sid: current.current.sid, id: item.id, text: item.text, original: item.text })
+    const state = current.current
+    const key = `${state.sid}:${item.id}`
+    const text = state.kept[key] ?? item.text
+    delete state.kept[key]
+    changeEdit({ sid: state.sid, id: item.id, text, original: item.text })
   }
 
   // Reads the edit from the ref, so an Enter followed by a blur sends one write.
-  // Item ids are per board, so an edit never writes or comes back on another session than its own.
-  // A stale or failed write puts the typed text back when the item is still on the board.
+  // Item ids are per board, so an edit never writes or reopens on another session than its own.
+  // A failed write reopens the edit, or else leaves the text in `kept` for the next edit of that item.
   function saveEdit() {
     const state = current.current
     const open = state.edit
@@ -684,9 +688,10 @@ function Pane({ ctx }) {
     const text = open.text.trim()
     if (text === '' || text === open.original || open.sid !== state.sid) return
     sendOp({ op: 'set_text', item_id: open.id, text }, outcome => {
+      if (outcome === 'ok') return
       const sameBoard = state.sid === open.sid && hasItem(state.board, open.id)
-      if (outcome === 'ok' || state.edit !== null || !sameBoard) return
-      changeEdit({ ...open, text })
+      if (sameBoard && state.edit === null) changeEdit({ ...open, text })
+      else state.kept[`${open.sid}:${open.id}`] = text
     }, open.sid)
   }
 
