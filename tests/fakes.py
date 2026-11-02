@@ -38,6 +38,12 @@ SEVEN_ROW_FIXTURE: dict[str, SessionSpec] = {
     "plain": SessionSpec(),
 }
 
+TITLE_FIXTURE: dict[str, SessionSpec] = {
+    "titled": SessionSpec(title="Lease renewal"),
+    "worded": SessionSpec(messages=(("assistant", "Hi"), ("user", "Plan the trip to Ottawa"))),
+    "blank": SessionSpec(),
+}
+
 
 class ReaderBoom(RuntimeError):
     """Raised by a fake reader method that a test chose to break."""

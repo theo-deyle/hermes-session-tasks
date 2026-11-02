@@ -15,7 +15,7 @@ from typing import Any
 
 import pytest
 from conftest import HERMES_AGENT_REPO
-from fakes import SEVEN_ROW_FIXTURE, FakeSessionReader
+from fakes import SEVEN_ROW_FIXTURE, TITLE_FIXTURE, FakeSessionReader
 from session_tasks import paths
 
 pytestmark = pytest.mark.hermes
@@ -91,13 +91,13 @@ def test_connect_path_twin_reports_the_same_pragmas_as_plugin_db(
         assert pragma_values(twin) == pragma_values(real)
 
 
-def test_fake_reader_and_resolver_match_the_real_session_db(
-    tmp_path: Path, hermes_home: Path
-) -> None:
+def run_snippet(tmp_path: Path, hermes_home: Path) -> dict[str, Any]:
+    """Run the snippet under the gateway venv Python on the combined fixture."""
     if not GATEWAY_PYTHON.exists():
         pytest.skip(f"gateway venv python not found at {GATEWAY_PYTHON}")
     fixture_json = tmp_path / "fixture.json"
-    fixture = {sid: dataclasses.asdict(spec) for sid, spec in SEVEN_ROW_FIXTURE.items()}
+    specs = {**SEVEN_ROW_FIXTURE, **TITLE_FIXTURE}
+    fixture = {sid: dataclasses.asdict(spec) for sid, spec in specs.items()}
     fixture_json.write_text(json.dumps(fixture), encoding="utf-8")
     env = {
         **os.environ,
@@ -122,9 +122,14 @@ def test_fake_reader_and_resolver_match_the_real_session_db(
         timeout=90,
         check=False,
     )
-
     assert done.returncode == 0, done.stderr
-    real = json.loads(done.stdout)
+    return json.loads(done.stdout)
+
+
+def test_fake_reader_and_resolver_match_the_real_session_db(
+    tmp_path: Path, hermes_home: Path
+) -> None:
+    real = run_snippet(tmp_path, hermes_home)
     fake = FakeSessionReader(SEVEN_ROW_FIXTURE)
     for session_id in [*SEVEN_ROW_FIXTURE, MISSING]:
         assert real["fork"][session_id] == fake.is_explicit_fork_child(session_id), session_id
@@ -145,3 +150,24 @@ def test_fake_reader_and_resolver_match_the_real_session_db(
     assert real["branch_texts"] == ["Call John"]
     expected = hermes_home / "plugin-data" / "hermes-session-tasks" / "data.db"
     assert Path(real["plugin_db_path"]).resolve() == expected.resolve()
+
+
+def test_fake_reader_titles_and_messages_match_the_real_session_db(
+    tmp_path: Path, hermes_home: Path
+) -> None:
+    real = run_snippet(tmp_path, hermes_home)
+
+    fake = FakeSessionReader({**SEVEN_ROW_FIXTURE, **TITLE_FIXTURE})
+    for session_id in [*TITLE_FIXTURE, MISSING]:
+        assert real["real_titles"][session_id] == fake.get_session_title(session_id), session_id
+        fake_pairs = [
+            [row["role"], row["content"]] for row in fake.get_messages(session_id, limit=5)
+        ]
+        assert real["real_messages"][session_id] == fake_pairs, session_id
+    assert real["titles"] == {
+        "titled": "Lease renewal",
+        "worded": "Plan the trip to Ottawa",
+        "blank": "Untitled session",
+        "missing": "Untitled session",
+    }
+    assert real["state_db_unchanged"] is True
