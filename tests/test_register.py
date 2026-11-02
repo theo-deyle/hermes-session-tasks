@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from fakes import FakeCtx, FakeReaderFactory
+from fakes import FakeCtx, FakeReaderFactory, SessionSpec
 from session_tasks import delta, tool_text
 from session_tasks.db import ConnFactory
 from session_tasks.edit_args import OP_FIELDS
@@ -80,16 +80,49 @@ def test_manifest_provides_exactly_the_registered_tools_and_hooks(connect: ConnF
     assert sorted(manifest_list("provides_hooks")) == sorted(ctx.hooks)
 
 
-def test_register_records_both_tools_in_one_toolset(connect: ConnFactory) -> None:
+def test_register_records_four_tools_in_one_toolset(connect: ConnFactory) -> None:
     ctx = registered(connect)
 
-    assert sorted(ctx.tools) == ["board_edit", "board_read"]
+    assert sorted(ctx.tools) == ["board_copy", "board_edit", "board_read", "board_sessions"]
     assert "" not in ctx.tools
     for entry in ctx.tools.values():
         assert entry["toolset"] == "task-board"
         assert entry["emoji"] == "\U0001f4cb"
     assert ctx.tools["board_read"]["schema"] is tool_text.BOARD_READ_SCHEMA
     assert ctx.tools["board_edit"]["schema"] is tool_text.BOARD_EDIT_SCHEMA
+    assert ctx.tools["board_sessions"]["schema"] is tool_text.BOARD_SESSIONS_SCHEMA
+    assert ctx.tools["board_copy"]["schema"] is tool_text.BOARD_COPY_SCHEMA
+
+
+def test_registered_board_copy_and_board_sessions_work_together(
+    connect: ConnFactory, store: BoardStore
+) -> None:
+    specs = {"s1": SessionSpec(title="Lease renewal"), "s2": SessionSpec(title="Source board")}
+    calls: list[tuple[str, str, int, str]] = []
+
+    def publish(root_id: str, session_id: str, rev: int, actor: str) -> None:
+        calls.append((root_id, session_id, rev, actor))
+
+    ctx = FakeCtx()
+    register(ctx, connect=connect, open_reader=FakeReaderFactory(specs), publish=publish)
+    store.apply("s1", [AddItem("Own item")], actor="agent", base_rev=0)
+    store.apply("s2", [AddItem("Call John")], actor="agent", base_rev=0)
+
+    copied = json.loads(
+        ctx.tools["board_copy"]["handler"]({"from_session_id": "s2"}, session_id="s1")
+    )
+    listed = json.loads(ctx.tools["board_sessions"]["handler"]({}, session_id="s1"))
+
+    assert copied["ok"] is True
+    assert copied["summary"].startswith("Copied 1 to Lease renewal.")
+    assert calls == [("s1", "s1", 2, "agent")]
+    assert listed["ok"] is True
+    lines = {line.split(" | ")[1]: line for line in listed["sessions"]}
+    assert set(lines) == {"s1", "s2"}
+    assert lines["s1"].startswith("- Lease renewal | s1 | ")
+    assert lines["s1"].endswith("(this session)")
+    assert lines["s2"].startswith("- Source board | s2 | ")
+    assert not lines["s2"].endswith("(this session)")
 
 
 def test_register_records_every_hook(connect: ConnFactory) -> None:
