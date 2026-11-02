@@ -95,8 +95,13 @@ def test_register_records_both_tools_in_one_toolset(connect: ConnFactory) -> Non
 def test_register_records_every_hook(connect: ConnFactory) -> None:
     ctx = registered(connect)
 
-    assert sorted(ctx.hooks) == ["post_compaction", "pre_llm_call", "pre_tool_call"]
-    assert [len(callbacks) for callbacks in ctx.hooks.values()] == [1, 1, 1]
+    assert sorted(ctx.hooks) == [
+        "on_session_delete",
+        "post_compaction",
+        "pre_llm_call",
+        "pre_tool_call",
+    ]
+    assert [len(callbacks) for callbacks in ctx.hooks.values()] == [1, 1, 1, 1]
 
 
 def test_register_records_the_prompt_section(connect: ConnFactory) -> None:
@@ -152,3 +157,16 @@ def test_registered_pre_llm_call_returns_theo_changes_once(
     assert out.count(f"<{delta.DELTA_TAG} ") == 1
     assert out.count(f"</{delta.DELTA_TAG}>") == 1
     assert pre_llm(session_id="s1", user_message="hi", is_first_turn=True) is None
+
+
+def test_registered_on_session_delete_removes_a_board(
+    connect: ConnFactory, store: BoardStore
+) -> None:
+    ctx = registered(connect)
+    store.apply("s1", [AddItem("Call John")], actor="agent", base_rev=0)
+
+    ctx.hooks["on_session_delete"][0](session_id="s1", reason="delete", profile="default")
+
+    board = store.get_board("s1")
+    assert board.rev == 0
+    assert board.items == ()
