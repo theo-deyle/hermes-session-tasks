@@ -23,7 +23,7 @@ Requirements for the first release. Each maps to a roadmap phase.
 - [x] **TOOL-01**: The agent can read the current session's board as markdown with item ids and the revision.
 - [x] **TOOL-02**: The agent can add, rename, check, uncheck and remove items in one call with a list of item-level operations. No replace-all write.
 - [ ] **TOOL-03**: The agent can list the sessions that have a board, with open and total counts and last update.
-- [ ] **TOOL-04**: The agent can read another session's board by session id.
+- [x] **TOOL-04**: The agent can read another session's board by session id.
 - [x] **TOOL-05**: The agent can copy chosen items, or all open items, from another session's board into the current board.
 - [x] **TOOL-06**: The tools take the current session from the `session_id` Hermes passes to the handler, never from the model's arguments.
 - [x] **TOOL-07**: Every write returns the new revision, a one-line change summary, and the board content the agent needs; a rejected stale write always returns the current board (full versus compact result is set in discuss-phase).
@@ -118,7 +118,7 @@ Each v1 requirement maps to exactly one phase.
 | TOOL-01 | Phase 2 | Complete |
 | TOOL-02 | Phase 2 | Complete |
 | TOOL-03 | Phase 6 | Pending |
-| TOOL-04 | Phase 6 | Pending |
+| TOOL-04 | Phase 6 | Complete |
 | TOOL-05 | Phase 6 | Complete |
 | TOOL-06 | Phase 2 | Complete |
 | TOOL-07 | Phase 2 | Complete |
