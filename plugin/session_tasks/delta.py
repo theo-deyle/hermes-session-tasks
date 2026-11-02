@@ -46,9 +46,15 @@ def pointer_line(rev: int) -> str:
 
 
 def delta_note(rev: int, changes: Sequence[Change], covered: bool) -> str | None:
-    """Return the fenced note of `changes`, or None when no change has a line."""
+    """Return the fenced note of `changes`, the pointer line, or None.
+
+    The pointer line replaces the note when the journal does not cover the gap, or when
+    the whole block, tags and note line included, is longer than `DELTA_MAX_CHARS`.
+    """
+    if not covered:
+        return pointer_line(rev)
     lines = [line for line in map(change_line, changes) if line is not None]
     if not lines:
         return None
     block = "\n".join([f'<{DELTA_TAG} rev="{rev}">', DELTA_NOTE, *lines, f"</{DELTA_TAG}>"])
-    return block
+    return pointer_line(rev) if len(block) > DELTA_MAX_CHARS else block

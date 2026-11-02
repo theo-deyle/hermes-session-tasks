@@ -277,5 +277,7 @@ class BoardStore:
             return Applied(_read_board(conn, root_id), row.rev, ())
         rows.save_board(conn, root_id, batch.new_rev, batch.next_id, now)
         rows.prune_changes(conn, root_id, JOURNAL_KEEP)
+        if actor == "agent":
+            rows.advance_seen(conn, root_id, row.rev, batch.new_rev)
         changed_ids = tuple(dict.fromkeys(batch.changed))
         return Applied(_read_board(conn, root_id), batch.new_rev, changed_ids, tuple(batch.entries))
