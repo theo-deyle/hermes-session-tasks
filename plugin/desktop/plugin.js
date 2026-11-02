@@ -197,7 +197,7 @@ function boardPath(sid) {
 }
 
 function isMismatch(meta) {
-  if (meta === null || meta.ok !== true) return false
+  if (!meta || meta.ok !== true) return false
   return meta.backend_version !== PLUGIN_VERSION || meta.api_version !== API_VERSION
 }
 
