@@ -3,16 +3,16 @@ gsd_state_version: "1.0"
 current_phase: 4
 current_phase_name: Pane
 status: executing
-stopped_at: Completed 04-09-PLAN.md
-last_updated: "2026-11-02T00:45:07.955Z"
+stopped_at: Completed 04-02-PLAN.md
+last_updated: "2026-11-02T01:01:05.743Z"
 last_activity: 2026-11-01
 last_activity_desc: Phase 02 complete, transitioned to Phase 3
-state_head: 9c40d1c267bcf4735ec4e828449fef98e734b887
+state_head: 918f35496a9d70abcd79788c46ac5fdad62e582a
 progress:
   total_phases: 7
   completed_phases: 2
   total_plans: 34
-  completed_plans: 24
+  completed_plans: 25
   percent: 29
 ---
 
@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-10-30)
 ## Current Position
 
 Phase: 4 (Pane) — READY TO EXECUTE
-Plan: 11 of 12 complete (03-01 done)
+Plan: 12 of 12 complete (03-01 done)
 Status: Ready to execute
 Last activity: 2026-11-01 — Completed 03-01 (pre_llm_call nudge, own-job harness)
 
@@ -80,6 +80,7 @@ Progress: [███░░░░░░░] 29%
 | Phase 03 P08 | 1h 36m | 3 tasks | 0 files |
 | Phase 04 P01 | 6 min | 2 tasks | 5 files |
 | Phase 04 P09 | 6 min | 2 tasks | 3 files |
+| Phase 04 P02 | 24 min | 3 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -133,6 +134,8 @@ Recent decisions affecting current work:
 - [Phase 03]: 03-08: a Desktop quit and reopen reattaches to the backend in backend.lock.json and starts no new process; only a backend restart refreshes the plugin Python half; every Mac command uses the SSH alias devbox
 - [Phase 04]: Pane keeps every React hook in Pane; Header and ItemRow are stateless and the harness enforces it
 - [Phase 04]: 04-09: -RemotePath defaults to the old literal; Test-RemotePath allows only absolute paths of [A-Za-z0-9._/-] because scp -O hands the path to a shell on devpc
+- [Phase 04]: The probe plugin lives in tests/fixtures and never reaches a Desktop machine; the install script copies only plugin/desktop/plugin.js.
+- [Phase 04]: The harness takes a peek capture for every POST, so later pane tests read the pane at write time through atWrite.
 
 ### Pending Todos
 
@@ -164,6 +167,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-11-02T00:45:07.670Z
-Stopped at: Completed 04-09-PLAN.md
+Last session: 2026-11-02T01:01:05.413Z
+Stopped at: Completed 04-02-PLAN.md
 Resume file: None
