@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import logging
 import sqlite3
 from collections.abc import Callable
@@ -81,6 +82,22 @@ def test_a_theo_edit_in_the_pane_reaches_the_next_turn_once(connect: ConnFactory
     ])
 
     assert pre_llm(session_id="s1", user_message="hi", is_first_turn=False) == expected
+    assert pre_llm(session_id="s1", user_message="hi", is_first_turn=False) is None
+
+
+def test_board_read_by_the_agent_clears_the_note(connect: ConnFactory) -> None:
+    ctx = FakeCtx()
+    register(ctx, connect=connect, open_reader=FakeReaderFactory({}), publish=no_publish)
+    edit = ctx.tools["board_edit"]["handler"]
+    board_read = ctx.tools["board_read"]["handler"]
+    pre_llm = ctx.hooks["pre_llm_call"][0]
+    edit({"ops": [{"op": "add", "text": "Call John"}]}, session_id="s1")
+    assert pre_llm(session_id="s1", user_message="hi", is_first_turn=False) is None
+    theo(connect, "s1", [{"op": "set_checked", "item_id": 1, "checked": True}], 1)
+
+    result = json.loads(board_read({}, session_id="s1"))
+
+    assert result["rev"] == 2
     assert pre_llm(session_id="s1", user_message="hi", is_first_turn=False) is None
 
 
