@@ -120,7 +120,7 @@ def test_hermes_dispatches_the_cross_session_tools(hermes_home: Path) -> None:
     lines = sessions["sessions"]
     assert isinstance(lines, list)
     by_id = {line.split(" | ")[1]: line for line in lines}
-    assert set(by_id) == {"s1", "s2"}
+    assert set(by_id) == {"s1", "s2", "s5"}
     assert by_id["s2"].startswith("- Source board | s2 | 1 of 2 open")
     assert not by_id["s2"].endswith("(this session)")
     assert by_id["s1"].endswith("(this session)")
