@@ -18,6 +18,9 @@ ROW_1 = {"row": "1"}
 ENTER = "Enter"
 ADD = "Add an item"
 STALE = "Board changed, showing the latest"
+TRASH = "Delete item"
+EMPTY = "The agent adds items here."
+TITLE = "Delete this item?"
 CLICK_CALL = {"clickText": CALL}
 RELOAD = {"event": {"type": EVENT_TYPE}}
 
@@ -223,3 +226,126 @@ def test_focus_change_drops_edit_and_typing(rig: Rig, tmp_path: Path) -> None:
 
     assert inputs(result, row="1") == []
     assert the_input(result, placeholder=ADD)["value"] == ""
+
+
+def seed_parent(store: BoardStore, *children: str, done: str | None = None) -> None:
+    """`Plan trip` with one subtask per text; the text `done` is checked. One write each."""
+    seed(store, "Plan trip")
+    for text in children:
+        rev = store.get_board("s1").rev
+        item = AddItem(text, checked=text == done, parent_id=1)
+        store.apply("s1", [item], actor="agent", base_rev=rev)
+
+
+def trash(row: str) -> dict[str, object]:
+    return {"click": {"label": TRASH, "row": row}}
+
+
+def dialog(count: str) -> dict[str, object]:
+    return {
+        "open": True,
+        "title": TITLE,
+        "description": f"Delete this item and its {count}?",
+        "confirmLabel": "Delete item and subtasks",
+        "cancelLabel": "Keep item",
+        "destructive": True,
+    }
+
+
+def removes(result: dict[str, object], item_id: int) -> bool:
+    return [call["body"]["ops"] for call in posts(result)] == [  # type: ignore[index]
+        [{"op": "remove", "item_id": item_id}]
+    ]
+
+
+def test_trash_deletes_an_item_without_subtasks_at_once(rig: Rig, tmp_path: Path) -> None:
+    seed(rig.store, CALL, "Email Ann")
+
+    result = rig.run(tmp_path, steps=[trash("1")])
+
+    assert removes(result, 1)
+    assert posts(result)[0]["body"]["base_rev"] == 2
+    assert result["confirm"]["open"] is False
+    assert [item.text for item in rig.store.get_board("s1").items] == ["Email Ann"]
+    assert TRASH in result["tips"]
+
+
+def test_trash_on_a_parent_asks_with_the_count(rig: Rig, tmp_path: Path) -> None:
+    seed_parent(rig.store, "Book flight", "Pack", done="Book flight")
+
+    result = rig.run(tmp_path, steps=[trash("1")])
+
+    assert posts(result) == []
+    assert result["confirm"] == dialog("2 subtasks")
+
+
+def test_keep_item_sends_nothing(rig: Rig, tmp_path: Path) -> None:
+    seed_parent(rig.store, "Book flight", "Pack")
+
+    result = rig.run(tmp_path, steps=[trash("1"), {"cancel": True}])
+
+    assert posts(result) == []
+    assert result["confirm"]["open"] is False
+    assert len(rig.store.get_board("s1").items) == 3
+
+
+def test_confirm_deletes_the_parent_and_its_subtasks(rig: Rig, tmp_path: Path) -> None:
+    seed_parent(rig.store, "Book flight", "Pack")
+
+    result = rig.run(tmp_path, steps=[trash("1"), {"confirm": True}])
+
+    assert removes(result, 1)
+    assert rig.store.get_board("s1").items == ()
+    assert EMPTY in result["lines"]
+    assert result["confirm"]["open"] is False
+
+
+def test_one_subtask_uses_the_singular(rig: Rig, tmp_path: Path) -> None:
+    seed_parent(rig.store, "Pack")
+
+    result = rig.run(tmp_path, steps=[trash("1")])
+
+    assert result["confirm"] == dialog("1 subtask")
+
+
+def test_subtask_trash_deletes_at_once(rig: Rig, tmp_path: Path) -> None:
+    seed_parent(rig.store, "Pack")
+
+    result = rig.run(tmp_path, steps=[trash("2")])
+
+    assert removes(result, 2)
+    assert result["confirm"]["open"] is False
+
+
+def test_parent_delete_is_stale_when_a_subtask_changed(rig: Rig, tmp_path: Path) -> None:
+    seed_parent(rig.store, "Pack")
+    check = {"op": "set_checked", "item_id": 2, "checked": True}
+
+    result = rig.run(tmp_path, steps=[outside(check, base_rev=2), trash("1"), {"confirm": True}])
+
+    sent = [call for call in posts(result) if call["body"]["ops"][0]["op"] == "remove"]
+    assert len(sent) == 1
+    assert sent[0]["body"]["base_rev"] == 2
+    assert len(rig.store.get_board("s1").items) == 2
+    assert STALE in result["lines"]
+
+
+def test_row_buttons_keep_their_space_at_320px(rig: Rig, tmp_path: Path) -> None:
+    long_text = "x" * 500
+    seed(rig.store, long_text)
+
+    result = rig.run(tmp_path)
+
+    for label in (TRASH, "Add subtask"):
+        found = [b for b in result["buttons"] if b["label"] == label and b["row"] == "1"]
+        assert len(found) == 1
+        for name in (
+            "shrink-0",
+            "opacity-0",
+            "group-hover:opacity-100",
+            "group-focus-within:opacity-100",
+        ):
+            assert name in found[0]["className"].split()
+    text = [node for node in result["nodes"] if node["text"] == long_text]
+    assert len(text) == 1
+    assert {"min-w-0", "flex-1"} <= set(text[0]["className"].split())
