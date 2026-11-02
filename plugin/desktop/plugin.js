@@ -283,6 +283,8 @@ function ItemRow({ item, subtasks, collapsed, onToggle, actions }) {
       top ? jsx(Chevron, { hasChildren: subtasks.length > 0, collapsed, onToggle }) : null,
       jsx('span', {
         className: HIT_CLASS,
+        // A press on the box keeps the focus where it is, so an open edit Input stays open.
+        onMouseDown: event => event.preventDefault(),
         children: jsx(Checkbox, {
           checked: item.checked,
           disabled: pendingRow,
@@ -425,6 +427,11 @@ function Pane({ ctx }) {
     current.current.revs[asked] = reply.rev
     if (current.current.sid !== asked) return
     current.current.board = reply.board
+    const open = current.current.edit
+    if (open !== null && !hasItem(reply.board, open.id)) {
+      changeEdit(null)
+      showNotice('stale')
+    }
     setServer({ sid: asked, rev: reply.rev, root_id: reply.root_id, board: reply.board })
   }
 
@@ -515,7 +522,9 @@ function Pane({ ctx }) {
   useEffect(() => {
     setCollapsed({})
     setAddText('')
+    setAddBusy(false)
     setSubLines({})
+    changeEdit(null)
     if (!sid) {
       setServer(null)
       return undefined
