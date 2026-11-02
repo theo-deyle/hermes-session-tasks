@@ -231,6 +231,21 @@ def test_relative_hermes_home_is_refused(rig: Rig) -> None:
     assert not rig.log.exists()
 
 
+def test_remote_path_names_another_file(rig: Rig) -> None:
+    home = rig.root / "home"
+    other = "/home/theo/share/hermes-todo/phase3-test-pane.plugin.js"
+
+    result = run_script(
+        ["-HermesHome", str(home), "-DevpcHost", "devpc", "-RemotePath", other], rig
+    )
+
+    target = home / SLOT / "plugin.js"
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert rig.calls()[0] == f"-O -q devpc:{other} .plugin.js.new"
+    assert target.read_text(encoding="utf-8") == SOURCE_TEXT
+    assert f"copy: devpc:{other}" in result.stdout.splitlines()
+
+
 @pytest.mark.parametrize("host", ["-oProxyCommand=touch x", "dev pc", "devpc;rm"])
 def test_bad_host_is_refused(rig: Rig, host: str) -> None:
     home = rig.root / "home"
