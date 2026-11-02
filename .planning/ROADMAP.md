@@ -210,7 +210,29 @@ Plans:
   2. On request, the agent reads another session's board by session id. The agent copies chosen items, or all open items, into the current board.
   3. A session picker in the pane lists boards with title, open count and last update. A picked board shows read-only.
   4. Theo copies one item, or all open items, from the shown board into the focused board.
-**Plans**: TBD
+**Plans**: 12 plans in 5 waves
+Plans:
+**Wave 1**
+- [ ] 06-01-PLAN.md - Copy in the board store: one transaction, the copy rules, the journal of where each copy came from (wave 1)
+- [ ] 06-02-PLAN.md - Arguments of board_copy and of the board_read target; the caller check keeps one sanctioned read (wave 1)
+- [ ] 06-03-PLAN.md - Session titles for the agent through the read-only session store, pinned to the real store (wave 1)
+- [ ] 06-04-PLAN.md - Chat picker in the pane with titles, and the first read-only view of another board (wave 1)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+- [ ] 06-05-PLAN.md - board_copy handler: copy into the caller's board, guards and the copy sentence (wave 2)
+- [ ] 06-06-PLAN.md - Read-only view: Back, focus change, live update by board, empty and failure states, no writes (wave 2)
+- [ ] 06-07-PLAN.md - Tools for the live check: seed a source board in a test home, read boards, list tool calls (wave 2)
+
+**Wave 3** *(blocked on Wave 2 completion)*
+- [ ] 06-08-PLAN.md - board_sessions and board_read of another session's board, with no seen change (wave 3)
+- [ ] 06-09-PLAN.md - Copy route for the pane, with the edit route's reply shapes (wave 3)
+
+**Wave 4** *(blocked on Wave 3 completion)*
+- [ ] 06-10-PLAN.md - Register the two new tools, the tool text, the skill section, the real Hermes dispatch test (wave 4)
+- [ ] 06-11-PLAN.md - Copy one item or all open items from the pane, with the one-line copy notice (wave 4)
+
+**Wave 5** *(blocked on Wave 4 completion)*
+- [ ] 06-12-PLAN.md - Live check with the real model in a test home, announced restart, own-plan re-check, Mac checks (wave 5)
 **Research**: Not needed. The REST and pane patterns repeat, and the title join uses the documented `session.list`.
 **UI hint**: yes
 
