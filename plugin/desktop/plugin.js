@@ -8,6 +8,7 @@
 import {
   Button,
   Checkbox,
+  ConfirmDialog,
   CopyButton,
   EmptyState,
   Input,
@@ -35,6 +36,9 @@ const EMPTY_HINT = 'Add one below.'
 const NO_CHAT_TITLE = 'Open a chat to see its items.'
 const ADD_PLACEHOLDER = 'Add an item'
 const SUBTASK_PLACEHOLDER = 'Add a subtask'
+const CONFIRM_TITLE = 'Delete this item?'
+const CONFIRM_LABEL = 'Delete item and subtasks'
+const CANCEL_LABEL = 'Keep item'
 const MAX_TEXT_CHARS = 500
 const PANE_CLASS = 'flex h-full flex-col text-xs'
 const HEADER_CLASS = 'text-sm font-medium text-(--ui-text-secondary)'
@@ -49,9 +53,9 @@ const LIST_CLASS = 'min-h-0 flex-1'
 const LIST_BODY_CLASS = 'flex flex-col p-2'
 const ADD_LINE_CLASS = 'mt-2'
 const SUBTASK_LINE_CLASS = 'mt-2 pl-6'
-// The plus button keeps its space at all times and shows on row hover or keyboard focus in the row.
+// The plus and trash buttons keep their space at all times and shows on row hover or keyboard focus in the row.
 const REVEAL_CLASS = 'opacity-0 group-hover:opacity-100 group-focus-within:opacity-100'
-const PLUS_CLASS = `${REVEAL_CLASS} shrink-0`
+const ROW_BUTTON_CLASS = `${REVEAL_CLASS} shrink-0`
 const ESCAPED_HASH = /^\\*#[0-9]+(?:\s|$)/
 const HIT_CLASS = 'flex size-6 shrink-0 items-center justify-center'
 const TEXT_CLASS = 'min-w-0 flex-1 py-1 text-xs'
@@ -152,13 +156,21 @@ function applyOp(board, op, pendingKey) {
   if (op.op === 'add') {
     return { ...board, items: insertPending(items, pendingItem(op, pendingKey)) }
   }
-  const field = op.op === 'set_text' ? { text: op.text } : { checked: op.checked }
+  if (op.op === 'remove') {
+    const kept = items.filter(item => item.id !== op.item_id && item.parent_id !== op.item_id)
+    return { ...board, items: kept }
+  }
   if (op.op !== 'set_checked' && op.op !== 'set_text') return board
+  const field = op.op === 'set_text' ? { text: op.text } : { checked: op.checked }
   if (!items.some(item => item.id === op.item_id)) return board
   return {
     ...board,
     items: items.map(item => (item.id === op.item_id ? { ...item, ...field } : item))
   }
+}
+
+function confirmText(count) {
+  return `Delete this item and its ${count === 1 ? '1 subtask' : `${count} subtasks`}?`
 }
 
 // Returns a new board with every pending write applied in order. Never mutates its input.
@@ -236,16 +248,16 @@ function Chevron({ hasChildren, collapsed, onToggle }) {
   })
 }
 
-function PlusButton({ onClick }) {
+function RowButton({ label, Icon, onClick }) {
   return jsx(Tip, {
-    label: 'Add subtask',
+    label,
     children: jsx(Button, {
       variant: 'ghost',
       size: 'icon-xs',
-      className: PLUS_CLASS,
-      'aria-label': 'Add subtask',
+      className: ROW_BUTTON_CLASS,
+      'aria-label': label,
       onClick,
-      children: jsx(icons.Plus, {})
+      children: jsx(Icon, {})
     })
   })
 }
@@ -296,16 +308,28 @@ function ItemRow({ item, subtasks, collapsed, onToggle, actions }) {
       top && subtasks.length > 0
         ? jsx('span', { className: COUNT_CLASS, children: subtaskCountText(subtasks) })
         : null,
-      top && !pendingRow ? jsx(PlusButton, { onClick: () => actions.onAddSubtask(item.id) }) : null
+      top && !pendingRow
+        ? jsx(RowButton, {
+            label: 'Add subtask',
+            Icon: icons.Plus,
+            onClick: () => actions.onAddSubtask(item.id)
+          })
+        : null,
+      pendingRow
+        ? null
+        : jsx(RowButton, {
+            label: 'Delete item',
+            Icon: icons.Trash2,
+            onClick: () => actions.onDelete(item, subtasks)
+          })
     ]
   })
 }
 
 // One top-level item: its row, one row per subtask, then its open subtask add line.
-// `subtask` holds that line ({ line, onChange, onKeyDown, onBlur }) and is null when none is open.
+// `subtask` holds the AddLine props of that line ({ value, readOnly, onChange, onKeyDown, onBlur }), or null.
 function ItemBlock({ group, collapsed, onToggle, actions, subtask }) {
   const { item, children } = group
-  const showLine = subtask !== null && !collapsed
   return jsxs('div', {
     'data-item-id': rowId(item),
     children: [
@@ -319,19 +343,10 @@ function ItemBlock({ group, collapsed, onToggle, actions, subtask }) {
       ...(collapsed
         ? []
         : children.map(child => jsx(ItemRow, { item: child, subtasks: [], actions }, itemKey(child)))),
-      showLine
+      subtask !== null && !collapsed
         ? jsx(
             AddLine,
-            {
-              className: SUBTASK_LINE_CLASS,
-              placeholder: SUBTASK_PLACEHOLDER,
-              value: subtask.line.text,
-              readOnly: subtask.line.busy,
-              autoFocus: true,
-              onChange: subtask.onChange,
-              onKeyDown: subtask.onKeyDown,
-              onBlur: subtask.onBlur
-            },
+            { className: SUBTASK_LINE_CLASS, placeholder: SUBTASK_PLACEHOLDER, autoFocus: true, ...subtask },
             'subtask-line'
           )
         : null
@@ -376,6 +391,19 @@ function caretToEnd(event) {
   field.setSelectionRange(field.value.length, field.value.length)
 }
 
+function DeleteConfirm({ confirm, onClose, onConfirm }) {
+  return jsx(ConfirmDialog, {
+    open: confirm !== null,
+    title: CONFIRM_TITLE,
+    description: confirm === null ? null : confirmText(confirm.count),
+    confirmLabel: CONFIRM_LABEL,
+    cancelLabel: CANCEL_LABEL,
+    destructive: true,
+    onClose,
+    onConfirm
+  })
+}
+
 function isEnter(event) {
   return event.key === 'Enter' && !(event.nativeEvent && event.nativeEvent.isComposing)
 }
@@ -400,6 +428,8 @@ function Pane({ ctx }) {
   const [subLines, setSubLines] = useState({})
   // The one item under edit: { id, text, original }, or null. The ref copy lives in `current`.
   const [edit, setEdit] = useState(null)
+  // The delete question for an item with subtasks: { id, count }, or null.
+  const [confirm, setConfirm] = useState(null)
   const shown = server !== null && server.sid === (sid || null) ? server : null
   // The listener, the interval and the writes live longer than one render, so they read this ref.
   // revs holds the newest accepted rev of each session. queue chains the writes one after another.
@@ -525,6 +555,7 @@ function Pane({ ctx }) {
     setAddBusy(false)
     setSubLines({})
     changeEdit(null)
+    setConfirm(null)
     if (!sid) {
       setServer(null)
       return undefined
@@ -608,7 +639,8 @@ function Pane({ ctx }) {
   // Escape closes the line, except while its write is in flight. Blur closes it only when it holds no text.
   function subtaskHandlers(parentId, line) {
     return {
-      line,
+      value: line.text,
+      readOnly: line.busy,
       onChange: value => patchSubLine(parentId, { text: value }),
       onKeyDown: event => {
         if (isEnter(event)) submitSubtask(parentId, line)
@@ -654,6 +686,18 @@ function Pane({ ctx }) {
     onEditBlur: () => saveEdit()
   }
 
+  // An item with no subtasks goes at once. One with subtasks asks first, naming the count.
+  function onDelete(item, children) {
+    if (children.length === 0) sendOp({ op: 'remove', item_id: item.id })
+    else setConfirm({ id: item.id, count: children.length })
+  }
+
+  function confirmDelete() {
+    if (confirm === null) return
+    setConfirm(null)
+    sendOp({ op: 'remove', item_id: confirm.id })
+  }
+
   function onCheck(item, value) {
     sendOp({ op: 'set_checked', item_id: item.id, checked: value === true })
   }
@@ -662,7 +706,7 @@ function Pane({ ctx }) {
     setCollapsed(prev => ({ ...prev, [itemId]: !prev[itemId] }))
   }
 
-  const actions = { edit, onCheck, onAddSubtask: openSubLine, onEdit: startEdit, ...editHandlers }
+  const actions = { edit, onCheck, onAddSubtask: openSubLine, onEdit: startEdit, onDelete, ...editHandlers }
   const focusedEntries = pending.filter(entry => entry.sid === focused)
   const board = shown === null ? null : viewBoard(shown.board, focusedEntries)
   const items = boardItems(board)
@@ -714,7 +758,8 @@ function Pane({ ctx }) {
             }, 'add')
           ]
         })
-      })
+      }),
+      jsx(DeleteConfirm, { confirm, onClose: () => setConfirm(null), onConfirm: confirmDelete })
     ]
   })
 }
@@ -734,29 +779,8 @@ export default {
 }
 
 export {
-  API_VERSION,
-  EVENT_TYPE,
-  PLUGIN_ID,
-  PLUGIN_VERSION,
-  LOAD_FAILED_NOTICE,
-  NOTICE_MS,
-  POLL_MS,
-  STALE_NOTICE,
-  WRITE_FAILED_NOTICE,
-  ADD_PLACEHOLDER,
-  MAX_TEXT_CHARS,
-  SUBTASK_PLACEHOLDER,
-  applyOp,
-  boardItems,
-  boardMarkdown,
-  boardPath,
-  buildTree,
-  headerText,
-  isMismatch,
-  isTopLevel,
-  noticeText,
-  openCounts,
-  subtaskCountText,
-  viewBoard,
-  writeOutcome
+  API_VERSION, EVENT_TYPE, PLUGIN_ID, PLUGIN_VERSION, LOAD_FAILED_NOTICE, NOTICE_MS, POLL_MS,
+  STALE_NOTICE, WRITE_FAILED_NOTICE, ADD_PLACEHOLDER, MAX_TEXT_CHARS, SUBTASK_PLACEHOLDER,
+  applyOp, boardItems, boardMarkdown, boardPath, buildTree, headerText, isMismatch, isTopLevel,
+  noticeText, openCounts, subtaskCountText, viewBoard, writeOutcome
 }
