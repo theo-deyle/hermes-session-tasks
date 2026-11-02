@@ -259,7 +259,8 @@ def test_plugin_passes_the_stdin_module_check(plugin_source: str) -> None:
 
 
 def test_truncated_plugin_fails_the_check(plugin_source: str) -> None:
-    checked = node_check(plugin_source[: len(plugin_source) // 2])
+    # Drop the final closing brace of the export list: always a syntax error, wherever blocks end.
+    checked = node_check(plugin_source.rstrip()[:-1])
 
     assert checked.returncode != 0
 

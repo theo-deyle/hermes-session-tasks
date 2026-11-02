@@ -34,19 +34,24 @@ const EMPTY_TITLE = 'The agent adds items here.'
 const EMPTY_HINT = 'Add one below.'
 const NO_CHAT_TITLE = 'Open a chat to see its items.'
 const ADD_PLACEHOLDER = 'Add an item'
+const SUBTASK_PLACEHOLDER = 'Add a subtask'
 const MAX_TEXT_CHARS = 500
 const PANE_CLASS = 'flex h-full flex-col text-xs'
 const HEADER_CLASS = 'text-sm font-medium text-(--ui-text-secondary)'
 const HEADER_ROW_CLASS =
   'flex items-center justify-between gap-2 border-b border-(--ui-stroke-secondary) p-2'
 const NOTICE_CLASS = 'px-2 pt-2 text-xs text-(--ui-text-secondary)'
-const ROW_CLASS = 'flex min-h-8 items-start gap-1 py-1'
-const SUBTASK_ROW_CLASS = 'flex min-h-8 items-start gap-1 py-1 pl-6'
+const ROW_CLASS = 'group flex min-h-8 items-start gap-1 py-1'
+const SUBTASK_ROW_CLASS = 'group flex min-h-8 items-start gap-1 py-1 pl-6'
 const CHEVRON_COL_CLASS = 'flex size-6 shrink-0 items-center justify-center'
 const COUNT_CLASS = 'shrink-0 py-1 text-xs text-(--ui-text-secondary)'
 const LIST_CLASS = 'min-h-0 flex-1'
 const LIST_BODY_CLASS = 'flex flex-col p-2'
 const ADD_LINE_CLASS = 'mt-2'
+const SUBTASK_LINE_CLASS = 'mt-2 pl-6'
+// The plus button keeps its space at all times and shows on row hover or keyboard focus in the row.
+const REVEAL_CLASS = 'opacity-0 group-hover:opacity-100 group-focus-within:opacity-100'
+const PLUS_CLASS = `${REVEAL_CLASS} shrink-0`
 const ESCAPED_HASH = /^\\*#[0-9]+(?:\s|$)/
 const HIT_CLASS = 'flex size-6 shrink-0 items-center justify-center'
 const TEXT_CLASS = 'min-w-0 flex-1 py-1 text-xs'
@@ -229,7 +234,21 @@ function Chevron({ hasChildren, collapsed, onToggle }) {
   })
 }
 
-function ItemRow({ item, subtasks, collapsed, onToggle, onCheck }) {
+function PlusButton({ onClick }) {
+  return jsx(Tip, {
+    label: 'Add subtask',
+    children: jsx(Button, {
+      variant: 'ghost',
+      size: 'icon-xs',
+      className: PLUS_CLASS,
+      'aria-label': 'Add subtask',
+      onClick,
+      children: jsx(icons.Plus, {})
+    })
+  })
+}
+
+function ItemRow({ item, subtasks, collapsed, onToggle, onCheck, onAddSubtask }) {
   const textClass = item.checked ? `${TEXT_CLASS} ${DONE_CLASS}` : TEXT_CLASS
   const top = isTopLevel(item)
   const pendingRow = isPending(item)
@@ -254,29 +273,65 @@ function ItemRow({ item, subtasks, collapsed, onToggle, onCheck }) {
       }),
       top && subtasks.length > 0
         ? jsx('span', { className: COUNT_CLASS, children: subtaskCountText(subtasks) })
+        : null,
+      top && !pendingRow ? jsx(PlusButton, { onClick: () => onAddSubtask(item.id) }) : null
+    ]
+  })
+}
+
+// One top-level item: its row, one row per subtask, then its open subtask add line.
+// `subtask` holds that line ({ line, onChange, onKeyDown, onBlur }) and is null when none is open.
+function ItemBlock({ group, collapsed, onToggle, onCheck, onAddSubtask, subtask }) {
+  const { item, children } = group
+  const showLine = subtask !== null && !collapsed
+  return jsxs('div', {
+    'data-item-id': rowId(item),
+    children: [
+      jsx(ItemRow, {
+        item,
+        subtasks: children,
+        collapsed,
+        onToggle: () => onToggle(item.id),
+        onCheck,
+        onAddSubtask
+      }),
+      ...(collapsed
+        ? []
+        : children.map(child => jsx(ItemRow, { item: child, subtasks: [], onCheck }, itemKey(child)))),
+      showLine
+        ? jsx(
+            AddLine,
+            {
+              className: SUBTASK_LINE_CLASS,
+              placeholder: SUBTASK_PLACEHOLDER,
+              value: subtask.line.text,
+              readOnly: subtask.line.busy,
+              autoFocus: true,
+              onChange: subtask.onChange,
+              onKeyDown: subtask.onKeyDown,
+              onBlur: subtask.onBlur
+            },
+            'subtask-line'
+          )
         : null
     ]
   })
 }
 
-// One top-level item: its row, then one row per subtask.
-function ItemBlock({ group, collapsed, onToggle, onCheck }) {
-  const { item, children } = group
-  return jsxs('div', {
-    'data-item-id': rowId(item),
-    children: [
-      jsx(ItemRow, { item, subtasks: children, collapsed, onToggle: () => onToggle(item.id), onCheck }),
-      ...(collapsed
-        ? []
-        : children.map(child => jsx(ItemRow, { item: child, subtasks: [], onCheck }, itemKey(child))))
-    ]
-  })
-}
-
 // One text line. It holds no state: the caller owns the text, the busy flag and the handlers.
-function AddLine({ placeholder, value, readOnly, autoFocus, inputRef, onChange, onKeyDown, onBlur }) {
+function AddLine({
+  className,
+  placeholder,
+  value,
+  readOnly,
+  autoFocus,
+  inputRef,
+  onChange,
+  onKeyDown,
+  onBlur
+}) {
   return jsx('div', {
-    className: ADD_LINE_CLASS,
+    className,
     children: jsx(Input, {
       ref: inputRef,
       placeholder,
@@ -312,6 +367,8 @@ function Pane({ ctx }) {
   const [addText, setAddText] = useState('')
   const [addBusy, setAddBusy] = useState(false)
   const addRef = useRef(null)
+  // The open subtask add lines, keyed by parent id: { text, busy }.
+  const [subLines, setSubLines] = useState({})
   const shown = server !== null && server.sid === (sid || null) ? server : null
   // The listener, the interval and the writes live longer than one render, so they read this ref.
   // revs holds the newest accepted rev of each session. queue chains the writes one after another.
@@ -323,6 +380,7 @@ function Pane({ ctx }) {
     seq: 0,
     entrySeq: 0,
     addBusy: false,
+    subBusy: {},
     noticeCleanup: null
   })
   const focused = sid || null
@@ -418,6 +476,7 @@ function Pane({ ctx }) {
   useEffect(() => {
     setCollapsed({})
     setAddText('')
+    setSubLines({})
     if (!sid) {
       setServer(null)
       return undefined
@@ -463,6 +522,56 @@ function Pane({ ctx }) {
     else if (event.key === 'Escape' && !current.current.addBusy) setAddText('')
   }
 
+  function patchSubLine(parentId, patch) {
+    setSubLines(prev =>
+      prev[parentId] ? { ...prev, [parentId]: { ...prev[parentId], ...patch } } : prev
+    )
+  }
+
+  function closeSubLine(parentId) {
+    setSubLines(prev =>
+      Object.fromEntries(Object.entries(prev).filter(([key]) => key !== String(parentId)))
+    )
+  }
+
+  // The plus click: lines without text close, this parent gets an empty line and shows its subtasks.
+  function openSubLine(parentId) {
+    setSubLines(prev => {
+      const kept = Object.fromEntries(Object.entries(prev).filter(([, line]) => line.text !== ''))
+      return kept[parentId] ? kept : { ...kept, [parentId]: { text: '', busy: false } }
+    })
+    setCollapsed(prev => ({ ...prev, [parentId]: false }))
+  }
+
+  function submitSubtask(parentId, line) {
+    const state = current.current
+    const text = line.text.trim()
+    if (state.subBusy[parentId] || text === '') return
+    const asked = state.sid
+    state.subBusy[parentId] = true
+    patchSubLine(parentId, { busy: true })
+    sendOp({ op: 'add', text, parent_id: parentId }, outcome => {
+      delete state.subBusy[parentId]
+      const cleared = outcome === 'ok' && state.sid === asked
+      patchSubLine(parentId, cleared ? { text: '', busy: false } : { busy: false })
+    })
+  }
+
+  // Escape closes the line, except while its write is in flight. Blur closes it only when it holds no text.
+  function subtaskHandlers(parentId, line) {
+    return {
+      line,
+      onChange: value => patchSubLine(parentId, { text: value }),
+      onKeyDown: event => {
+        if (isEnter(event)) submitSubtask(parentId, line)
+        else if (event.key === 'Escape' && !line.busy) closeSubLine(parentId)
+      },
+      onBlur: () => {
+        if (line.text === '' && !line.busy) closeSubLine(parentId)
+      }
+    }
+  }
+
   function onCheck(item, value) {
     sendOp({ op: 'set_checked', item_id: item.id, checked: value === true })
   }
@@ -499,11 +608,21 @@ function Pane({ ctx }) {
               : buildTree(items).map(group =>
                   jsx(
                     ItemBlock,
-                    { group, collapsed: collapsed[group.item.id] === true, onToggle, onCheck },
+                    {
+                      group,
+                      collapsed: collapsed[group.item.id] === true,
+                      onToggle,
+                      onCheck,
+                      onAddSubtask: openSubLine,
+                      subtask: subLines[group.item.id]
+                        ? subtaskHandlers(group.item.id, subLines[group.item.id])
+                        : null
+                    },
                     itemKey(group.item)
                   )
                 ),
             jsx(AddLine, {
+              className: ADD_LINE_CLASS,
               placeholder: ADD_PLACEHOLDER,
               value: addText,
               readOnly: addBusy,
@@ -544,6 +663,7 @@ export {
   WRITE_FAILED_NOTICE,
   ADD_PLACEHOLDER,
   MAX_TEXT_CHARS,
+  SUBTASK_PLACEHOLDER,
   applyOp,
   boardItems,
   boardMarkdown,
