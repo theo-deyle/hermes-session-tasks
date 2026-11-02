@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Session picker sketch</title>
+<style>
+  :root { --bg:#141518; --pane:#1c1e23; --stroke:#33363d; --text:#e6e6e8; --muted:#9a9ca3; --accent:#7aa2ff; --warn:#f0c674; }
+  body { margin:0; background:var(--bg); color:var(--text); font:14px/1.45 system-ui, sans-serif; padding:24px; }
+  h1 { font-size:18px; margin:0 0 4px; }
+  p.lead { color:var(--muted); margin:0 0 20px; max-width:720px; }
+  .row { display:flex; gap:28px; flex-wrap:wrap; align-items:flex-start; }
+  .state { width:320px; }
+  .state h2 { font-size:13px; color:var(--muted); font-weight:600; margin:0 0 8px; text-transform:uppercase; letter-spacing:.04em; }
+  .pane { background:var(--pane); border:1px solid var(--stroke); border-radius:8px; padding:10px; min-height:360px; position:relative; }
+  .picker { display:flex; align-items:center; justify-content:space-between; border:1px solid var(--stroke); border-radius:6px; padding:6px 8px; margin-bottom:8px; cursor:pointer; }
+  .picker .title { font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:230px; }
+  .picker .count { color:var(--muted); font-size:12px; margin-left:8px; white-space:nowrap; }
+  .picker .caret { color:var(--muted); margin-left:6px; }
+  .hdr { display:flex; align-items:center; justify-content:space-between; color:var(--muted); font-size:12px; padding:2px 4px 6px; }
+  .btn { border:1px solid var(--stroke); border-radius:5px; padding:2px 8px; font-size:12px; color:var(--text); background:transparent; cursor:pointer; }
+  .btn.accent { border-color:var(--accent); color:var(--accent); }
+  .item { display:flex; align-items:center; gap:8px; padding:5px 4px; }
+  .item.sub { padding-left:28px; }
+  .box { width:14px; height:14px; border:1px solid var(--muted); border-radius:3px; flex:none; }
+  .box.on { background:var(--muted); }
+  .item .t { flex:1; }
+  .item.done .t { text-decoration:line-through; color:var(--muted); }
+  .item .copy { visibility:hidden; }
+  .item:hover .copy, .item.show .copy { visibility:visible; }
+  .banner { background:rgba(240,198,116,.12); border:1px solid var(--warn); color:var(--warn); border-radius:6px; padding:5px 8px; font-size:12px; margin-bottom:6px; display:flex; justify-content:space-between; align-items:center; }
+  .banner a { color:var(--warn); text-decoration:underline; cursor:pointer; }
+  .notice { color:var(--muted); font-size:12px; padding:6px 4px; border-top:1px dashed var(--stroke); margin-top:6px; }
+  .add { border:1px solid var(--stroke); border-radius:6px; padding:5px 8px; color:var(--muted); margin-top:8px; }
+  .menu { position:absolute; left:10px; right:10px; top:44px; background:var(--pane); border:1px solid var(--stroke); border-radius:6px; box-shadow:0 8px 24px rgba(0,0,0,.4); z-index:2; }
+  .opt { display:flex; justify-content:space-between; padding:7px 10px; border-bottom:1px solid var(--stroke); }
+  .opt:last-child { border-bottom:0; }
+  .opt .n { font-weight:600; }
+  .opt .m { color:var(--muted); font-size:12px; text-align:right; white-space:nowrap; }
+  .opt.sel { background:rgba(122,162,255,.12); }
+  .note { color:var(--muted); font-size:12px; margin-top:8px; max-width:320px; }
+</style>
+</head>
+<body>
+<h1>Phase 6 - Session picker in the task pane</h1>
+<p class="lead">Three states of the same 320 px pane. Left: today's pane with the picker row added. Middle: the picker open. Right: another session's board, read only, with copy buttons.</p>
+
+<div class="row">
+
+<div class="state">
+  <h2>1. Focused session (default)</h2>
+  <div class="pane">
+    <div class="picker"><span class="title">Lease renewal</span><span><span class="count">3 of 5 open</span><span class="caret">&#9662;</span></span></div>
+    <div class="hdr"><span></span><span class="btn">&#9112; copy md</span></div>
+    <div class="item"><span class="box"></span><span class="t">Call John about the lease</span></div>
+    <div class="item sub done"><span class="box on"></span><span class="t">Find the old contract</span></div>
+    <div class="item sub"><span class="box"></span><span class="t">Ask for the renewal date</span></div>
+    <div class="item"><span class="box"></span><span class="t">Send the quote to Mat</span></div>
+    <div class="item done"><span class="box on"></span><span class="t">Book the room</span></div>
+    <div class="add">Add an item...</div>
+  </div>
+  <p class="note">The picker row replaces the "3 of 5 open" header line. The count moves into the row. Nothing else changes.</p>
+</div>
+
+<div class="state">
+  <h2>2. Picker open</h2>
+  <div class="pane">
+    <div class="picker"><span class="title">Lease renewal</span><span><span class="count">3 of 5 open</span><span class="caret">&#9652;</span></span></div>
+    <div class="menu">
+      <div class="opt sel"><span><span class="n">Lease renewal</span><br><span class="m">this session</span></span><span class="m">3 of 5 open<br>2 min ago</span></div>
+      <div class="opt"><span><span class="n">Syncro ticket 4910</span></span><span class="m">1 of 4 open<br>today 09:12</span></div>
+      <div class="opt"><span><span class="n">Laptop setup DM-LT041</span></span><span class="m">0 of 6 open<br>Oct 30</span></div>
+      <div class="opt"><span><span class="n">Untitled session</span><br><span class="m">a1f3c9...</span></span><span class="m">2 of 2 open<br>Oct 28</span></div>
+    </div>
+    <div class="item" style="margin-top:150px"><span class="box"></span><span class="t">Call John about the lease</span></div>
+    <div class="item"><span class="box"></span><span class="t">Send the quote to Mat</span></div>
+  </div>
+  <p class="note">Sessions that have a board, newest board change first. Title from Hermes, then the first message, then "Untitled session" with the short id. The focused session is always listed, even with an empty board.</p>
+</div>
+
+<div class="state">
+  <h2>3. Another session's board</h2>
+  <div class="pane">
+    <div class="picker"><span class="title">Syncro ticket 4910</span><span><span class="count">1 of 4 open</span><span class="caret">&#9662;</span></span></div>
+    <div class="banner"><span>Read only. Viewing another session.</span><a>Back</a></div>
+    <div class="hdr"><span></span><span class="btn accent">Copy all open to Lease renewal</span></div>
+    <div class="item show"><span class="box"></span><span class="t">Reply to the customer</span><span class="btn copy">Copy</span></div>
+    <div class="item sub done"><span class="box on"></span><span class="t">Check the invoice</span></div>
+    <div class="item done"><span class="box on"></span><span class="t">Add the private note</span></div>
+    <div class="item done"><span class="box on"></span><span class="t">Close the ticket</span></div>
+    <div class="notice">Copied 1 to Lease renewal. 0 skipped.</div>
+  </div>
+  <p class="note">No checkboxes work here, no add line, no edit. "Copy" on a row copies that item and its open subtasks. "Copy all open" copies every open item. An item whose text is already open on the target board is skipped and counted. Back returns to the focused session.</p>
+</div>
+
+</div>
+</body>
+</html>
