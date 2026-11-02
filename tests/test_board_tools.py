@@ -488,3 +488,103 @@ def test_a_failing_after_write_still_returns_the_applied_result(
     records = [r for r in caplog.records if r.name == "session_tasks.board_tools"]
     assert len(records) == 1
     assert records[0].levelno == logging.WARNING
+
+
+def seen(connect: ConnFactory, root: str) -> int:
+    conn = connect()
+    try:
+        return int(
+            conn.execute("SELECT agent_seen_rev FROM boards WHERE root_id = ?", (root,)).fetchone()[
+                0
+            ]
+        )
+    finally:
+        conn.close()
+
+
+def test_read_marks_the_board_seen_at_its_rev(
+    store: BoardStore, resolver_for: ResolverFor, connect: ConnFactory
+) -> None:
+    tools, _ = tools_for(store, resolver_for)
+    store.apply("s1", [AddItem("Call John")], actor="user", base_rev=0)
+    assert seen(connect, "s1") == 0
+
+    read(tools, "s1")
+
+    assert seen(connect, "s1") == 1
+
+
+def test_delegate_read_does_not_mark_seen(
+    store: BoardStore, resolver_for: ResolverFor, connect: ConnFactory
+) -> None:
+    tools, _ = tools_for(store, resolver_for, DELEGATE_SPECS)
+    store.apply("s1", [AddItem("Call John")], actor="user", base_rev=0)
+
+    result = read(tools, "dg")
+
+    assert result["rev"] == 1
+    assert seen(connect, "s1") == 0
+
+
+def test_stale_reply_marks_seen_at_the_board_rev(
+    store: BoardStore, resolver_for: ResolverFor, connect: ConnFactory
+) -> None:
+    tools, _ = tools_for(store, resolver_for)
+    store.apply("s1", [AddItem("a")], actor="agent", base_rev=0)
+    assert seen(connect, "s1") == 1
+    store.apply("s1", [SetText(1, "renamed")], actor="user", base_rev=1)
+
+    result = edit(tools, {"ops": [{"op": "set_text", "item_id": 1, "text": "new"}], "base_rev": 1})
+
+    assert result["stale"] is True
+    assert result["rev"] == 2
+    assert seen(connect, "s1") == 2
+
+
+def test_not_found_reply_marks_seen(
+    store: BoardStore, resolver_for: ResolverFor, connect: ConnFactory
+) -> None:
+    tools, _ = tools_for(store, resolver_for)
+    store.apply("s1", [AddItem("a")], actor="agent", base_rev=0)
+    store.apply("s1", [SetChecked(1, True)], actor="user", base_rev=1)
+
+    result = edit(tools, {"ops": [{"op": "remove", "item_id": 9}], "base_rev": 2})
+
+    assert result["reason"] == "not_found"
+    assert seen(connect, "s1") == store.get_board("s1").rev == 2
+
+
+def test_applied_edit_after_a_theo_change_keeps_seen(
+    store: BoardStore, resolver_for: ResolverFor, connect: ConnFactory
+) -> None:
+    tools, _ = tools_for(store, resolver_for)
+    edit(tools, {"ops": [add_op("a")]})
+    assert seen(connect, "s1") == 1
+    store.apply("s1", [SetChecked(1, True)], actor="user", base_rev=1)
+
+    result = edit(tools, {"ops": [add_op("b")]})
+
+    assert result["rev"] == 3
+    assert seen(connect, "s1") == 1
+
+
+def test_a_failing_seen_mark_still_returns_the_board(
+    store: BoardStore,
+    resolver_for: ResolverFor,
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    tools, _ = tools_for(store, resolver_for)
+    store.apply("s1", [AddItem("Call John")], actor="agent", base_rev=0)
+
+    def broken(self: BoardStore, root_id: str, rev: int) -> None:
+        raise RuntimeError("write failed")
+
+    monkeypatch.setattr(BoardStore, "mark_seen", broken)
+
+    with caplog.at_level(logging.WARNING, logger="session_tasks.board_tools"):
+        result = read(tools, "s1")
+
+    assert result == {"ok": True, "rev": 1, "board": "- [ ] #1 Call John\n"}
+    records = [r for r in caplog.records if r.name == "session_tasks.board_tools"]
+    assert [r.levelno for r in records] == [logging.WARNING]
