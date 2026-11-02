@@ -3,16 +3,16 @@ gsd_state_version: "1.0"
 current_phase: 3
 current_phase_name: REST router and client install spike
 status: executing
-stopped_at: Completed 03-10-PLAN.md
-last_updated: "2026-11-02T17:57:53.417Z"
+stopped_at: Completed 03-11-PLAN.md
+last_updated: "2026-11-02T18:32:18.619Z"
 last_activity: 2026-11-02
 last_activity_desc: Phase 05 complete, transitioned to Phase 3
-state_head: 490016e2c71dea95adf3579b63cacab282fbfd52
+state_head: dd16d72822d71598960949aeca8000fae9e434dd
 progress:
   total_phases: 7
   completed_phases: 4
   total_plans: 41
-  completed_plans: 39
+  completed_plans: 40
   percent: 57
 ---
 
@@ -96,6 +96,7 @@ Progress: [██████░░░░] 57%
 | Phase 05 P06 | 8min | 3 tasks | 2 files |
 | Phase 05 P07 | 23 min | 3 tasks | 2 files |
 | Phase 03 P10 | 60 min | 3 tasks | 0 files |
+| Phase 03 P11 | 20m | 3 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -172,6 +173,7 @@ Recent decisions affecting current work:
 - [Phase 05]: 05-06: own-plan test passed 3 of 3 without the one-line reminder; reminder text and its two tests removed, hooks.py unchanged, no second restart needed
 - [Phase 05]: Token test judges input tokens per turn (difference between runs); session totals stay in the report. Measured: plugin 516 tokens per turn, notes 291 at turn 30 for 790 characters.
 - [Phase 03]: 03-10: the Windows live test installs the frozen Phase 3 test pane with -RemotePath, because plugin.js at HEAD holds the Phase 4 board pane
+- [Phase 03]: The README names the live SSH alias of each machine (devbox on the Mac, devpc-ts on the Windows PC) in its commands
 
 ### Pending Todos
 
@@ -203,6 +205,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-11-02T17:57:52.942Z
-Stopped at: Completed 03-10-PLAN.md
+Last session: 2026-11-02T18:32:18.126Z
+Stopped at: Completed 03-11-PLAN.md
 Resume file: None

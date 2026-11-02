@@ -39,8 +39,8 @@ Requirements for the first release. Each maps to a roadmap phase.
 
 ### Backend routes
 
-- [ ] **API-01**: REST routes under `/api/plugins/hermes-session-tasks/` let the pane read a board, list boards, and apply the same item-level operations as the agent tools.
-- [ ] **API-02**: Every write, from a tool or a route, broadcasts a `board.updated` event with the session id and revision.
+- [x] **API-01**: REST routes under `/api/plugins/hermes-session-tasks/` let the pane read a board, list boards, and apply the same item-level operations as the agent tools.
+- [x] **API-02**: Every write, from a tool or a route, broadcasts a `board.updated` event with the session id and revision.
 - [x] **API-03**: A meta route returns the backend version and API version, so the pane can detect a mismatch with its own copy.
 
 ### Pane
@@ -128,8 +128,8 @@ Each v1 requirement maps to exactly one phase.
 | AGNT-03 | Phase 2 | Complete |
 | AGNT-04 | Phase 2 | Complete |
 | AGNT-05 | Phase 5 | Complete |
-| API-01 | Phase 3 | Pending |
-| API-02 | Phase 3 | Pending |
+| API-01 | Phase 3 | Complete |
+| API-02 | Phase 3 | Complete |
 | API-03 | Phase 3 | Complete |
 | PANE-01 | Phase 4 | Complete |
 | PANE-02 | Phase 4 | Complete |
