@@ -10,6 +10,11 @@ import {
   Checkbox,
   ConfirmDialog,
   CopyButton,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
   EmptyState,
   Input,
   ScrollArea,
@@ -41,9 +46,8 @@ const CONFIRM_LABEL = 'Delete item and subtasks'
 const CANCEL_LABEL = 'Keep item'
 const MAX_TEXT_CHARS = 500
 const PANE_CLASS = 'flex h-full flex-col text-xs'
-const HEADER_CLASS = 'text-sm font-medium text-(--ui-text-secondary)'
 const HEADER_ROW_CLASS =
-  'flex items-center justify-between gap-2 border-b border-(--ui-stroke-secondary) p-2'
+  'flex items-center justify-end gap-2 border-b border-(--ui-stroke-secondary) p-2'
 const NOTICE_CLASS = 'px-2 pt-2 text-xs text-(--ui-text-secondary)'
 const ROW_CLASS = 'group flex min-h-8 items-start gap-1 py-1'
 const SUBTASK_ROW_CLASS = 'group flex min-h-8 items-start gap-1 py-1 pl-6'
@@ -65,6 +69,34 @@ const DONE_CLASS = 'text-(--ui-text-secondary)'
 const TEXT_STYLE = { overflowWrap: 'anywhere', whiteSpace: 'pre-wrap' }
 const DONE_STYLE = { ...TEXT_STYLE, textDecoration: 'line-through' }
 const NOTICE_STYLE = { whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }
+const PICKER_TIP = 'Choose a session'
+const UNTITLED = 'Untitled session'
+const NO_OTHER_BOARDS = 'No other session has a board.'
+const LIST_FAILED = 'Could not load the session list. Reopen the list to retry.'
+const READ_ONLY_BANNER = 'Read only. Viewing another session.'
+const READ_ONLY_EMPTY_TITLE = 'This board is empty.'
+const READ_ONLY_EMPTY_HINT = 'Pick another session or go back.'
+const THIS_SESSION = 'this session'
+const SESSION_LIST_LIMIT = 200
+const SHORT_ID_CHARS = 6
+const MENU_STYLE = { width: '304px' }
+// A one-line text that ends with an ellipsis. A count never wraps and never shrinks.
+const TRUNCATE_STYLE = { overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }
+const NOWRAP_STYLE = { whiteSpace: 'nowrap' }
+const PICKER_ROW_CLASS = 'px-2 pt-2'
+const PICKER_BUTTON_CLASS = 'min-h-8 w-full justify-between'
+const PICKER_TITLE_CLASS = 'min-w-0 flex-1 text-sm font-medium'
+const PICKER_COUNT_CLASS = 'shrink-0 text-xs text-(--ui-text-secondary)'
+const CARET_CLASS = 'size-4 shrink-0'
+const MENU_LEFT_CLASS = 'flex min-w-0 flex-1 flex-col'
+const MENU_NAME_CLASS = 'text-xs font-medium'
+const MENU_SUB_CLASS = 'text-xs text-(--ui-text-secondary)'
+const MENU_RIGHT_CLASS = 'flex shrink-0 flex-col text-right text-xs text-(--ui-text-secondary)'
+const BANNER_CLASS =
+  'mx-2 mt-2 flex items-center justify-between border border-(--ui-yellow) px-2 py-1 text-xs text-(--ui-text-primary)'
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+const MS_PER_MINUTE = 60000
+const MS_PER_HOUR = 3600000
 
 function isTopLevel(item) {
   return item.parent_id === null || item.parent_id === undefined
@@ -94,6 +126,101 @@ function openCounts(items) {
 
 function headerText(counts) {
   return `${counts.open} of ${counts.total} open`
+}
+
+// The last 6 characters of a board root id. A Hermes id starts with a date, so the end tells boards apart.
+function shortId(rootId) {
+  return String(rootId).slice(-SHORT_ID_CHARS)
+}
+
+function rowTitle(row) {
+  for (const field of [row.title, row.preview]) {
+    if (typeof field === 'string' && field.trim() !== '') return field
+  }
+  return null
+}
+
+// Maps a board root id to its Hermes label: the title, else the preview. The first row for a root wins.
+// A session that was never compressed has a null lineage root, so its own id is the key.
+function titleMap(rows) {
+  const titles = {}
+  const seen = new Set()
+  for (const row of Array.isArray(rows) ? rows : []) {
+    if (row === null || typeof row !== 'object') continue
+    const root = row._lineage_root_id ?? row.id
+    if (typeof root !== 'string' || root === '' || seen.has(root)) continue
+    seen.add(root)
+    const label = rowTitle(row)
+    if (label !== null) titles[root] = label
+  }
+  return titles
+}
+
+function hasTitle(rootId, titles) {
+  return Object.hasOwn(titles, rootId)
+}
+
+// The single-line label of a board: the trigger, the aria-label and later the notices.
+function boardLabel(rootId, titles) {
+  return hasTitle(rootId, titles) ? titles[rootId] : `${UNTITLED} ${shortId(rootId)}`
+}
+
+function menuName(rootId, titles) {
+  return hasTitle(rootId, titles) ? titles[rootId] : UNTITLED
+}
+
+function menuSubLine(rootId, focusedRoot, titles) {
+  const parts = []
+  if (rootId === focusedRoot) parts.push(THIS_SESSION)
+  if (!hasTitle(rootId, titles)) parts.push(shortId(rootId))
+  return parts.length === 0 ? null : parts.join(' - ')
+}
+
+function updatedMs(board) {
+  const ms = typeof board.updated_at === 'string' ? Date.parse(board.updated_at) : Number.NaN
+  return Number.isNaN(ms) ? null : ms
+}
+
+// The focused board comes first. The others follow, newest update first. A board with no time goes last.
+// Equal times sort by root id. `focused` is the focused entry of the list, or null when the list lacks it.
+function orderBoards(boards, focusedRoot) {
+  const list = Array.isArray(boards) ? boards.filter(board => board && board.root_id) : []
+  const others = list.filter(board => board.root_id !== focusedRoot)
+  others.sort((a, b) => {
+    const left = updatedMs(a)
+    const right = updatedMs(b)
+    if (left !== right) {
+      if (left === null) return 1
+      if (right === null) return -1
+      return right - left
+    }
+    if (a.root_id === b.root_id) return 0
+    return a.root_id < b.root_id ? -1 : 1
+  })
+  return { focused: list.find(board => board.root_id === focusedRoot) ?? null, others }
+}
+
+function pad2(value) {
+  return String(value).padStart(2, '0')
+}
+
+// The update time of a board as a short English label. Null when the time is absent or unreadable.
+function updatedLabel(iso, nowMs) {
+  const then = typeof iso === 'string' ? Date.parse(iso) : Number.NaN
+  if (Number.isNaN(then)) return null
+  const diff = nowMs - then
+  if (diff < MS_PER_MINUTE) return 'just now'
+  if (diff < MS_PER_HOUR) return `${Math.floor(diff / MS_PER_MINUTE)} min ago`
+  const when = new Date(then)
+  const now = new Date(nowMs)
+  const day = `${MONTHS[when.getMonth()]} ${when.getDate()}`
+  if (when.getFullYear() !== now.getFullYear()) return `${day}, ${when.getFullYear()}`
+  if (when.getMonth() !== now.getMonth() || when.getDate() !== now.getDate()) return day
+  return `today ${pad2(when.getHours())}:${pad2(when.getMinutes())}`
+}
+
+function pickerAriaLabel(label, counts) {
+  return counts.total === 0 ? `Session: ${label}` : `Session: ${label}, ${headerText(counts)}`
 }
 
 // Groups the board items by parent. Items arrive in board order, each subtask after its parent.
@@ -215,19 +342,130 @@ function Notice({ text }) {
   return jsx('div', { className: NOTICE_CLASS, style: NOTICE_STYLE, children: text })
 }
 
-function Header({ counts, items }) {
-  return jsxs('div', {
+function Header({ items }) {
+  return jsx('div', {
     className: HEADER_ROW_CLASS,
+    children: jsx(CopyButton, {
+      appearance: 'icon',
+      label: 'Copy as markdown',
+      text: () => boardMarkdown(items),
+      disabled: items.length === 0
+    })
+  })
+}
+
+// One board in the menu. The right block and the check slot never shrink; the name truncates.
+function MenuRow({ rootId, counts, updatedAt, view, onSelect }) {
+  const { titles, focusedRoot, shownRoot, nowMs } = view
+  const sub = menuSubLine(rootId, focusedRoot, titles)
+  const time = updatedLabel(updatedAt, nowMs)
+  const current = rootId === shownRoot
+  return jsxs(DropdownMenuItem, {
+    onSelect,
+    'aria-current': current ? true : undefined,
     children: [
-      jsx('span', { className: HEADER_CLASS, children: counts.total === 0 ? null : headerText(counts) }),
-      jsx(CopyButton, {
-        appearance: 'icon',
-        label: 'Copy as markdown',
-        text: () => boardMarkdown(items),
-        disabled: items.length === 0
-      })
+      jsxs('span', {
+        className: MENU_LEFT_CLASS,
+        children: [
+          jsx('span', { className: MENU_NAME_CLASS, style: TRUNCATE_STYLE, children: menuName(rootId, titles) }),
+          sub === null ? null : jsx('span', { className: MENU_SUB_CLASS, style: TRUNCATE_STYLE, children: sub })
+        ]
+      }),
+      jsxs('span', {
+        className: MENU_RIGHT_CLASS,
+        style: NOWRAP_STYLE,
+        children: [
+          counts.total === 0 ? null : jsx('span', { children: headerText(counts) }),
+          time === null ? null : jsx('span', { children: time })
+        ]
+      }),
+      jsx('span', { className: CARET_CLASS, children: current ? jsx(icons.Check, {}) : null })
     ]
   })
+}
+
+// The menu: the focused board, a hairline, then the others or one plain line that says why there are none.
+function PickerMenu({ view, boards, failed, focusedCounts, onPick }) {
+  const { focused, others } = orderBoards(boards, view.focusedRoot)
+  const first = focused === null ? { open: focusedCounts.open, total: focusedCounts.total } : focused
+  const tail = []
+  if (failed) {
+    tail.push(jsx(DropdownMenuItem, { disabled: true, children: LIST_FAILED }, 'failed'))
+  } else if (boards !== null && others.length === 0) {
+    tail.push(jsx(DropdownMenuItem, { disabled: true, children: NO_OTHER_BOARDS }, 'none'))
+  } else if (boards !== null) {
+    for (const board of others) {
+      tail.push(
+        jsx(
+          MenuRow,
+          {
+            rootId: board.root_id,
+            counts: { open: board.open, total: board.total },
+            updatedAt: board.updated_at,
+            view,
+            onSelect: () => onPick(board.root_id)
+          },
+          board.root_id
+        )
+      )
+    }
+  }
+  return jsxs(DropdownMenuContent, {
+    align: 'start',
+    style: MENU_STYLE,
+    children: [
+      jsx(
+        MenuRow,
+        {
+          rootId: view.focusedRoot,
+          counts: { open: first.open, total: first.total },
+          updatedAt: focused === null ? null : focused.updated_at,
+          view,
+          onSelect: () => onPick(view.focusedRoot)
+        },
+        'focused'
+      ),
+      jsx(DropdownMenuSeparator, {}),
+      ...tail
+    ]
+  })
+}
+
+// The first element of the pane: the shown board and its count, and the menu of every board.
+function PickerRow({ view, counts, boards, failed, focusedCounts, onOpenChange, onPick }) {
+  const label = boardLabel(view.shownRoot, view.titles)
+  return jsx('div', {
+    className: PICKER_ROW_CLASS,
+    children: jsxs(DropdownMenu, {
+      onOpenChange,
+      children: [
+        jsx(Tip, {
+          label: PICKER_TIP,
+          children: jsx(DropdownMenuTrigger, {
+            asChild: true,
+            children: jsxs(Button, {
+              variant: 'outline',
+              size: 'sm',
+              className: PICKER_BUTTON_CLASS,
+              'aria-label': pickerAriaLabel(label, counts),
+              children: [
+                jsx('span', { className: PICKER_TITLE_CLASS, style: TRUNCATE_STYLE, children: label }),
+                counts.total === 0
+                  ? null
+                  : jsx('span', { className: PICKER_COUNT_CLASS, style: NOWRAP_STYLE, children: headerText(counts) }),
+                jsx(icons.ChevronDown, { className: CARET_CLASS })
+              ]
+            })
+          })
+        }),
+        jsx(PickerMenu, { view, boards, failed, focusedCounts, onPick })
+      ]
+    })
+  })
+}
+
+function ReadOnlyBanner() {
+  return jsx('div', { className: BANNER_CLASS, children: jsx('span', { children: READ_ONLY_BANNER }) })
 }
 
 function Chevron({ hasChildren, collapsed, onToggle }) {
@@ -280,7 +518,7 @@ function RowText({ item, textClass, actions }) {
   return jsx('span', {
     className: textClass,
     style: item.checked ? DONE_STYLE : TEXT_STYLE,
-    onClick: isPending(item) ? undefined : () => actions.onEdit(item),
+    onClick: isPending(item) || actions.readOnly === true ? undefined : () => actions.onEdit(item),
     children: item.text
   })
 }
@@ -289,6 +527,7 @@ function ItemRow({ item, subtasks, collapsed, onToggle, actions }) {
   const textClass = item.checked ? `${TEXT_CLASS} ${DONE_CLASS}` : TEXT_CLASS
   const top = isTopLevel(item)
   const pendingRow = isPending(item)
+  const readOnly = actions.readOnly === true
   return jsxs('div', {
     className: top ? ROW_CLASS : SUBTASK_ROW_CLASS,
     'data-item-id': rowId(item),
@@ -300,8 +539,10 @@ function ItemRow({ item, subtasks, collapsed, onToggle, actions }) {
         children: jsx(Checkbox, {
           className: CHECK_CLASS,
           checked: item.checked,
-          disabled: pendingRow,
-          onCheckedChange: value => (pendingRow ? undefined : actions.onCheck(item, value)),
+          disabled: pendingRow || readOnly,
+          onCheckedChange: readOnly
+            ? undefined
+            : value => (pendingRow ? undefined : actions.onCheck(item, value)),
           'aria-label': item.text
         })
       }),
@@ -310,14 +551,14 @@ function ItemRow({ item, subtasks, collapsed, onToggle, actions }) {
       top && subtasks.length > 0
         ? jsx('span', { className: COUNT_CLASS, children: subtaskCountText(subtasks) })
         : null,
-      top && !pendingRow
+      top && !pendingRow && !readOnly
         ? jsx(RowButton, {
             label: 'Add subtask',
             Icon: icons.Plus,
             onClick: () => actions.onAddSubtask(item.id)
           })
         : null,
-      pendingRow
+      pendingRow || readOnly
         ? null
         : jsx(RowButton, {
             label: 'Delete item',
@@ -432,6 +673,16 @@ function Pane({ ctx }) {
   const [edit, setEdit] = useState(null)
   // The delete question for an item with subtasks: { id, count }, or null.
   const [confirm, setConfirm] = useState(null)
+  // Hermes titles by board root id, the boards of the menu (null until the first reply) and whether that list failed.
+  const [titles, setTitles] = useState({})
+  const [boards, setBoards] = useState(null)
+  const [boardsFailed, setBoardsFailed] = useState(false)
+  // When the menu opened: the time labels are computed against it and nothing ticks.
+  const [menuNow, setMenuNow] = useState(0)
+  // The root id of the other board under view, its last reply, and its own collapse map (null view = focused board).
+  const [picked, setPicked] = useState(null)
+  const [pickedServer, setPickedServer] = useState(null)
+  const [pickedCollapsed, setPickedCollapsed] = useState({})
   const shown = server !== null && server.sid === (sid || null) ? server : null
   // The listener, the interval and the writes live longer than one render, so they read this ref.
   // revs holds the newest accepted rev of each session. queue chains the writes one after another.
@@ -448,6 +699,7 @@ function Pane({ ctx }) {
     subBusy: {},
     edit: null,
     board: null,
+    picked: null,
     noticeCleanup: null
   })
   const focused = sid || null
@@ -488,6 +740,38 @@ function Pane({ ctx }) {
       .catch(() => {
         if (current.current.sid === asked) setLoadFailed(true)
       })
+  }
+
+  // Titles come from Hermes. A failed or odd reply keeps the last good titles and shows nothing.
+  function loadTitles() {
+    try {
+      return Promise.resolve(host.request('session.list', { limit: SESSION_LIST_LIMIT }))
+        .then(reply => {
+          if (reply && Array.isArray(reply.sessions)) setTitles(titleMap(reply.sessions))
+        })
+        .catch(() => undefined)
+    } catch {
+      return Promise.resolve()
+    }
+  }
+
+  function loadBoards() {
+    return ctx
+      .rest('/boards')
+      .then(body => {
+        const good = body && body.ok === true && Array.isArray(body.boards)
+        if (good) setBoards(body.boards)
+        setBoardsFailed(!good)
+      })
+      .catch(() => setBoardsFailed(true))
+  }
+
+  // The menu refreshes when it opens, never on the poll.
+  function onMenuOpenChange(open) {
+    if (!open) return
+    setMenuNow(Date.now())
+    loadBoards()
+    loadTitles()
   }
 
   function showNotice(kind) {
@@ -558,6 +842,10 @@ function Pane({ ctx }) {
   useEffect(() => {
     current.current.sid = focused
     current.current.board = null
+    current.current.picked = null
+    setPicked(null)
+    setPickedServer(null)
+    setPickedCollapsed({})
     current.current.visit += 1
     current.current.addBusy = false
     current.current.subBusy = {}
@@ -572,6 +860,7 @@ function Pane({ ctx }) {
       setServer(null)
       return undefined
     }
+    loadTitles()
     reload()
     return ctx.setInterval(reload, POLL_MS)
   }, [sid])
@@ -719,9 +1008,38 @@ function Pane({ ctx }) {
     sendOp({ op: 'remove', item_id: confirm.id })
   }
 
+  // The focused board, or another one under view. Picking the focused or the shown board returns to the focused one.
+  function pick(rootId, focusedRoot) {
+    const state = current.current
+    if (rootId === focusedRoot || rootId === state.picked) {
+      state.picked = null
+      setPicked(null)
+      setPickedServer(null)
+      reload()
+      return
+    }
+    saveEdit()
+    state.picked = rootId
+    setPicked(rootId)
+    setPickedServer(null)
+    setPickedCollapsed({})
+    ctx
+      .rest(boardPath(rootId))
+      .then(body => {
+        if (current.current.picked !== rootId) return
+        const good = body && body.ok === true
+        if (good) setPickedServer(body)
+        setLoadFailed(!good)
+      })
+      .catch(() => {
+        if (current.current.picked === rootId) setLoadFailed(true)
+      })
+  }
+
   const onCheck = (item, value) => sendOp({ op: 'set_checked', item_id: item.id, checked: value === true })
   const onToggle = itemId => setCollapsed(prev => ({ ...prev, [itemId]: !prev[itemId] }))
   const actions = { edit, onCheck, onAddSubtask: openSubLine, onEdit: startEdit, onDelete, ...editHandlers }
+  const readOnlyActions = { readOnly: true, edit: null }
   const focusedEntries = pending.filter(entry => entry.sid === focused)
   const board = shown === null ? null : viewBoard(shown.board, focusedEntries)
   const items = boardItems(board)
@@ -732,11 +1050,37 @@ function Pane({ ctx }) {
       children: [noticeLine, jsx(EmptyState, { title: NO_CHAT_TITLE })]
     })
   }
-  const isEmpty = shown !== null && items.length === 0
+  const focusedRoot = shown === null ? focused : shown.root_id
+  const viewing = picked !== null
+  const shownItems = viewing ? boardItems(pickedServer === null ? null : pickedServer.board) : items
+  const view = {
+    titles,
+    focusedRoot,
+    shownRoot: viewing ? picked : focusedRoot,
+    nowMs: menuNow
+  }
+  const isEmpty = viewing ? pickedServer !== null && shownItems.length === 0 : shown !== null && items.length === 0
+  const emptyState = viewing
+    ? jsx(EmptyState, { title: READ_ONLY_EMPTY_TITLE, description: READ_ONLY_EMPTY_HINT }, 'empty')
+    : jsx(EmptyState, { title: EMPTY_TITLE, description: EMPTY_HINT }, 'empty')
+  const collapseMap = viewing ? pickedCollapsed : collapsed
+  const onToggleShown = viewing
+    ? itemId => setPickedCollapsed(prev => ({ ...prev, [itemId]: !prev[itemId] }))
+    : onToggle
   return jsxs('div', {
     className: PANE_CLASS,
     children: [
-      jsx(Header, { counts: openCounts(items), items }),
+      jsx(PickerRow, {
+        view,
+        counts: openCounts(shownItems),
+        boards,
+        failed: boardsFailed,
+        focusedCounts: openCounts(items),
+        onOpenChange: onMenuOpenChange,
+        onPick: rootId => pick(rootId, focusedRoot)
+      }),
+      viewing ? jsx(ReadOnlyBanner, {}) : null,
+      jsx(Header, { items: shownItems }),
       noticeLine,
       jsx(ScrollArea, {
         className: LIST_CLASS,
@@ -744,31 +1088,34 @@ function Pane({ ctx }) {
           className: LIST_BODY_CLASS,
           children: [
             isEmpty
-              ? jsx(EmptyState, { title: EMPTY_TITLE, description: EMPTY_HINT }, 'empty')
-              : buildTree(items).map(group =>
+              ? emptyState
+              : buildTree(shownItems).map(group =>
                   jsx(
                     ItemBlock,
                     {
                       group,
-                      collapsed: collapsed[group.item.id] === true,
-                      onToggle,
-                      actions,
-                      subtask: subLines[group.item.id]
-                        ? subtaskHandlers(group.item.id, subLines[group.item.id])
-                        : null
+                      collapsed: collapseMap[group.item.id] === true,
+                      onToggle: onToggleShown,
+                      actions: viewing ? readOnlyActions : actions,
+                      subtask:
+                        !viewing && subLines[group.item.id]
+                          ? subtaskHandlers(group.item.id, subLines[group.item.id])
+                          : null
                     },
                     itemKey(group.item)
                   )
                 ),
-            jsx(AddLine, {
-              className: ADD_LINE_CLASS,
-              placeholder: ADD_PLACEHOLDER,
-              value: addText,
-              readOnly: addBusy,
-              inputRef: addRef,
-              onChange: setAddText,
-              onKeyDown: onAddKeyDown
-            }, 'add')
+            viewing
+              ? null
+              : jsx(AddLine, {
+                  className: ADD_LINE_CLASS,
+                  placeholder: ADD_PLACEHOLDER,
+                  value: addText,
+                  readOnly: addBusy,
+                  inputRef: addRef,
+                  onChange: setAddText,
+                  onKeyDown: onAddKeyDown
+                }, 'add')
           ]
         })
       }),
@@ -794,6 +1141,8 @@ export default {
 export {
   API_VERSION, EVENT_TYPE, PLUGIN_ID, PLUGIN_VERSION, LOAD_FAILED_NOTICE, NOTICE_MS, POLL_MS,
   STALE_NOTICE, WRITE_FAILED_NOTICE, ADD_PLACEHOLDER, MAX_TEXT_CHARS, SUBTASK_PLACEHOLDER,
-  applyOp, boardItems, boardMarkdown, boardPath, buildTree, headerText, isMismatch, isTopLevel,
-  noticeText, openCounts, subtaskCountText, viewBoard, writeOutcome
+  PICKER_TIP, UNTITLED, NO_OTHER_BOARDS, LIST_FAILED, READ_ONLY_BANNER, SESSION_LIST_LIMIT,
+  applyOp, boardItems, boardLabel, boardMarkdown, boardPath, buildTree, headerText, isMismatch,
+  isTopLevel, menuName, menuSubLine, noticeText, openCounts, orderBoards, pickerAriaLabel,
+  shortId, subtaskCountText, titleMap, updatedLabel, viewBoard, writeOutcome
 }

@@ -203,8 +203,10 @@ def test_header_sits_outside_the_scroll_area(rig: Rig, tmp_path: Path) -> None:
         ],
     )
 
-    title = node(result, "Lease renewal")
-    count = node(result, "1 of 1 open")
+    # The trigger holds the picker title and count; the always-rendered menu rows repeat the same texts.
+    in_trigger = [entry for entry in result["nodes"] if entry["button"]]
+    (title,) = [entry for entry in in_trigger if entry["text"] == "Lease renewal"]
+    (count,) = [entry for entry in in_trigger if entry["text"] == "1 of 1 open"]
     assert title["scroll"] is False
     assert "text-sm" in title["className"]
     assert "font-medium" in title["className"]

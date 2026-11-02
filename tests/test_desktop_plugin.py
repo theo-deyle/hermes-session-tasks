@@ -360,7 +360,9 @@ PALETTE_RE = re.compile(
 )
 STYLE_COLOUR_RE = re.compile(r"(color|background|backgroundColor|borderColor):\s*'(?!var\(--ui-)")
 TEMPLATE_CLASS_RE = re.compile(r"className:\s*\x60")
-MAX_PLUGIN_LINES = 800
+# The pane is one plain file: Desktop loads one uncompiled file and refuses a relative import
+# (06-UI-SPEC.md, Registry Safety), so it cannot split. The house 800 line rule is soft; this keeps a ceiling.
+MAX_PLUGIN_LINES = 1200
 
 
 def over_line_ceiling(source: str) -> bool:
