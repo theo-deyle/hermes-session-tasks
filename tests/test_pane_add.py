@@ -213,6 +213,7 @@ def test_plus_expands_a_collapsed_parent(rig: Rig, tmp_path: Path) -> None:
 
 
 def test_subtask_line_escape_and_blur(rig: Rig, tmp_path: Path) -> None:
+    seed_plan_trip(rig.store)
     close = {"blur": {"placeholder": SUB}}
     escaped = rig.run(tmp_path, steps=[PLUS_ROW_1, press("Escape", SUB)])
     blurred = rig.run(tmp_path, steps=[PLUS_ROW_1, close])
