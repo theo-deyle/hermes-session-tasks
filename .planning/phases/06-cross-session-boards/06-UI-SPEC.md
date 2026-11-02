@@ -1,7 +1,8 @@
 ---
 phase: "06"
 slug: cross-session-boards
-status: draft
+status: approved
+reviewed_at: "2026-11-02"
 shadcn_initialized: false
 preset: none
 created: "2026-11-02"
@@ -274,7 +275,7 @@ The pane is 320px. The picker trigger is 304px (8px pane padding each side). The
 
 | Element | Arithmetic | Result |
 |---------|-----------|--------|
-| Picker trigger inner width | 304 - 20 (SDK `px-2.5` both sides) - 12 (two `gap-1.5` gaps) - 16 (caret, `size-4`) | 256px for title and count |
+| Picker trigger inner width | 304 - 20 (SDK-owned `px-2.5` both sides, not a pane value) - 12 (two SDK-owned `gap-1.5` gaps, not a pane value) - 16 (caret, `size-4`) | 256px for title and count |
 | Typical count `3 of 5 open` (11 characters) | about 68px | title gets about 188px, about 26 characters at 14px |
 | Worst count `100 of 100 open` (15 characters) | about 93px | title gets about 163px, about 22 characters at 14px |
 | Title longer than its space | `overflow: hidden`, `textOverflow: 'ellipsis'`, `whiteSpace: 'nowrap'`, `minWidth: 0` | ends with an ellipsis; the count and caret stay in place |
@@ -298,6 +299,8 @@ A live check on the Mac with a 60 character title and a `100 of 100 open` board 
 ---
 
 ## UI Considerations
+
+Applicable state considerations resolved: 21 covered, 2 backstop, 0 unresolved. Authored from the Interaction Contract under `--auto`; the researcher table is kept as the resolved section (Phase 4 precedent).
 
 | Category | Element(s) | Status | Resolution / Reason |
 |----------|------------|--------|---------------------|
@@ -364,12 +367,12 @@ The picker title (14px, weight 500) is the primary visual anchor of the pane. It
 
 ## Checker Sign-Off
 
-- [ ] Dimension 1 Copywriting: pending
-- [ ] Dimension 2 Visuals: pending
-- [ ] Dimension 3 Color: pending
-- [ ] Dimension 4 Typography: pending
-- [ ] Dimension 5 Spacing: pending
-- [ ] Dimension 6 Registry Safety: pending
-- [ ] Dimension 7 Inventory Provenance: pending
+- [x] Dimension 1 Copywriting: PASS
+- [x] Dimension 2 Visuals: PASS
+- [x] Dimension 3 Color: PASS
+- [x] Dimension 4 Typography: PASS
+- [x] Dimension 5 Spacing: PASS (FLAG resolved: SDK-owned values labelled in the width check)
+- [x] Dimension 6 Registry Safety: PASS
+- [x] Dimension 7 Inventory Provenance: PASS
 
 **Approval:** pending gsd-ui-checker
