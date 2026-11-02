@@ -35,6 +35,8 @@ from .model import (
 )
 from .revision import check_base_rev, is_stale, target_id
 
+SQL_IN_CHUNK = 500
+
 
 class _StaleSignal(Exception):
     """Carries a rejected write out of the transaction, so the transaction rolls back."""
@@ -234,6 +236,24 @@ class BoardStore:
         check_session_id(root_id)
         with schema.open_db(self.connect) as conn, write_txn(conn):
             rows.mark_seen(conn, root_id, rev)
+
+    def delete_boards(self, ids: Sequence[str]) -> int:
+        """Delete the boards whose root id is in `ids`, and every alias row that names an id.
+
+        All chunks of at most `SQL_IN_CHUNK` ids share one write transaction. A board goes
+        only on an exact root id match; an alias match alone removes the alias row only.
+        Return the number of boards removed.
+        """
+        checked = [check_session_id(item) for item in ids]
+        if not checked:
+            return 0
+        removed = 0
+        with schema.open_db(self.connect) as conn, write_txn(conn):
+            for start in range(0, len(checked), SQL_IN_CHUNK):
+                chunk = checked[start : start + SQL_IN_CHUNK]
+                removed += rows.delete_boards(conn, chunk)
+                aliases.delete_aliases(conn, chunk)
+        return removed
 
     def apply(self, root_id: str, ops: Sequence[Op], *, actor: Actor, base_rev: int) -> WriteResult:
         """Apply a batch of operations in one write transaction, all or nothing.

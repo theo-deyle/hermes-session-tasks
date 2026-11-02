@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import sqlite3
+from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import cast
 
@@ -229,6 +230,20 @@ def prune_changes(conn: sqlite3.Connection, root_id: str, keep: int) -> None:
         f"(SELECT seq FROM {CHANGES} WHERE root_id = ? ORDER BY seq DESC LIMIT ?)"
     )
     conn.execute(sql, (root_id, root_id, keep))
+
+
+def delete_boards(conn: sqlite3.Connection, root_ids: Sequence[str]) -> int:
+    """Delete the boards with these root ids. Items and changes go by foreign key cascade.
+
+    Return the number of boards removed.
+    """
+    if not root_ids:
+        return 0
+    placeholders = ",".join("?" * len(root_ids))
+    cursor = conn.execute(
+        f"DELETE FROM {BOARDS} WHERE root_id IN ({placeholders})", tuple(root_ids)
+    )
+    return cursor.rowcount
 
 
 def list_board_summaries(conn: sqlite3.Connection) -> tuple[BoardSummary, ...]:

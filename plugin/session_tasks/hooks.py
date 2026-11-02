@@ -8,6 +8,10 @@ blocks the call. It returns a block directive or None and nothing else (D-18).
 `pre_llm_call` adds a short note of Theo's changes since the agent last saw the board, or
 nothing, to a turn of a non-delegate session. It returns a str or None and never raises
 (D-28, D-35, D-36).
+
+`on_session_delete` removes the boards of the session ids that Hermes deleted, and the alias
+rows that name them. A reason of `archive`, or a payload it cannot read, removes nothing.
+It never raises (D-37).
 """
 
 from __future__ import annotations
@@ -22,6 +26,7 @@ from .results import describe
 from .store import BoardStore
 
 GUARD_FAILED = "board_edit: the guard could not check this call. Try again."
+ARCHIVE_REASON = "archive"
 
 log = logging.getLogger(__name__)
 
@@ -111,3 +116,35 @@ def make_pre_llm_call(store: BoardStore, resolver: SessionResolver) -> Callable[
             return None
 
     return pre_llm_call
+
+
+def _delete_ids(session_id: object, deleted_ids: object) -> tuple[str, ...]:
+    """Return the ids that Hermes deleted: the list when it is a list, else `session_id`."""
+    if isinstance(deleted_ids, list | tuple):
+        listed = (item for item in deleted_ids if isinstance(item, str) and item.strip())
+        return tuple(dict.fromkeys(listed))
+    if isinstance(session_id, str) and session_id.strip():
+        return (session_id,)
+    return ()
+
+
+def make_on_session_delete(store: BoardStore) -> Callable[..., None]:
+    """Build the `on_session_delete` callback. It never raises."""
+
+    def on_session_delete(
+        session_id: object = "",
+        reason: object = "",
+        deleted_ids: object = None,
+        **kwargs: object,
+    ) -> None:
+        if not isinstance(reason, str) or not reason.strip() or reason == ARCHIVE_REASON:
+            return
+        ids = _delete_ids(session_id, deleted_ids)
+        if not ids:
+            return
+        try:
+            store.delete_boards(ids)
+        except Exception:
+            log.warning("board delete after session delete failed", exc_info=True)
+
+    return on_session_delete
