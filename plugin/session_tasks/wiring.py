@@ -11,6 +11,7 @@ from .board_tools import BoardTools
 from .db import ConnFactory
 from .lineage import ReaderFactory, SessionResolver
 from .store import BoardStore
+from .titles import TitleLookup
 
 
 class PluginContext(Protocol):
@@ -50,7 +51,12 @@ def register(
     """Register tools, hooks, prompt section and skill. Hermes calls this once."""
     store = BoardStore(connect)
     resolver = SessionResolver(connect, open_reader)
-    tools = BoardTools(store, resolver, after_write=events.listener("agent", publish))
+    tools = BoardTools(
+        store,
+        resolver,
+        after_write=events.listener("agent", publish),
+        titles=TitleLookup(open_reader),
+    )
     ctx.register_tool(
         name=tool_text.BOARD_READ,
         toolset=tool_text.TOOLSET,
@@ -63,6 +69,20 @@ def register(
         toolset=tool_text.TOOLSET,
         schema=tool_text.BOARD_EDIT_SCHEMA,
         handler=tools.board_edit,
+        emoji=tool_text.TOOL_EMOJI,
+    )
+    ctx.register_tool(
+        name=tool_text.BOARD_SESSIONS,
+        toolset=tool_text.TOOLSET,
+        schema=tool_text.BOARD_SESSIONS_SCHEMA,
+        handler=tools.board_sessions,
+        emoji=tool_text.TOOL_EMOJI,
+    )
+    ctx.register_tool(
+        name=tool_text.BOARD_COPY,
+        toolset=tool_text.TOOLSET,
+        schema=tool_text.BOARD_COPY_SCHEMA,
+        handler=tools.board_copy,
         emoji=tool_text.TOOL_EMOJI,
     )
     ctx.register_hook("pre_tool_call", hooks.make_pre_tool_call(store, resolver))

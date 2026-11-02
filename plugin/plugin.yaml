@@ -5,6 +5,8 @@ requires_hermes: ">=0.22.5"
 provides_tools:
   - board_read
   - board_edit
+  - board_sessions
+  - board_copy
 provides_hooks:
   - pre_tool_call
   - post_compaction
