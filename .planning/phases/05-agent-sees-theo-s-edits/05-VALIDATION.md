@@ -33,7 +33,7 @@ created: "2026-11-02"
 
 - **After every task commit:** run the task's own `<automated>` command (the touched test files).
 - **After every plan wave:** run `./scripts/check.sh`.
-- **Before `/gsd-verify-work`:** full suite green, plugin gate green, the 05-05 live note table and gate verdict on record, the 05-07 arms report with `pass` true, and the 05-07 delete table on record.
+- **Before `/gsd-verify-work`:** full suite green, plugin gate green, the 05-05 live note table and gate verdict on record, the 05-07 arms report with `pass` true and the three measured numbers (notes size, plugin fixed cost against the no-plugin arm, their sum), and the 05-07 delete table on record.
 - **Max feedback latency:** about 15 s for a task quick run; live runs only in plans 05-05 and 05-07.
 
 ---
@@ -47,6 +47,7 @@ created: "2026-11-02"
 | 5-01-03 | 01 | 1 | AGNT-05 | T-05-03 | Real Hermes dispatch returns only Theo's changes | unit + hermes contract + full suite | `uv run pytest tests/test_register.py tests/test_hermes_dispatch.py -q -rs` and `./scripts/check.sh` | yes (extend) | pending |
 | 5-02-01 | 02 | 2 | AGNT-05 | T-05-06 | Scripted Theo edit writes only its own session | hermes contract | `uv run pytest tests/test_live_delta.py -q -rs -m hermes` | W0 (new files) | pending |
 | 5-02-02 | 02 | 2 | AGNT-05, STOR-07 | T-05-07, T-05-08 | Read-only opens; stop at the first broken run | unit | `uv run pytest tests/test_live_delta.py -q -rs` | W0 (new files) | pending |
+| 5-02-03 | 02 | 2 | AGNT-05 | T-05-25, T-05-26, T-05-27 | Test home keeps no secret, every platform off, no `.env` by default; test gateway stopped only on a pid file and environment match | unit + hermes contract | `uv run pytest tests/test_live_delta.py -q -rs` | W0 (new file make_home.py) | pending |
 | 5-03-01 | 03 | 2 | AGNT-05 | T-05-11 | A board read clears the note | unit (end to end in process) | `uv run pytest tests/test_pre_llm_hook.py -q -rs -k board_read_by_the_agent` | yes (extend) | pending |
 | 5-03-02 | 03 | 2 | AGNT-05 | T-05-09, T-05-10 | Delegate read marks nothing; mark fault keeps the tool result | unit | `uv run pytest tests/test_board_tools.py tests/test_pre_llm_hook.py tests/test_store_seen.py -q -rs` | yes (extend) | pending |
 | 5-03-03 | 03 | 2 | AGNT-05 | - | 30 turns add exactly the notes through Hermes's composer | hermes contract + full suite | `uv run pytest tests/test_hermes_thirty_turn.py -q -rs -m hermes` and `./scripts/check.sh` | W0 (new files) | pending |
@@ -60,8 +61,8 @@ created: "2026-11-02"
 | 5-06-02 | 06 | 5 | AGNT-05 | T-05-20 | Delta part, store and SQL unchanged | unit + hermes contract + full suite | `uv run pytest tests/test_tool_text.py tests/test_pre_llm_hook.py tests/test_register.py tests/test_hermes_dispatch.py tests/test_hermes_thirty_turn.py -q -rs` and `./scripts/check.sh` | yes (extend) | pending |
 | 5-06-03 | 06 | 5 | AGNT-05 | T-05-21 | Second restart named before it happens | checkpoint (Theo's go, only when hooks.py changed) | none: Theo's go | n/a | pending |
 | 5-07-01 | 07 | 6 | AGNT-05 | T-05-21 | Restart only after the recorded go | live headless | outcome line grep in 05-07-SUMMARY.md | yes | pending |
-| 5-07-02 | 07 | 6 | AGNT-05 | T-05-24 | Timeouts per turn and per run; stop at the first broken run | live headless | `delta_live.py arms`, then the `arms-report.json` pass check | yes (05-02 tools) | pending |
-| 5-07-03 | 07 | 6 | STOR-07 | T-05-22, T-05-23 | Archive only after a dry run that lists one test session; delete only checked test ids | live CLI + full suite | `hermes sessions delete <id> --yes` with `delta_live.py rows`, `./scripts/check.sh`, `timeout 120 hermes plugins validate plugin/` | yes | pending |
+| 5-07-02 | 07 | 6 | AGNT-05 | T-05-24, T-05-28, T-05-29 | Three arms in twin test homes (no-plugin arm measured); real gateway PID unchanged; test gateways stopped and test homes removed | live headless | `delta_live.py arms --plugin-home --bare-home`, then the `arms-report.json` check for pass, the three measured numbers and `test_gateways` | yes (05-02 tools) | pending |
+| 5-07-03 | 07 | 6 | STOR-07 | T-05-22, T-05-23 | Archive (on the 05-05 live note session) only after a dry run that lists one test session; delete only checked test ids in the real home | live CLI + full suite | `hermes sessions delete <id> --yes` with `delta_live.py rows`, `./scripts/check.sh`, `timeout 120 hermes plugins validate plugin/` | yes | pending |
 
 *Status: pending, green, red, flaky*
 
