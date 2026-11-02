@@ -58,6 +58,8 @@ const REVEAL_CLASS = 'opacity-0 group-hover:opacity-100 group-focus-within:opaci
 const ROW_BUTTON_CLASS = `${REVEAL_CLASS} shrink-0`
 const ESCAPED_HASH = /^\\*#[0-9]+(?:\s|$)/
 const HIT_CLASS = 'flex size-6 shrink-0 items-center justify-center'
+// The SDK box border fades into the dark theme; the tertiary text colour keeps it visible.
+const CHECK_CLASS = 'border-(--ui-text-tertiary)'
 const TEXT_CLASS = 'min-w-0 flex-1 py-1 text-xs'
 const EDIT_CLASS = 'min-w-0 flex-1'
 const DONE_CLASS = 'text-(--ui-text-secondary)'
@@ -230,7 +232,7 @@ function Header({ counts, items }) {
 }
 
 function Chevron({ hasChildren, collapsed, onToggle }) {
-  if (!hasChildren) return jsx('span', { className: CHEVRON_COL_CLASS })
+  if (!hasChildren) return null
   const label = collapsed ? 'Expand subtasks' : 'Collapse subtasks'
   const Icon = collapsed ? icons.ChevronRight : icons.ChevronDown
   return jsx('span', {
@@ -292,12 +294,12 @@ function ItemRow({ item, subtasks, collapsed, onToggle, actions }) {
     className: top ? ROW_CLASS : SUBTASK_ROW_CLASS,
     'data-item-id': rowId(item),
     children: [
-      top ? jsx(Chevron, { hasChildren: subtasks.length > 0, collapsed, onToggle }) : null,
       jsx('span', {
         className: HIT_CLASS,
         // A press on the box keeps the focus where it is, so an open edit Input stays open.
         onMouseDown: event => event.preventDefault(),
         children: jsx(Checkbox, {
+          className: CHECK_CLASS,
           checked: item.checked,
           disabled: pendingRow,
           onCheckedChange: value => (pendingRow ? undefined : actions.onCheck(item, value)),
@@ -305,6 +307,7 @@ function ItemRow({ item, subtasks, collapsed, onToggle, actions }) {
         })
       }),
       jsx(RowText, { item, textClass, actions }),
+      top ? jsx(Chevron, { hasChildren: subtasks.length > 0, collapsed, onToggle }) : null,
       top && subtasks.length > 0
         ? jsx('span', { className: COUNT_CLASS, children: subtaskCountText(subtasks) })
         : null,
