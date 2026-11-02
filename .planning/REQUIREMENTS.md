@@ -41,7 +41,7 @@ Requirements for the first release. Each maps to a roadmap phase.
 
 - [ ] **API-01**: REST routes under `/api/plugins/hermes-session-tasks/` let the pane read a board, list boards, and apply the same item-level operations as the agent tools.
 - [ ] **API-02**: Every write, from a tool or a route, broadcasts a `board.updated` event with the session id and revision.
-- [ ] **API-03**: A meta route returns the backend version and API version, so the pane can detect a mismatch with its own copy.
+- [x] **API-03**: A meta route returns the backend version and API version, so the pane can detect a mismatch with its own copy.
 
 ### Pane
 
@@ -65,7 +65,7 @@ Requirements for the first release. Each maps to a roadmap phase.
 - [x] **DEV-02**: Tool handlers, hooks, store and routes have tests that run without a gateway, including a two-process concurrent write test.
 - [x] **DEV-03**: The pane file passes `node --check` and an import allowlist test.
 - [ ] **DEV-04**: The package dir is symlinked into `~/.hermes/plugins/`, enabled with the Hermes CLI, and the gateway restart is announced before it happens.
-- [ ] **DEV-05**: The Desktop half (`desktop/plugin.js`) is installed on the Mac and the Windows PC by a copy script, the pane shows a banner when its version does not match the backend, and the README gives the steps for each machine.
+- [x] **DEV-05**: The Desktop half (`desktop/plugin.js`) is installed on the Mac and the Windows PC by a copy script, the pane shows a banner when its version does not match the backend, and the README gives the steps for each machine.
 - [ ] **DEV-06**: The repo is pushed to GitHub `Don-Mor-Software-Group/hermes-session-tasks` (private) with a plain-language README.
 
 ## v2 Requirements
@@ -130,7 +130,7 @@ Each v1 requirement maps to exactly one phase.
 | AGNT-05 | Phase 5 | Complete |
 | API-01 | Phase 3 | Pending |
 | API-02 | Phase 3 | Pending |
-| API-03 | Phase 3 | Pending |
+| API-03 | Phase 3 | Complete |
 | PANE-01 | Phase 4 | Complete |
 | PANE-02 | Phase 4 | Complete |
 | PANE-03 | Phase 4 | Complete |
@@ -148,7 +148,7 @@ Each v1 requirement maps to exactly one phase.
 | DEV-02 | Phase 1 | Complete |
 | DEV-03 | Phase 3 | Complete |
 | DEV-04 | Phase 7 | Pending |
-| DEV-05 | Phase 3 | Pending |
+| DEV-05 | Phase 3 | Complete |
 | DEV-06 | Phase 7 | Pending |
 
 **Coverage:**

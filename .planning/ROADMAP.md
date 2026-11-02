@@ -101,7 +101,7 @@ Plans:
   3. A write from an agent tool and a write from a route both broadcast `board.updated` with the session id and revision. The stub on each machine shows whether the event arrived.
   4. The `/meta` route returns the backend version and the API version. The stub shows a banner when its own version differs from the backend.
   5. The stub file passes `node --check` and an import allowlist test that permits only `@hermes/plugin-sdk`, `react` and `react/jsx-runtime`.
-**Plans**: 9/12 plans executed in 8 waves
+**Plans**: 10/12 plans executed in 8 waves
 Plans:
 **Wave 1**
 - [x] 03-01-PLAN.md - Own-plan nudge: pre_llm_call hook end to end through Hermes, board block escape and cap, own-job harness tracked with its pass rule (wave 1)
@@ -123,7 +123,7 @@ Plans:
 - [x] 03-09-PLAN.md - Mac part 2: test pane lines, agent write event, write test and stale reply, each checked against data.db (wave 5)
 
 **Wave 6** *(blocked on Wave 5 completion)*
-- [ ] 03-10-PLAN.md - Windows PC part 1: install command, announced Desktop restart, test pane lines (wave 6)
+- [x] 03-10-PLAN.md - Windows PC part 1: install command, announced Desktop restart, test pane lines (wave 6)
 
 **Wave 7** *(blocked on Wave 6 completion)*
 - [ ] 03-11-PLAN.md - Windows PC part 2: agent write event, write test, then README facts from both machines (wave 7)
@@ -235,7 +235,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 |-------|----------------|--------|-----------|
 | 1. Core, storage and session identity | 6/6 | Complete    | 2026-10-30 |
 | 2. Agent tools and skill | 7/7 | Complete    | 2026-10-31 |
-| 3. REST router and client install spike | 9/12 | In Progress | - |
+| 3. REST router and client install spike | 10/12 | In Progress | - |
 | 4. Pane | 9/9 | Complete    | 2026-11-01 |
 | 5. Agent sees Theo's edits | 7/7 | Complete    | 2026-11-02 |
 | 6. Cross-session boards | 0/TBD | Not started | - |
