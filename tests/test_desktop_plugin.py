@@ -406,3 +406,18 @@ def test_plugin_stays_under_the_line_ceiling(plugin_source: str) -> None:
 def test_line_ceiling_catches_a_long_file() -> None:
     assert over_line_ceiling("x\n" * (MAX_PLUGIN_LINES + 1))
     assert not over_line_ceiling("x\n" * MAX_PLUGIN_LINES)
+
+
+# Mac live check, plan 04-08 step 1: the unchecked box was invisible on the dark theme, and every
+# row carried an empty chevron column on the left, so the items did not line up with the add line.
+
+
+def test_checkbox_border_is_visible(plugin_source: str) -> None:
+    assert "const CHECK_CLASS = 'border-(--ui-text-tertiary)'" in plugin_source
+    assert "className: CHECK_CLASS" in plugin_source
+
+
+def test_rows_without_subtasks_start_at_the_checkbox(plugin_source: str) -> None:
+    assert "if (!hasChildren) return null" in plugin_source
+    row_start = "children: [\n      jsx('span', {\n        className: HIT_CLASS"
+    assert row_start in plugin_source
