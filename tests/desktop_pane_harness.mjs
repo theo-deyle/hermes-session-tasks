@@ -43,6 +43,12 @@ let pending = 0
 // ---- hook runtime: one component tree, slots by call order ----
 const slots = []
 let slotIndex = 0
+let componentDepth = 0
+
+// The runtime keeps one slot list by call order, so a hook in a child that renders conditionally would read another slot.
+function assertTopLevel() {
+  if (componentDepth !== 1) throw new Error('hooks run only in the top-level pane component')
+}
 let queuedEffects = []
 
 function depsChanged(before, after) {
@@ -51,6 +57,7 @@ function depsChanged(before, after) {
 }
 
 function useState(initial) {
+  assertTopLevel()
   const index = slotIndex++
   if (!slots[index]) {
     slots[index] = { value: typeof initial === 'function' ? initial() : initial }
@@ -66,22 +73,26 @@ function useState(initial) {
 }
 
 function useRef(initial) {
+  assertTopLevel()
   const index = slotIndex++
   if (!slots[index]) slots[index] = { current: initial }
   return slots[index]
 }
 
 function useMemo(factory, deps) {
+  assertTopLevel()
   const index = slotIndex++
   if (!slots[index] || depsChanged(slots[index].deps, deps)) slots[index] = { deps, value: factory() }
   return slots[index].value
 }
 
 function useCallback(fn, deps) {
+  assertTopLevel()
   return useMemo(() => fn, deps)
 }
 
 function useEffect(effect, deps) {
+  assertTopLevel()
   const index = slotIndex++
   if (!slots[index]) slots[index] = { deps: undefined, cleanup: undefined, fresh: true }
   const slot = slots[index]
@@ -216,7 +227,12 @@ function walk(node, lines, buttons, boxes, row) {
     return
   }
   if (typeof type === 'function') {
-    walk(type(props), lines, buttons, boxes, row)
+    componentDepth += 1
+    try {
+      walk(type(props), lines, buttons, boxes, row)
+    } finally {
+      componentDepth -= 1
+    }
     return
   }
   const itemId = props['data-item-id']
@@ -291,6 +307,7 @@ for (const step of steps) {
 }
 
 const output = {
+  name: plugin.name,
   lines,
   restCalls,
   contribution: {

@@ -175,7 +175,7 @@ function Pane({ ctx }) {
 
 export default {
   id: PLUGIN_ID,
-  name: 'Session tasks (test)',
+  name: 'Session tasks',
   register(ctx) {
     ctx.register({
       id: 'pane',
