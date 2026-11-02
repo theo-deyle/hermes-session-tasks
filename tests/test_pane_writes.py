@@ -368,3 +368,15 @@ def test_a_render_that_never_commits_does_not_move_the_write_session(
 
     assert [call["body"]["session_id"] for call in posts(result)] == ["s1"]
     assert rig.store.get_board("s1").items[0].checked is True
+
+
+# Review 04-REVIEW WR-05: an empty /meta reply must not blank the pane.
+
+
+def test_empty_meta_reply_does_not_crash_the_render(rig: Rig, tmp_path: Path) -> None:
+    seed_call_john(rig.store)
+
+    result = rig.run(tmp_path, restOverrides={"/meta": "__empty__"})
+
+    assert "Call John" in result["lines"]
+    assert MISMATCH_LINE not in result["lines"]
