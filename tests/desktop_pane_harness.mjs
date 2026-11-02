@@ -556,7 +556,9 @@ async function runStep(step) {
   } else if (step.clickText !== undefined) {
     await findClickable(step.clickText).onClick()
   } else if (step.blur !== undefined) {
-    await findInput(step.blur).onBlur({})
+    // An Input without an onBlur handler does nothing on blur, as in the browser.
+    const record = findInput(step.blur)
+    if (typeof record.onBlur === 'function') await record.onBlur({})
   } else if (step.confirm !== undefined) {
     await openDialog().onConfirm()
   } else if (step.cancel !== undefined) {
@@ -576,7 +578,7 @@ async function runStep(step) {
       preventDefault() {},
       nativeEvent: { isComposing: false }
     })
-    if (step.key.blur === true) await record.onBlur({})
+    if (step.key.blur === true && typeof record.onBlur === 'function') await record.onBlur({})
   } else if (step.event !== undefined) {
     for (const entry of [...listeners]) {
       if (entry.type === step.event.type) await entry.fn(step.event)
