@@ -84,6 +84,8 @@ class BoardTools:
         except BoardError as exc:
             return error_result(describe(exc))
         if isinstance(result, Stale):
+            # The stale or not-found reply carries the whole board, so the agent saw it.
+            self._mark_seen(resolution.root_id, result.board.rev)
             return stale_result(result, base_rev)
         if result.changed_ids:
             # The write is committed already. A listener fault must not turn it into an
