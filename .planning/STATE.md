@@ -3,16 +3,16 @@ gsd_state_version: "1.0"
 current_phase: 6
 current_phase_name: Cross-session boards
 status: executing
-stopped_at: Completed 06-07-PLAN.md
-last_updated: "2026-11-02T22:34:55.778Z"
+stopped_at: Completed 06-11-PLAN.md
+last_updated: "2026-11-02T23:18:23.644Z"
 last_activity: 2026-11-02
 last_activity_desc: Phase 6 execution started
-state_head: 19f7e29b497a7c126e55c6428ada7265408c2e8e
+state_head: f30944ca3bf22fe188efa866f0fb9da3035f7cec
 progress:
   total_phases: 7
   completed_phases: 5
   total_plans: 53
-  completed_plans: 48
+  completed_plans: 52
   percent: 71
 ---
 
@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-11-02)
 ## Current Position
 
 Phase: 6 (Cross-session boards) — EXECUTING
-Plan: 4 of 12
+Plan: 5 of 12
 Status: Ready to execute
 Last activity: 2026-11-02 — Phase 6 execution started
 
@@ -102,6 +102,7 @@ Progress: [███████░░░] 71%
 | Phase 06 P01 | 35min | 2 tasks | 5 files |
 | Phase 06 P02 | 15min | 2 tasks | 4 files |
 | Phase 06 P07 | 25 min | 3 tasks | 6 files |
+| Phase 06 P11 | 40 min | 3 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -185,6 +186,8 @@ Recent decisions affecting current work:
 - [Phase 03]: Plan 03-12: the cleanup script lives in the session scratchpad, not the repo; items and changes cascade from the boards rows with foreign keys on
 - [Phase 06]: Plan 06-01: copy built as one transaction; A1 to A4 and A10 built as planned
 - [Phase 06]: 06-02: TOOL-06 guard allows one sanctioned read, copy_args.read_target; strict elsewhere
+- [Phase 06]: 06-11: copied notice shows only while the asked session is still focused; stale and failed notices show regardless
+- [Phase 06]: 06-11: copyBusy is not reset on a focus change, the copy controls stay off until the outcome
 
 ### Pending Todos
 
@@ -216,6 +219,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-11-02T22:34:54.956Z
-Stopped at: Completed 06-07-PLAN.md
+Last session: 2026-11-02T23:18:22.811Z
+Stopped at: Completed 06-11-PLAN.md
 Resume file: None
