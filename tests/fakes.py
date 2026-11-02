@@ -48,6 +48,7 @@ class FakeSessionReader:
         self._specs = specs
         self._raise_in = raise_in
         self.closed = False
+        self.message_limits: list[int | None] = []
 
     def _maybe_raise(self, method: str) -> None:
         if self._raise_in == method:
@@ -109,6 +110,7 @@ class FakeSessionReader:
 
     def get_messages(self, session_id: str, *, limit: int | None = None) -> list[dict[str, Any]]:
         self._maybe_raise("get_messages")
+        self.message_limits.append(limit)
         spec = self._specs.get(session_id)
         if spec is None:
             return []
