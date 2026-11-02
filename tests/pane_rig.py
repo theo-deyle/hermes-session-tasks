@@ -120,3 +120,14 @@ def the_input(
     found = inputs(result, placeholder, row)
     assert len(found) == 1, f"{len(found)} inputs match placeholder={placeholder} row={row}"
     return found[0]
+
+
+def button(result: dict[str, Any], label: str, row: str | None = None) -> dict[str, Any]:
+    """The one Button record with the label (and the row, when given)."""
+    found = [
+        entry
+        for entry in result["buttons"]
+        if entry["label"] == label and (row is None or entry["row"] == row)
+    ]
+    assert len(found) == 1, f"{len(found)} buttons labelled {label!r} in row {row}"
+    return found[0]
