@@ -438,6 +438,21 @@ def test_session_id_guard_reports_subscript_get_and_pop_on_the_arguments(tmp_pat
     assert len(session_id_arg_findings(tmp_path)) == 3
 
 
+def test_session_id_guard_allows_only_the_sanctioned_function(tmp_path: Path) -> None:
+    read = "    return args.get('session_id')\n"
+    _write_module(
+        tmp_path,
+        f"def read_target(args):\n{read}\ndef other(args):\n{read}",
+        "copy_args.py",
+    )
+    assert len(session_id_arg_findings(tmp_path)) == 1
+
+    other_dir = tmp_path / "elsewhere"
+    other_dir.mkdir()
+    _write_module(other_dir, f"def read_target(args):\n{read}", "board_tools.py")
+    assert len(session_id_arg_findings(other_dir)) == 1
+
+
 def test_todo_guard_reports_any_letter_case_and_skips_tool_text(tmp_path: Path) -> None:
     (tmp_path / "session_tasks").mkdir()
     _write_module(tmp_path / "session_tasks", "x = 'ToDo'\n", "tool_text.py")
