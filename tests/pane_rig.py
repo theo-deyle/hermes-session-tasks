@@ -19,14 +19,16 @@ if TYPE_CHECKING:
 ROOT = Path(__file__).resolve().parent.parent
 EVENT_TYPE = "plugin.hermes-session-tasks.board.updated"
 PLUGIN_JS = ROOT / "plugin" / "desktop" / "plugin.js"
+PROBE_JS = ROOT / "tests" / "fixtures" / "harness_probe.js"
 HARNESS = Path(__file__).with_name("desktop_pane_harness.mjs")
 
 
-def run_harness(config: dict[str, Any], tmp_path: Path, plugin: Path = PLUGIN_JS) -> dict[str, Any]:
-    """Run the harness on `plugin` with `config` and return its one JSON line."""
+def _run_node(
+    config: dict[str, Any], tmp_path: Path, plugin: Path
+) -> subprocess.CompletedProcess[str]:
     config_path = tmp_path / "harness-config.json"
     config_path.write_text(json.dumps(config), encoding="utf-8")
-    completed = subprocess.run(
+    return subprocess.run(
         [
             "node",
             "--experimental-vm-modules",
@@ -40,8 +42,20 @@ def run_harness(config: dict[str, Any], tmp_path: Path, plugin: Path = PLUGIN_JS
         text=True,
         timeout=60,
     )
+
+
+def run_harness(config: dict[str, Any], tmp_path: Path, plugin: Path = PLUGIN_JS) -> dict[str, Any]:
+    """Run the harness on `plugin` with `config` and return its one JSON line."""
+    completed = _run_node(config, tmp_path, plugin)
     assert completed.returncode == 0, completed.stderr or completed.stdout
     return json.loads(completed.stdout.strip().splitlines()[-1])
+
+
+def harness_error(config: dict[str, Any], tmp_path: Path, plugin: Path = PLUGIN_JS) -> str:
+    """Run the harness, assert that it fails, and return its stderr."""
+    completed = _run_node(config, tmp_path, plugin)
+    assert completed.returncode != 0, "the harness run was expected to fail"
+    return completed.stderr
 
 
 class Rig:
@@ -52,11 +66,17 @@ class Rig:
         resolver, _ = resolver_for({})
         self.client = make_client(load_plugin_api(), BoardApi(store, resolver))
 
+    def _config(self, relay: RestRelay, config: dict[str, Any]) -> dict[str, Any]:
+        return {"baseUrl": relay.base_url + PREFIX, "focused": "s1", "steps": [], **config}
+
     def run(self, tmp_path: Path, plugin: Path = PLUGIN_JS, **config: Any) -> dict[str, Any]:
         with RestRelay(self.client) as relay:
-            config.setdefault("focused", "s1")
-            config.setdefault("steps", [])
-            return run_harness({"baseUrl": relay.base_url + PREFIX, **config}, tmp_path, plugin)
+            return run_harness(self._config(relay, config), tmp_path, plugin)
+
+    def error(self, tmp_path: Path, plugin: Path = PLUGIN_JS, **config: Any) -> str:
+        """Run a harness call that must fail and return its stderr."""
+        with RestRelay(self.client) as relay:
+            return harness_error(self._config(relay, config), tmp_path, plugin)
 
 
 def seed_call_john(store: BoardStore) -> None:
@@ -78,4 +98,25 @@ def checkbox(result: dict[str, Any], row: str) -> dict[str, Any]:
     """The one checkbox record in the row `row`."""
     found = [box for box in result["checkboxes"] if box["row"] == row]
     assert len(found) == 1, f"{len(found)} checkboxes in row {row}"
+    return found[0]
+
+
+def inputs(
+    result: dict[str, Any], placeholder: str | None = None, row: str | None = None
+) -> list[dict[str, Any]]:
+    """The Input records that match the placeholder and the row (a None filter matches all)."""
+    return [
+        entry
+        for entry in result["inputs"]
+        if (placeholder is None or entry["placeholder"] == placeholder)
+        and (row is None or entry["row"] == row)
+    ]
+
+
+def the_input(
+    result: dict[str, Any], placeholder: str | None = None, row: str | None = None
+) -> dict[str, Any]:
+    """The one Input record that matches the placeholder and the row."""
+    found = inputs(result, placeholder, row)
+    assert len(found) == 1, f"{len(found)} inputs match placeholder={placeholder} row={row}"
     return found[0]
