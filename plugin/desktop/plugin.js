@@ -74,6 +74,7 @@ const UNTITLED = 'Untitled session'
 const NO_OTHER_BOARDS = 'No other session has a board.'
 const LIST_FAILED = 'Could not load the session list. Reopen the list to retry.'
 const READ_ONLY_BANNER = 'Read only. Viewing another session.'
+const BACK_LABEL = 'Back'
 const READ_ONLY_EMPTY_TITLE = 'This board is empty.'
 const READ_ONLY_EMPTY_HINT = 'Pick another session or go back.'
 const THIS_SESSION = 'this session'
@@ -464,8 +465,21 @@ function PickerRow({ view, counts, boards, failed, focusedCounts, onOpenChange, 
   })
 }
 
-function ReadOnlyBanner() {
-  return jsx('div', { className: BANNER_CLASS, children: READ_ONLY_BANNER })
+function ReadOnlyBanner({ focusedLabel, onBack }) {
+  return jsxs('div', {
+    className: BANNER_CLASS,
+    children: [
+      READ_ONLY_BANNER,
+      jsx(Button, {
+        variant: 'text',
+        size: 'inline',
+        className: 'underline',
+        'aria-label': `Back to ${focusedLabel}`,
+        onClick: onBack,
+        children: BACK_LABEL
+      })
+    ]
+  })
 }
 
 function Chevron({ hasChildren, collapsed, onToggle }) {
@@ -1008,14 +1022,19 @@ function Pane({ ctx }) {
     sendOp({ op: 'remove', item_id: confirm.id })
   }
 
+  // Leaves the board under view and reloads the focused one at once. The focused board's lines and pending writes stay in state.
+  function back() {
+    current.current.picked = null
+    setPicked(null)
+    setPickedServer(null)
+    reload()
+  }
+
   // The focused board, or another one under view. Picking the focused or the shown board returns to the focused one.
   function pick(rootId, focusedRoot) {
     const state = current.current
     if (rootId === focusedRoot || rootId === state.picked) {
-      state.picked = null
-      setPicked(null)
-      setPickedServer(null)
-      reload()
+      back()
       return
     }
     saveEdit()
@@ -1079,7 +1098,9 @@ function Pane({ ctx }) {
         onOpenChange: onMenuOpenChange,
         onPick: rootId => pick(rootId, focusedRoot)
       }),
-      viewing ? jsx(ReadOnlyBanner, {}) : null,
+      viewing
+        ? jsx(ReadOnlyBanner, { focusedLabel: boardLabel(focusedRoot, titles), onBack: back })
+        : null,
       jsx(Header, { items: shownItems }),
       noticeLine,
       jsx(ScrollArea, {
