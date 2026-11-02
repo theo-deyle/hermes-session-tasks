@@ -85,7 +85,7 @@ Screenshots: `~/share/hermes-todo/Screenshot 2026-11-01 at 9.43.50 PM.png` (defe
 
 | Defect | Cause | Fix | Commits |
 |--------|-------|-----|---------|
-| Unchecked box invisible on the dark theme | SDK Checkbox border `border-input` has no contrast there | `CHECK_CLASS = 'border-(--ui-text-tertiary)'` on the Checkbox | `2f3b6ca` (tests first in `b1` of the same pair) |
+| Unchecked box invisible on the dark theme | SDK Checkbox border `border-input` has no contrast there | `CHECK_CLASS = 'border-(--ui-text-tertiary)'` on the Checkbox | `2f3b6ca` |
 | Items indented past the add line | Every row carried an empty 24px chevron column | Chevron renders only for rows with subtasks and sits after the text; rows start at the checkbox | same |
 
 Test commit first: `test(04-08): add failing tests for a visible checkbox and left-aligned rows`, then `fix(04-08): visible checkbox border and rows that start at the left edge` (`2f3b6ca`). 122 pane tests pass. plugin.js is 789 lines. SHA-256 after the fix: `04adc10fda44b3cb` (prefix).
