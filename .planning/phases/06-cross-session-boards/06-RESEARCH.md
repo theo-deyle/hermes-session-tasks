@@ -650,15 +650,20 @@ Not a rename or migration phase. Omitted. One live data note: the new `copied` j
 | A9 | Tool descriptions plus skill are enough to keep the agent from copying unasked | Live checks | The live check 2 measures it; D-40 allows no hook guard. |
 | A10 | Per-item `copied` rows (2x journal rows) are acceptable | Pattern 3 | Journal prune hits earlier; the pointer line covers it. |
 
-## Open Questions
+## Open Questions (RESOLVED)
+
+Each question is settled by a plan; the answer sits under its question.
 
 1. **One `copied` row per item or per batch?**
    - Known: D-41 says "The journal row names the source root id and the source item id." A per-item row names both exactly.
    - Unclear: a 100 item copy writes 200 rows and trims the journal to 100.
    - Recommendation: per-item rows, text `"<source_root>#<source_item_id>"`. Switch to one row per batch (`item_id` null, text `"<root>:<id>,<id>"`) only if the planner prefers fewer rows.
+   - Resolved: per-item rows (plan 06-01).
 2. **Does the agent copy only when asked?** D-40 forbids a hook guard, so only the descriptions and skill carry it. Measure in live check 2 and record the result; do not add a guard.
+   - Resolved: tool descriptions and the skill text carry the rule, no hook (plan 06-10); the live check in 06-12 measures it.
 3. **Pane file size.** `plugin.js` is 799 lines. The picker, read-only rows, copy flow, relative time and title join add roughly 250 to 350 lines. CLAUDE.md says Desktop loads one plain file; the house ceiling is 800 lines per source file. Recommendation: do not split. The SDK doc says "Only three specifiers resolve: `@hermes/plugin-sdk`, `react`, `react/jsx-runtime`. Any other import surfaces an up-front load error." [VERIFIED: website/docs/developer-guide/desktop-plugin-sdk.md:2001-2002], so a relative import of a sibling file fails. Keep one file and accept it over the soft ceiling with pure helpers grouped and exported for the harness. Ask Theo one line only if the planner wants to split with a build step (CLAUDE.md forbids a build step).
 4. **Where `host.request` fails.** If `session.list` rejects in the real pane, the fallback labels carry the picker. Decide in the live visual check whether a title cache from `GET /board` replies is wanted later (not this phase).
+   - Resolved: fallback labels (title, then preview, then "Untitled session" with the short id) carry the picker when `session.list` fails (plan 06-04). A title cache is deferred.
 
 ## Sources
 
