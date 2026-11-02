@@ -6,6 +6,7 @@ hermes). The other tests load the live scripts by file path and never start a ga
 
 from __future__ import annotations
 
+import contextlib
 import importlib.util
 import json
 import os
@@ -321,8 +322,8 @@ def test_rows_report_reads_only_the_given_session_read_only(tmp_path: Path) -> N
     assert [row["chars"] for row in report["assistant_rows"]] == [2, 3]
     assert report["board"] is None
     assert "secret words" not in json.dumps(report)
-    with pytest.raises(sqlite3.OperationalError):
-        live.open_ro(state).execute("INSERT INTO messages (id) VALUES (99)")
+    with contextlib.closing(live.open_ro(state)) as conn, pytest.raises(sqlite3.OperationalError):
+        conn.execute("INSERT INTO messages (id) VALUES (99)")
 
 
 def test_build_runs_counts_cumulative_characters(tmp_path: Path) -> None:
@@ -364,10 +365,10 @@ FAKE_SOURCE: dict[str, Any] = {
 def write_source(root: Path, **changes: Any) -> Path:
     """Write a fake source home with a config, the three secret files and a provider plugin."""
     home = root / "source-home"
-    (home / "plugins" / "prov").mkdir(parents=True)
+    (home / "plugins" / "prov").mkdir(parents=True, exist_ok=True)
     (home / ".env").write_text("TOKEN=abc\n", encoding="utf-8")
     (home / "auth.json").write_text("{}", encoding="utf-8")
-    (home / "mcp-tokens").mkdir()
+    (home / "mcp-tokens").mkdir(exist_ok=True)
     # JSON is valid YAML, so the dev environment needs no PyYAML to write the source.
     (home / "config.yaml").write_text(json.dumps({**FAKE_SOURCE, **changes}), encoding="utf-8")
     return home
@@ -592,9 +593,7 @@ def test_fixed_user_chars_with_a_reminder() -> None:
     edits = [
         replace(run, reminder=True, user_chars=run.user_chars + extra * run.run) for run in edits
     ]
-    bare = [
-        replace(run, user_chars=run.user_chars - extra * run.run, reminder=False) for run in quiet
-    ]
+    bare = [replace(run, user_chars=run.user_chars - extra * run.run) for run in bare_from(quiet)]
 
     passed = compare_pair(edits, quiet, bare, reminder_chars)
     wrong = compare_pair(

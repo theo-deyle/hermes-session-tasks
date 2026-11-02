@@ -7,10 +7,18 @@ Subcommands:
                    `result` event of a `hermes chat --format stream-json` run.
   rows --session   Print, for one session, the note the hook added to each user row, the text
                    length of each row, and the board rev and agent_seen_rev.
-  arms --out DIR   Run interleaved headless sessions on one query and judge them. The edits
+  arms --out DIR --plugin-home A --bare-home B
+                   Run three interleaved headless arms on one query and judge them. The edits
                    arm gets Theo's scripted edits before runs 5, 10, 15, 20 and 25. The quiet
-                   arm gets none. Both arms run with the plugin on. SC3 reads as the edits
-                   arm against the no-edits arm: the token growth that only the notes cause.
+                   arm gets none. Both run in home A with the plugin on. The bare arm runs in
+                   home B, the same config with the plugin off. Three numbers come out: the
+                   notes size (edits minus quiet), the plugin fixed cost (quiet minus bare) and
+                   the sum against the no-plugin arm (edits minus bare). SC3 reads as all three.
+                   On every exit path it stops the test gateways it caused.
+  ports --home DIR ... --real-home DIR
+                   List the listening TCP ports of each test gateway and of the real gateway.
+                   Exit 1 when a test port equals a real port or a test listener is not on
+                   loopback, 2 when a gateway.pid is missing.
 
 Exit codes: 0 pass, 1 measured fail, 2 broken run or read error.
 Every state file opens read only (a sqlite URI with mode=ro). The tool prints lengths and the
@@ -22,9 +30,12 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
+import signal
 import sqlite3
 import subprocess
 import sys
+import time
 from collections.abc import Iterable, Sequence
 from dataclasses import asdict, dataclass
 from pathlib import Path
@@ -52,7 +63,13 @@ CHECKS = (
     "every_note_within_cap",
     "user_char_diff_equals_notes",
     "token_growth_ratio_in_band",
+    "bare_arm_has_no_note",
+    "fixed_user_chars_match_reminder",
+    "fixed_cost_positive",
 )
+STOP_WAIT = 30.0
+LOOPBACK = ("127.0.0.1", "::1")
+PID_FIELD = re.compile(r"pid=(\d+)")
 
 Ops = list[dict[str, object]]
 
@@ -153,16 +170,35 @@ def _user_diff_matches_notes(edits: Sequence[ArmRun], quiet: Sequence[ArmRun]) -
     return True
 
 
+def _fixed_user_chars_match(
+    quiet: Sequence[ArmRun], bare: Sequence[ArmRun], reminder_chars: int
+) -> bool:
+    """Quiet minus bare user characters must equal the reminder lines alone (0 without one)."""
+    unit = reminder_chars + JOINER if reminder_chars else 0
+    expected = 0
+    for calm, plain in zip(quiet, bare, strict=True):
+        if calm.reminder:
+            expected += unit
+        if calm.user_chars - plain.user_chars != expected:
+            return False
+    return True
+
+
 def compare(
-    edits: Sequence[ArmRun], quiet: Sequence[ArmRun], edit_runs: Sequence[int]
+    edits: Sequence[ArmRun],
+    quiet: Sequence[ArmRun],
+    bare: Sequence[ArmRun],
+    edit_runs: Sequence[int],
+    reminder_chars: int = 0,
 ) -> dict[str, object]:
-    """Judge the edits arm against the quiet arm. `pass` is True only when every check holds."""
+    """Judge the three arms. `pass` is True only when every check holds."""
     report: dict[str, object] = {key: False for key in CHECKS}
-    if not edits or len(edits) != len(quiet):
+    if not edits or len(edits) != len(quiet) or len(edits) != len(bare):
         report["pass"] = False
         return report
     first_e, last_e = edits[0], edits[-1]
     first_q, last_q = quiet[0], quiet[-1]
+    first_b, last_b = bare[0], bare[-1]
     growth_diff = (last_e.input_tokens - first_e.input_tokens) - (
         last_q.input_tokens - first_q.input_tokens
     )
@@ -171,6 +207,9 @@ def compare(
     char_diff = user_diff + assistant_diff
     ratio = growth_diff / char_diff if char_diff > 0 else None
     notes = [item.note for item in edits if item.note is not None]
+    fixed_run1 = first_q.input_tokens - first_b.input_tokens
+    fixed_last = last_q.input_tokens - last_b.input_tokens
+    edits_minus_quiet = last_e.input_tokens - last_q.input_tokens
     report["reminder_runs_match"] = _reminder_runs(edits) == _reminder_runs(quiet)
     report["notes_only_on_edit_runs"] = _notes_only_on_edit_runs(edits, quiet, edit_runs)
     report["every_note_within_cap"] = all(len(note) <= NOTE_MAX for note in notes)
@@ -180,11 +219,18 @@ def compare(
         and growth_diff > 0
         and TOKENS_PER_CHAR_MIN <= ratio <= TOKENS_PER_CHAR_MAX
     )
+    report["bare_arm_has_no_note"] = all(item.note is None for item in bare)
+    report["fixed_user_chars_match_reminder"] = _fixed_user_chars_match(quiet, bare, reminder_chars)
+    report["fixed_cost_positive"] = fixed_run1 > 0
     report["notes_chars"] = sum(len(note) for note in notes)
     report["user_char_diff"] = user_diff
     report["assistant_char_diff"] = assistant_diff
     report["token_growth_diff"] = growth_diff
     report["token_ratio"] = ratio
+    report["fixed_cost_tokens_run1"] = fixed_run1
+    report["fixed_cost_tokens_runN"] = fixed_last
+    report["edits_minus_quiet_tokens_runN"] = edits_minus_quiet
+    report["edits_minus_bare_tokens_runN"] = last_e.input_tokens - last_b.input_tokens
     report["pass"] = all(report[key] is True for key in CHECKS)
     return report
 
@@ -235,6 +281,102 @@ def read_board(data_db: Path, session_id: str) -> dict[str, int] | None:
     finally:
         conn.close()
     return None if board is None else {"rev": int(board[0]), "agent_seen_rev": int(board[1])}
+
+
+def read_system_prompt_chars(state_db: Path, session_id: str) -> int | None:
+    """Return the length of `sessions.system_prompt` of one session, or None."""
+    try:
+        conn = open_ro(state_db)
+    except sqlite3.Error:
+        return None
+    try:
+        found = conn.execute(
+            "SELECT length(system_prompt) FROM sessions WHERE id = ?", (session_id,)
+        ).fetchone()
+    except sqlite3.Error:
+        return None
+    finally:
+        conn.close()
+    return None if found is None or found[0] is None else int(found[0])
+
+
+def _alive(pid: int) -> bool:
+    """True while the process runs. A zombie counts as ended."""
+    try:
+        stat = Path(f"/proc/{pid}/stat").read_text(encoding="utf-8")
+    except OSError:
+        return False
+    return stat.rpartition(")")[2].split()[:1] != ["Z"]
+
+
+def _environ_home(pid: int) -> str | None:
+    try:
+        raw = Path(f"/proc/{pid}/environ").read_bytes()
+    except OSError:
+        return None
+    for item in raw.split(b"\0"):
+        if item.startswith(b"HERMES_HOME="):
+            return item[len(b"HERMES_HOME=") :].decode("utf-8", errors="replace")
+    return None
+
+
+def stop_test_gateway(home: Path) -> str:
+    """Stop the gateway of one test home. Return `stopped`, `not running` or `refused`.
+
+    SIGTERM goes only to the PID of `<home>/gateway.pid` when both its `hermes_home` field and
+    the HERMES_HOME of the process name this test home. It never signals the real gateway.
+    """
+    try:
+        record = json.loads((home / "gateway.pid").read_text(encoding="utf-8"))
+    except FileNotFoundError:
+        return "not running"
+    except (OSError, ValueError):
+        return "refused"
+    pid = record.get("pid") if isinstance(record, dict) else None
+    named = record.get("hermes_home") if isinstance(record, dict) else None
+    if not isinstance(pid, int) or isinstance(pid, bool) or not isinstance(named, str):
+        return "refused"
+    if Path(named).resolve() != home.resolve():
+        return "refused"
+    if not _alive(pid):
+        return "not running"
+    environ_home = _environ_home(pid)
+    if environ_home is None or Path(environ_home).resolve() != home.resolve():
+        return "refused"
+    os.kill(pid, signal.SIGTERM)
+    deadline = time.monotonic() + STOP_WAIT
+    while time.monotonic() < deadline:
+        if not _alive(pid):
+            return "stopped"
+        time.sleep(0.2)
+    return "refused"
+
+
+def parse_ss(text: str, pid: int) -> set[tuple[str, int]]:
+    """Return the (address, port) pairs that one PID listens on, from `ss -ltnp` output."""
+    found: set[tuple[str, int]] = set()
+    for line in text.splitlines():
+        if pid not in {int(match) for match in PID_FIELD.findall(line)}:
+            continue
+        columns = line.split()
+        if len(columns) < 4:
+            continue
+        address, _, port = columns[3].rpartition(":")
+        if port.isdigit():
+            found.add((address.strip("[]"), int(port)))
+    return found
+
+
+def port_clash(test: set[tuple[str, int]], real: set[tuple[str, int]]) -> list[str]:
+    """Name every test port that a real gateway also uses, and every test listener off loopback."""
+    real_ports = {port for _, port in real}
+    lines: list[str] = []
+    for address, port in sorted(test):
+        if port in real_ports:
+            lines.append(f"test port {port} is also a real gateway port")
+        if address not in LOOPBACK:
+            lines.append(f"test listener {address}:{port} is not on loopback")
+    return lines
 
 
 def _injected(row: Row, reminder: str) -> tuple[bool, str | None]:
@@ -399,22 +541,27 @@ def cmd_rows(args: argparse.Namespace) -> int:
     return 0
 
 
-def cmd_arms(args: argparse.Namespace) -> int:
-    out = Path(args.out)
-    out.mkdir(parents=True, exist_ok=True)
-    home = Path(os.environ.get("HERMES_HOME") or DEFAULT_HOME)
+def _arms_body(
+    args: argparse.Namespace, out: Path, plugin_home: Path, bare_home: Path
+) -> tuple[int, dict[str, object] | None]:
+    """Run and judge the arms. Return (exit code, report). A broken run gives (2, None)."""
     reminder = _read_reminder(args.reminder_file)
-    arms = [("edits", home), ("quiet", home)]
+    arms = [("edits", plugin_home), ("quiet", plugin_home), ("bare", bare_home)]
     try:
         sessions, tokens = run_arms(arms, args.runs, out)
         built = {
             name: build_runs(read_rows(path / "state.db", sessions[name]), tokens[name], reminder)
             for name, path in arms
         }
+        prompts = {
+            name: read_system_prompt_chars(path / "state.db", sessions[name]) for name, path in arms
+        }
     except (BrokenRun, sqlite3.Error) as exc:
         print(f"broken run: {exc}", file=sys.stderr)
-        return 2
-    report = compare(built["edits"], built["quiet"], EDIT_RUNS)
+        return 2, None
+    report = compare(built["edits"], built["quiet"], built["bare"], EDIT_RUNS, len(reminder))
+    report["system_prompt_chars_plugin"] = prompts["quiet"]
+    report["system_prompt_chars_bare"] = prompts["bare"]
     report["sessions"] = sessions
     report["runs"] = {
         name: [
@@ -423,10 +570,64 @@ def cmd_arms(args: argparse.Namespace) -> int:
         ]
         for name in built
     }
+    return (0 if report["pass"] is True else 1), report
+
+
+def cmd_arms(args: argparse.Namespace) -> int:
+    out = Path(args.out)
+    out.mkdir(parents=True, exist_ok=True)
+    plugin_home = Path(args.plugin_home).expanduser().resolve()
+    bare_home = Path(args.bare_home).expanduser().resolve()
+    try:
+        code, report = _arms_body(args, out, plugin_home, bare_home)
+    finally:
+        gateways = {
+            "plugin": stop_test_gateway(plugin_home),
+            "bare": stop_test_gateway(bare_home),
+        }
+    if report is None:
+        print(json.dumps({"test_gateways": gateways}), file=sys.stderr)
+        return code
+    report["test_gateways"] = gateways
     text = json.dumps(report)
     (out / "arms-report.json").write_text(text, encoding="utf-8")
     print(text)
-    return 0 if report["pass"] is True else 1
+    return code
+
+
+def _gateway_pid(home: Path) -> int:
+    record = json.loads((home / "gateway.pid").read_text(encoding="utf-8"))
+    pid = record.get("pid") if isinstance(record, dict) else None
+    if not isinstance(pid, int) or isinstance(pid, bool):
+        raise ValueError("gateway.pid has no pid")
+    return pid
+
+
+def cmd_ports(args: argparse.Namespace) -> int:
+    homes = [Path(item).expanduser() for item in args.home]
+    try:
+        pids = {str(home): _gateway_pid(home) for home in homes}
+        real_pid = _gateway_pid(Path(args.real_home).expanduser())
+    except (OSError, ValueError) as exc:
+        print(f"gateway.pid error: {exc}", file=sys.stderr)
+        return 2
+    done = subprocess.run(
+        ["timeout", "10", "ss", "-ltnp"], capture_output=True, text=True, check=False
+    )
+    if done.returncode != 0:
+        print(f"ss exited {done.returncode}", file=sys.stderr)
+        return 2
+    real = parse_ss(done.stdout, real_pid)
+    tests = {name: parse_ss(done.stdout, pid) for name, pid in pids.items()}
+    clash = [line for name in tests for line in port_clash(tests[name], real)]
+    print(
+        json.dumps({
+            "homes": {name: sorted(found) for name, found in tests.items()},
+            "real": sorted(real),
+            "clash": clash,
+        })
+    )
+    return 1 if clash else 0
 
 
 def _parser() -> argparse.ArgumentParser:
@@ -441,14 +642,19 @@ def _parser() -> argparse.ArgumentParser:
     rows.add_argument("--reminder-file", default=None)
     arms = sub.add_parser("arms", help="run and judge the token arms")
     arms.add_argument("--out", required=True)
+    arms.add_argument("--plugin-home", required=True)
+    arms.add_argument("--bare-home", required=True)
     arms.add_argument("--runs", type=int, default=30)
     arms.add_argument("--reminder-file", default=None)
+    ports = sub.add_parser("ports", help="compare the ports of the test and real gateways")
+    ports.add_argument("--home", action="append", required=True)
+    ports.add_argument("--real-home", required=True)
     return parser
 
 
 def main(argv: Sequence[str] | None = None) -> int:
     args = _parser().parse_args(argv)
-    handlers = {"result": cmd_result, "rows": cmd_rows, "arms": cmd_arms}
+    handlers = {"result": cmd_result, "rows": cmd_rows, "arms": cmd_arms, "ports": cmd_ports}
     try:
         return handlers[args.command](args)
     except OSError as exc:
