@@ -35,7 +35,7 @@ Requirements for the first release. Each maps to a roadmap phase.
 - [x] **AGNT-02**: The tool descriptions carry the trigger, the own-plan rule and the `todo_list` boundary, so the agent uses the board without loading the skill.
 - [x] **AGNT-03**: The agent asks Theo one plain question before it removes, unchecks or rewords an item Theo wrote on its own initiative, or when it is unsure which item Theo means. An explicit instruction from Theo in his own message is the permission: the agent then acts at once with `confirmed: true` and asks nothing.
 - [x] **AGNT-04**: When the agent's work finishes an item, the agent checks it and says so in one line.
-- [ ] **AGNT-05**: The agent sees Theo's own edits on its next turn through a `pre_llm_call` hook that injects only the changes since the agent last saw the board, and injects nothing when nothing changed.
+- [x] **AGNT-05**: The agent sees Theo's own edits on its next turn through a `pre_llm_call` hook that injects only the changes since the agent last saw the board, and injects nothing when nothing changed.
 
 ### Backend routes
 
@@ -127,7 +127,7 @@ Each v1 requirement maps to exactly one phase.
 | AGNT-02 | Phase 2 | Complete |
 | AGNT-03 | Phase 2 | Complete |
 | AGNT-04 | Phase 2 | Complete |
-| AGNT-05 | Phase 5 | Pending |
+| AGNT-05 | Phase 5 | Complete |
 | API-01 | Phase 3 | Pending |
 | API-02 | Phase 3 | Pending |
 | API-03 | Phase 3 | Pending |
