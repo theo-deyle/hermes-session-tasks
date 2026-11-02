@@ -451,11 +451,6 @@ function Pane({ ctx }) {
     noticeCleanup: null
   })
   const focused = sid || null
-  if (current.current.sid !== focused) {
-    current.current.sid = focused
-    delete current.current.revs[focused]
-    current.current.board = null
-  }
 
   function take(asked, reply) {
     current.current.revs[asked] = reply.rev
@@ -558,7 +553,11 @@ function Pane({ ctx }) {
   }, [])
 
   // A focus change starts a new visit. A write that settles in a later visit changes no line state.
+  // The render never writes the ref: a render React drops must not move the session of a write.
+  // A rev only grows, so the revs of other sessions stay and reload drops any lower reply.
   useEffect(() => {
+    current.current.sid = focused
+    current.current.board = null
     current.current.visit += 1
     current.current.addBusy = false
     current.current.subBusy = {}
