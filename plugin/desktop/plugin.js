@@ -78,12 +78,17 @@ const BACK_LABEL = 'Back'
 const READ_ONLY_EMPTY_TITLE = 'This board is empty.'
 const READ_ONLY_EMPTY_HINT = 'Pick another session or go back.'
 const THIS_SESSION = 'this session'
+const COPY_LABEL = 'Copy'
+const COPY_ROW_ARIA = 'Copy item to '
+const COPY_ALL_PREFIX = 'Copy all open to '
+const BOARD_CAP = 100
 const SESSION_LIST_LIMIT = 200
 const SHORT_ID_CHARS = 6
 const MENU_STYLE = { width: '304px' }
 // A one-line text that ends with an ellipsis. A count never wraps and never shrinks.
 const TRUNCATE_STYLE = { overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }
 const NOWRAP_STYLE = { whiteSpace: 'nowrap' }
+const ROW_COPY_CLASS = `${REVEAL_CLASS} shrink-0`
 const PICKER_ROW_CLASS = 'px-2 pt-2'
 const PICKER_BUTTON_CLASS = 'min-h-8 w-full justify-between'
 const PICKER_TITLE_CLASS = 'min-w-0 flex-1 text-sm font-medium'
@@ -329,18 +334,35 @@ function isMismatch(meta) {
   return meta.backend_version !== PLUGIN_VERSION || meta.api_version !== API_VERSION
 }
 
-// One message at a time, in the order: version mismatch, write failed, stale, load failed.
+// The copy notice sentence in pieces: head, title, tail and the whole. Counts are numerals.
+// The cap clause follows only when some items were cut.
+function copyNoticeText({ copied, skipped, overflow, label }) {
+  const cut = overflow > 0 ? ` ${overflow} not copied, the board holds ${BOARD_CAP} items.` : ''
+  const head = `Copied ${copied} to `
+  const tail = `. ${skipped} skipped, already on the board.${cut}`
+  return { head, title: label, tail, full: `${head}${label}${tail}` }
+}
+
+// One message at a time: version mismatch, then the latest notice (write failed, stale or copied), then load failed.
 function noticeText({ meta, notice, loadFailed }) {
   if (isMismatch(meta)) return MISMATCH_LINE
   const kind = notice ? notice.kind : null
   if (kind === 'failed') return WRITE_FAILED_NOTICE
   if (kind === 'stale') return STALE_NOTICE
+  if (kind === 'copied') return copyNoticeText(notice.data).full
   return loadFailed ? LOAD_FAILED_NOTICE : null
 }
 
-function Notice({ text }) {
+// The copied notice that shows now, or null. A version mismatch hides it.
+function copiedNotice({ meta, notice }) {
+  if (isMismatch(meta) || !notice || notice.kind !== 'copied') return null
+  return copyNoticeText(notice.data)
+}
+
+function Notice({ text, copied }) {
   if (!text) return null
-  return jsx('div', { className: NOTICE_CLASS, style: NOTICE_STYLE, children: text })
+  const title = copied ? copied.full : undefined
+  return jsx('div', { className: NOTICE_CLASS, style: NOTICE_STYLE, title, children: text })
 }
 
 function Header({ items }) {
@@ -572,6 +594,20 @@ function ItemRow({ item, subtasks, collapsed, onToggle, actions }) {
             onClick: () => actions.onAddSubtask(item.id)
           })
         : null,
+      top && readOnly
+        ? jsx(Tip, {
+            label: actions.copyAria,
+            children: jsx(Button, {
+              variant: 'ghost',
+              size: 'sm',
+              className: ROW_COPY_CLASS,
+              'aria-label': actions.copyAria,
+              disabled: actions.copyBusy,
+              onClick: () => actions.onCopy(item.id),
+              children: COPY_LABEL
+            })
+          })
+        : null,
       pendingRow || readOnly
         ? null
         : jsx(RowButton, {
@@ -697,6 +733,8 @@ function Pane({ ctx }) {
   const [picked, setPicked] = useState(null)
   const [pickedServer, setPickedServer] = useState(null)
   const [pickedCollapsed, setPickedCollapsed] = useState({})
+  // True from a copy click until its outcome: every copy control is disabled meanwhile.
+  const [copyBusy, setCopyBusy] = useState(false)
   const shown = server !== null && server.sid === (sid || null) ? server : null
   // The listener, the interval and the writes live longer than one render, so they read this ref.
   // revs holds the newest accepted rev of each session. queue chains the writes one after another.
@@ -712,6 +750,7 @@ function Pane({ ctx }) {
     visit: 0,
     kept: {},
     addBusy: false,
+    copyBusy: false,
     subBusy: {},
     edit: null,
     board: null,
@@ -821,12 +860,12 @@ function Pane({ ctx }) {
     loadTitles()
   }
 
-  function showNotice(kind) {
+  function showNotice(kind, data) {
     const state = current.current
     state.seq += 1
     const mine = state.seq
     if (typeof state.noticeCleanup === 'function') state.noticeCleanup()
-    setNotice({ kind, seq: mine })
+    setNotice({ kind, seq: mine, data })
     state.noticeCleanup = ctx.setTimeout(() => {
       if (current.current.seq === mine) setNotice(null)
     }, NOTICE_MS)
@@ -870,6 +909,55 @@ function Pane({ ctx }) {
     } finally {
       if (onOutcome) onOutcome(outcome)
     }
+  }
+
+  // Copies into the focused board `asked` from the board `fromRoot`. One request, never retried.
+  // The rev is read when the copy runs, so a write queued before it has moved the rev already.
+  async function runCopy(asked, fromRoot, itemIds, label) {
+    const state = current.current
+    state.inFlight += 1
+    let outcome = 'failed'
+    let reply = null
+    try {
+      const body = { session_id: asked, from_session_id: fromRoot, base_rev: state.revs[asked] ?? 0 }
+      if (itemIds !== null) body.item_ids = itemIds
+      reply = await ctx.rest('/board/copy', { method: 'POST', body })
+      const isStale = reply && reply.ok === false && reply.error === 'stale' && reply.board
+      if (reply && reply.ok === true) outcome = 'ok'
+      else if (isStale) outcome = 'stale'
+      if (outcome !== 'failed') take(asked, reply)
+    } catch {
+      outcome = 'failed'
+    } finally {
+      state.inFlight -= 1
+    }
+    try {
+      if (outcome === 'ok') {
+        const { copied = 0, skipped = 0, overflow = 0 } = reply
+        if (state.sid === asked) showNotice('copied', { copied, skipped, overflow, label })
+      } else if (outcome === 'stale') {
+        reloadPicked()
+        showNotice('stale')
+      } else {
+        reload()
+        showNotice('failed')
+      }
+    } finally {
+      state.copyBusy = false
+      setCopyBusy(false)
+    }
+  }
+
+  // Starts a copy and returns nothing. `itemIds` null copies every open item. The session and the root
+  // are read now, at click time, and the copy waits in the write queue behind earlier writes.
+  function copyItems(itemIds, label) {
+    const state = current.current
+    const asked = state.sid
+    const fromRoot = state.picked
+    if (!asked || fromRoot === null || state.copyBusy) return
+    state.copyBusy = true
+    setCopyBusy(true)
+    state.queue = state.queue.then(() => runCopy(asked, fromRoot, itemIds, label)).catch(() => undefined)
   }
 
   useEffect(() => {
@@ -1092,11 +1180,13 @@ function Pane({ ctx }) {
   const onCheck = (item, value) => sendOp({ op: 'set_checked', item_id: item.id, checked: value === true })
   const onToggle = itemId => setCollapsed(prev => ({ ...prev, [itemId]: !prev[itemId] }))
   const actions = { edit, onCheck, onAddSubtask: openSubLine, onEdit: startEdit, onDelete, ...editHandlers }
-  const readOnlyActions = { readOnly: true, edit: null }
   const focusedEntries = pending.filter(entry => entry.sid === focused)
   const board = shown === null ? null : viewBoard(shown.board, focusedEntries)
   const items = boardItems(board)
-  const noticeLine = jsx(Notice, { text: noticeText({ meta, notice, loadFailed }) })
+  const noticeLine = jsx(Notice, {
+    text: noticeText({ meta, notice, loadFailed }),
+    copied: copiedNotice({ meta, notice })
+  })
   if (focused === null) {
     return jsxs('div', {
       className: PANE_CLASS,
@@ -1104,6 +1194,14 @@ function Pane({ ctx }) {
     })
   }
   const focusedRoot = shown === null ? focused : shown.root_id
+  const focusedLabel = boardLabel(focusedRoot, titles)
+  const readOnlyActions = {
+    readOnly: true,
+    edit: null,
+    copyAria: `${COPY_ROW_ARIA}${focusedLabel}`,
+    copyBusy,
+    onCopy: itemId => copyItems([itemId], focusedLabel)
+  }
   const viewing = picked !== null
   const shownItems = viewing ? boardItems(pickedServer === null ? null : pickedServer.board) : items
   const view = {
@@ -1133,7 +1231,7 @@ function Pane({ ctx }) {
         onPick: rootId => pick(rootId, focusedRoot)
       }),
       viewing
-        ? jsx(ReadOnlyBanner, { focusedLabel: boardLabel(focusedRoot, titles), onBack: back })
+        ? jsx(ReadOnlyBanner, { focusedLabel, onBack: back })
         : null,
       jsx(Header, { items: shownItems }),
       noticeLine,
@@ -1197,7 +1295,7 @@ export {
   API_VERSION, EVENT_TYPE, PLUGIN_ID, PLUGIN_VERSION, LOAD_FAILED_NOTICE, NOTICE_MS, POLL_MS,
   STALE_NOTICE, WRITE_FAILED_NOTICE, ADD_PLACEHOLDER, MAX_TEXT_CHARS, SUBTASK_PLACEHOLDER,
   PICKER_TIP, UNTITLED, NO_OTHER_BOARDS, LIST_FAILED, READ_ONLY_BANNER, SESSION_LIST_LIMIT,
-  applyOp, boardItems, boardLabel, boardMarkdown, boardPath, buildTree, headerText, isMismatch,
+  applyOp, boardItems, boardLabel, boardMarkdown, boardPath, buildTree, copyNoticeText, headerText, isMismatch,
   isTopLevel, menuName, menuSubLine, noticeText, openCounts, orderBoards, pickerAriaLabel,
   shortId, subtaskCountText, titleMap, updatedLabel, viewBoard, writeOutcome
 }
