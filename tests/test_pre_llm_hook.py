@@ -88,6 +88,7 @@ def test_quiet_turn_returns_none_and_marks_nothing(
     hook: Hook, store: BoardStore, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     store.apply("s1", [AddItem("Call John")], actor="agent", base_rev=0)
+    assert turn(hook) is None
     marks: list[tuple[str, int]] = []
     real_mark = BoardStore.mark_seen
 
@@ -97,7 +98,6 @@ def test_quiet_turn_returns_none_and_marks_nothing(
 
     monkeypatch.setattr(BoardStore, "mark_seen", recording_mark)
 
-    assert turn(hook) is None
     assert turn(hook) is None
     assert marks == []
 

@@ -212,6 +212,29 @@ class BoardStore:
         with schema.open_db(self.connect) as conn, read_txn(conn):
             return rows.read_user_touched_ids(conn, root_id)
 
+    def unseen_changes(self, root_id: str) -> rows.Unseen | None:
+        """Return Theo's changes that the agent has not seen, or None when there are none.
+
+        One read snapshot. The journal is covered when it still holds every row after
+        `agent_seen_rev`: fewer than `JOURNAL_KEEP` rows, or an oldest rev at or below it.
+        """
+        check_session_id(root_id)
+        with schema.open_db(self.connect) as conn, read_txn(conn):
+            seen = rows.read_seen(conn, root_id)
+            if seen is None or seen[0] <= seen[1]:
+                return None
+            rev, seen_rev = seen
+            changes = rows.read_user_changes_after(conn, root_id, seen_rev)
+            count, oldest_rev = rows.journal_span(conn, root_id)
+            covered = count < JOURNAL_KEEP or oldest_rev <= seen_rev
+            return rows.Unseen(rev, seen_rev, changes, covered)
+
+    def mark_seen(self, root_id: str, rev: int) -> None:
+        """Record that the agent has seen the board up to `rev`. The mark never moves down."""
+        check_session_id(root_id)
+        with schema.open_db(self.connect) as conn, write_txn(conn):
+            rows.mark_seen(conn, root_id, rev)
+
     def apply(self, root_id: str, ops: Sequence[Op], *, actor: Actor, base_rev: int) -> WriteResult:
         """Apply a batch of operations in one write transaction, all or nothing.
 

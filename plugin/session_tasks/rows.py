@@ -35,6 +35,16 @@ class BoardSummary:
     updated_at: str
 
 
+@dataclass(frozen=True, slots=True)
+class Unseen:
+    """What the agent has not seen: Theo's changes after `seen_rev`, up to board rev `rev`."""
+
+    rev: int
+    seen_rev: int
+    changes: tuple[Change, ...]
+    covered: bool
+
+
 def read_board(conn: sqlite3.Connection, root_id: str) -> BoardRow | None:
     sql = f"SELECT {BOARD_COLUMNS} FROM {BOARDS} WHERE root_id = ?"
     row = conn.execute(sql, (root_id,)).fetchone()
@@ -175,6 +185,41 @@ def read_user_touched_ids(conn: sqlite3.Connection, root_id: str) -> frozenset[i
         "WHERE root_id = ? AND actor = 'user' AND item_id IS NOT NULL"
     )
     return frozenset(int(row[0]) for row in conn.execute(sql, (root_id,)))
+
+
+def read_seen(conn: sqlite3.Connection, root_id: str) -> tuple[int, int] | None:
+    """Return `(rev, agent_seen_rev)` of a board, or None when it has no row."""
+    sql = f"SELECT rev, agent_seen_rev FROM {BOARDS} WHERE root_id = ?"
+    row = conn.execute(sql, (root_id,)).fetchone()
+    return None if row is None else (int(row[0]), int(row[1]))
+
+
+def read_user_changes_after(conn: sqlite3.Connection, root_id: str, rev: int) -> tuple[Change, ...]:
+    """Return Theo's journal rows after `rev`, in journal order. Agent rows are left out."""
+    sql = (
+        f"SELECT rev, actor, op, item_id, text, ts FROM {CHANGES} "
+        "WHERE root_id = ? AND rev > ? AND actor = 'user' ORDER BY seq"
+    )
+    return tuple(Change(*row) for row in conn.execute(sql, (root_id, rev)))
+
+
+def journal_span(conn: sqlite3.Connection, root_id: str) -> tuple[int, int]:
+    """Return `(row count, oldest rev)` of the journal, `(0, 0)` when it is empty."""
+    sql = f"SELECT COUNT(*), COALESCE(MIN(rev), 0) FROM {CHANGES} WHERE root_id = ?"
+    row = conn.execute(sql, (root_id,)).fetchone()
+    return int(row[0]), int(row[1])
+
+
+def mark_seen(conn: sqlite3.Connection, root_id: str, rev: int) -> None:
+    """Raise `agent_seen_rev` to `rev`. It never moves down."""
+    sql = f"UPDATE {BOARDS} SET agent_seen_rev = ? WHERE root_id = ? AND agent_seen_rev < ?"
+    conn.execute(sql, (rev, root_id, rev))
+
+
+def advance_seen(conn: sqlite3.Connection, root_id: str, before_rev: int, new_rev: int) -> None:
+    """Move `agent_seen_rev` to `new_rev` only when it equalled `before_rev`."""
+    sql = f"UPDATE {BOARDS} SET agent_seen_rev = ? WHERE root_id = ? AND agent_seen_rev = ?"
+    conn.execute(sql, (new_rev, root_id, before_rev))
 
 
 def prune_changes(conn: sqlite3.Connection, root_id: str, keep: int) -> None:
