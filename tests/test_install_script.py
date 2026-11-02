@@ -258,6 +258,21 @@ def test_bad_host_is_refused(rig: Rig, host: str) -> None:
     assert not home.exists()
 
 
+@pytest.mark.parametrize(
+    "path",
+    ["relative/plugin.js", "/tmp/x;touch y", "/tmp/a b.js", "-oProxyCommand=x", "/tmp/$(id).js"],
+)
+def test_bad_remote_path_is_refused(rig: Rig, path: str) -> None:
+    home = rig.root / "home"
+
+    result = run_script(["-HermesHome", str(home), f"-RemotePath:{path}"], rig)
+
+    assert result.returncode == 1, result.stdout + result.stderr
+    assert "refusing" in result.stderr
+    assert not rig.log.exists()
+    assert not home.exists()
+
+
 def test_empty_host_name_is_refused(rig: Rig) -> None:
     command = f". '{SCRIPT}'; Test-DevpcHost -Name ''"
     result = subprocess.run(
@@ -411,6 +426,10 @@ def test_readme_names_the_script_and_its_parameters() -> None:
 
     for needle in ("install-desktop.ps1", "pwsh -NoProfile -File", "-DevpcHost", "-DryRun"):
         assert needle in text
+
+
+def test_readme_names_the_remote_path_option() -> None:
+    assert "-RemotePath <path on devpc>" in readme_text()
 
 
 def test_readme_names_the_windows_home_and_the_reload() -> None:
