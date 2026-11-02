@@ -211,7 +211,9 @@ function ItemBlock({ group, collapsed, onToggle, onCheck }) {
     'data-item-id': String(item.id),
     children: [
       jsx(ItemRow, { item, subtasks: children, collapsed, onToggle: () => onToggle(item.id), onCheck }),
-      ...children.map(child => jsx(ItemRow, { item: child, subtasks: [], onCheck }, child.id))
+      ...(collapsed
+        ? []
+        : children.map(child => jsx(ItemRow, { item: child, subtasks: [], onCheck }, child.id)))
     ]
   })
 }
@@ -226,6 +228,8 @@ function Pane({ ctx }) {
   // The one notice that shows: { kind: 'stale' | 'failed', seq }, or null.
   const [notice, setNotice] = useState(null)
   const [loadFailed, setLoadFailed] = useState(false)
+  // The parents whose subtasks are hidden, keyed by item id. It lives here only and starts empty.
+  const [collapsed, setCollapsed] = useState({})
   const shown = server !== null && server.sid === (sid || null) ? server : null
   // The listener, the interval and the writes live longer than one render, so they read this ref.
   // revs holds the newest accepted rev of each session. queue chains the writes one after another.
@@ -329,6 +333,7 @@ function Pane({ ctx }) {
   }, [])
 
   useEffect(() => {
+    setCollapsed({})
     if (!sid) {
       setServer(null)
       return undefined
@@ -354,6 +359,10 @@ function Pane({ ctx }) {
     sendOp({ op: 'set_checked', item_id: item.id, checked: value === true })
   }
 
+  function onToggle(itemId) {
+    setCollapsed(prev => ({ ...prev, [itemId]: !prev[itemId] }))
+  }
+
   const focusedOps = pending.filter(entry => entry.sid === focused).map(entry => entry.op)
   const board = shown === null ? null : viewBoard(shown.board, focusedOps)
   const items = boardItems(board)
@@ -367,7 +376,7 @@ function Pane({ ctx }) {
         children: jsx('div', {
           className: LIST_BODY_CLASS,
           children: buildTree(items).map(group =>
-            jsx(ItemBlock, { group, collapsed: false, onToggle: () => {}, onCheck }, group.item.id)
+            jsx(ItemBlock, { group, collapsed: collapsed[group.item.id] === true, onToggle, onCheck }, group.item.id)
           )
         })
       })
