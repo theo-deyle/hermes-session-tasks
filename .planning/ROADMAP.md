@@ -23,7 +23,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 2: Agent tools and skill** - The agent reads and edits the board, and puts its own multi-step plan on the board. (completed 2026-10-31)
 - [ ] **Phase 3: REST router and client install spike** - The backend routes work, and a stub pane runs on the Mac and the Windows PC.
 - [x] **Phase 4: Pane** - Theo sees and edits the focused session's board in a right-side pane that updates live. (completed 2026-11-01)
-- [ ] **Phase 5: Agent sees Theo's edits** - The agent learns of Theo's changes on its next turn, and a deleted session loses its board.
+- [x] **Phase 5: Agent sees Theo's edits** - The agent learns of Theo's changes on its next turn, and a deleted session loses its board. (completed 2026-11-02)
 - [ ] **Phase 6: Cross-session boards** - The agent and Theo list, read and copy items from other sessions' boards.
 - [ ] **Phase 7: Deploy and hardening** - The plugin runs on devpc and on both clients, with the README and the GitHub repo in place.
 
@@ -179,7 +179,7 @@ Plans:
   2. A turn with no change since the agent last saw the board gets no injected text.
   3. The injected note stays near 600 to 1200 characters at most. A token count at turn 30 is compared with a session that has no plugin. The difference equals the size of the notes.
   4. When Hermes deletes a session, the plugin removes that session's board. A session that Hermes archives keeps its board.
-**Plans**: 7/7 plans executed in 6 waves
+**Plans**: 7/7 plans complete in 6 waves
 Plans:
 **Wave 1**
 - [x] 05-01-PLAN.md - First end to end test (Theo's pane edit to the agent's next turn), note rules, seen rules, old turn-text contracts (wave 1)
@@ -237,6 +237,6 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 | 2. Agent tools and skill | 7/7 | Complete    | 2026-10-31 |
 | 3. REST router and client install spike | 9/12 | In Progress | - |
 | 4. Pane | 9/9 | Complete    | 2026-11-01 |
-| 5. Agent sees Theo's edits | 7/7 | In Progress | - |
+| 5. Agent sees Theo's edits | 7/7 | Complete    | 2026-11-02 |
 | 6. Cross-session boards | 0/TBD | Not started | - |
 | 7. Deploy and hardening | 0/TBD | Not started | - |
