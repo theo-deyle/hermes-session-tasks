@@ -4,13 +4,17 @@
 //
 // It loads the plugin with stub SDK, react and jsx-runtime modules, runs the registered
 // pane through a small hook runtime, and prints one JSON line:
-//   lines, restCalls, contribution, intervals, eventTypes, buttons.
+//   lines, restCalls, contribution, intervals, eventTypes, buttons, checkboxes.
 //
 // Config keys:
 //   baseUrl       relay URL; ctx.rest forwards to baseUrl + path with fetch
 //   focused       the focused stored session id, or null
 //   restOverrides map of path to a reply body, or the string "__error__" to reject
-//   steps         list of {"click": "<button label>"} or {"event": {...}}
+//   steps         list of {"click": "<button label>"}, {"event": {...}} or
+//                 {"check": {"row": "<data-item-id>", "value": true|false}}
+//
+// A checkbox is recorded as {row, label, checked, disabled}. `row` is the data-item-id of the
+// nearest ancestor host element, or null.
 
 import fs from 'node:fs/promises'
 import process from 'node:process'
@@ -93,9 +97,11 @@ function useEffect(effect, deps) {
 
 // ---- stub modules ----
 function Button() {}
+function Checkbox() {}
 const focusedAtom = { get: () => config.focused ?? null }
 const sdkValues = {
   Button,
+  Checkbox,
   cn: (...values) => values.filter(Boolean).join(' '),
   host: { state: { focusedStoredSessionId: focusedAtom } },
   useValue: atom => atom.get()
@@ -187,10 +193,10 @@ if (!contribution || typeof contribution.render !== 'function') {
 }
 
 // ---- render walk ----
-function walk(node, lines, buttons) {
+function walk(node, lines, buttons, boxes, row) {
   if (node === null || node === undefined || typeof node === 'boolean') return
   if (Array.isArray(node)) {
-    for (const child of node) walk(child, lines, buttons)
+    for (const child of node) walk(child, lines, buttons, boxes, row)
     return
   }
   if (typeof node !== 'object') return
@@ -199,15 +205,27 @@ function walk(node, lines, buttons) {
     buttons.push({ label: textOf(props.children), onClick: props.onClick })
     return
   }
-  if (typeof type === 'function') {
-    walk(type(props), lines, buttons)
+  if (type === Checkbox) {
+    boxes.push({
+      row,
+      label: props['aria-label'],
+      checked: props.checked === true,
+      disabled: props.disabled === true,
+      onCheckedChange: props.onCheckedChange
+    })
     return
   }
+  if (typeof type === 'function') {
+    walk(type(props), lines, buttons, boxes, row)
+    return
+  }
+  const itemId = props['data-item-id']
+  const here = typeof type === 'string' && itemId !== undefined ? String(itemId) : row
   const children = props.children
   const list = Array.isArray(children) ? children : [children]
   const text = list.filter(child => typeof child === 'string' || typeof child === 'number')
   if (typeof type === 'string' && text.length > 0) lines.push(text.join(''))
-  walk(list, lines, buttons)
+  walk(list, lines, buttons, boxes, here)
 }
 
 function textOf(children) {
@@ -217,19 +235,22 @@ function textOf(children) {
 
 let lines = []
 let buttons = []
+let checkboxes = []
 
 function renderOnce() {
   slotIndex = 0
   queuedEffects = []
   const nextLines = []
   const nextButtons = []
-  walk(contribution.render(), nextLines, nextButtons)
+  const nextBoxes = []
+  walk(contribution.render(), nextLines, nextButtons, nextBoxes, null)
   const effects = queuedEffects
   queuedEffects = []
   for (const run of effects) run()
   const changed = JSON.stringify(nextLines) !== JSON.stringify(lines)
   lines = nextLines
   buttons = nextButtons
+  checkboxes = nextBoxes
   return changed
 }
 
@@ -253,6 +274,12 @@ for (const step of steps) {
     const button = buttons.find(entry => entry.label === step.click)
     if (!button) throw new Error(`no button labelled ${JSON.stringify(step.click)}`)
     await button.onClick()
+  } else if (step.check !== undefined) {
+    const { row, value } = step.check
+    const matches = checkboxes.filter(entry => entry.row === row)
+    if (matches.length === 0) throw new Error(`no checkbox in row ${row}`)
+    if (matches.length > 1) throw new Error(`${matches.length} checkboxes in row ${row}`)
+    await matches[0].onCheckedChange(value)
   } else if (step.event !== undefined) {
     for (const entry of [...listeners]) {
       if (entry.type === step.event.type) await entry.fn(step.event)
@@ -274,6 +301,7 @@ const output = {
   },
   intervals,
   eventTypes,
-  buttons: buttons.map(entry => entry.label)
+  buttons: buttons.map(entry => entry.label),
+  checkboxes: checkboxes.map(({ onCheckedChange, ...rest }) => rest)
 }
 process.stdout.write(`${JSON.stringify(output)}\n`, () => process.exit(0))

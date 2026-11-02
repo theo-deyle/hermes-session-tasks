@@ -5,13 +5,15 @@ from __future__ import annotations
 import functools
 import os
 import socket
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any, TypeAlias
 
 import pytest
+from api_client import unload_plugin_api
 from fakes import FakeReaderFactory, SessionSpec
+from pane_rig import Rig
 from session_tasks import paths
 from session_tasks.db import ConnFactory
 from session_tasks.lineage import SessionResolver
@@ -102,6 +104,14 @@ def resolver_for(connect: ConnFactory, clock: FakeClock) -> ResolverFor:
         return SessionResolver(connect, factory, clock), factory
 
     return build
+
+
+@pytest.fixture
+def rig(store: BoardStore, resolver_for: ResolverFor) -> Iterator[Rig]:
+    """The real router behind a relay. The dashboard core is unloaded before and after."""
+    unload_plugin_api()
+    yield Rig(store, resolver_for)
+    unload_plugin_api()
 
 
 def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item]) -> None:
