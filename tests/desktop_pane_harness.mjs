@@ -109,10 +109,12 @@ function useEffect(effect, deps) {
 // ---- stub modules ----
 function Button() {}
 function Checkbox() {}
+function Input() {}
 const focusedAtom = { get: () => config.focused ?? null }
 const sdkValues = {
   Button,
   Checkbox,
+  Input,
   cn: (...values) => values.filter(Boolean).join(' '),
   host: { state: { focusedStoredSessionId: focusedAtom } },
   useValue: atom => atom.get()
@@ -204,21 +206,22 @@ if (!contribution || typeof contribution.render !== 'function') {
 }
 
 // ---- render walk ----
-function walk(node, lines, buttons, boxes, row) {
+// `out` holds the lists one render fills. `here` is {row} and grows with each host element.
+function walk(node, out, here) {
   if (node === null || node === undefined || typeof node === 'boolean') return
   if (Array.isArray(node)) {
-    for (const child of node) walk(child, lines, buttons, boxes, row)
+    for (const child of node) walk(child, out, here)
     return
   }
   if (typeof node !== 'object') return
   const { type, props } = node
   if (type === Button) {
-    buttons.push({ label: textOf(props.children), onClick: props.onClick })
+    out.buttons.push({ label: textOf(props.children), onClick: props.onClick })
     return
   }
   if (type === Checkbox) {
-    boxes.push({
-      row,
+    out.boxes.push({
+      row: here.row,
       label: props['aria-label'],
       checked: props.checked === true,
       disabled: props.disabled === true,
@@ -226,22 +229,39 @@ function walk(node, lines, buttons, boxes, row) {
     })
     return
   }
+  if (type === Input) {
+    out.inputs.push({
+      placeholder: props.placeholder ?? null,
+      row: here.row,
+      value: props.value ?? '',
+      readOnly: props.readOnly === true,
+      disabled: props.disabled === true,
+      maxLength: props.maxLength ?? null,
+      size: props.size ?? null,
+      autoFocus: props.autoFocus === true,
+      onChange: props.onChange,
+      onKeyDown: props.onKeyDown,
+      onBlur: props.onBlur,
+      onFocus: props.onFocus
+    })
+    return
+  }
   if (typeof type === 'function') {
     componentDepth += 1
     try {
-      walk(type(props), lines, buttons, boxes, row)
+      walk(type(props), out, here)
     } finally {
       componentDepth -= 1
     }
     return
   }
   const itemId = props['data-item-id']
-  const here = typeof type === 'string' && itemId !== undefined ? String(itemId) : row
+  const next = typeof type === 'string' && itemId !== undefined ? { ...here, row: String(itemId) } : here
   const children = props.children
   const list = Array.isArray(children) ? children : [children]
   const text = list.filter(child => typeof child === 'string' || typeof child === 'number')
-  if (typeof type === 'string' && text.length > 0) lines.push(text.join(''))
-  walk(list, lines, buttons, boxes, here)
+  if (typeof type === 'string' && text.length > 0) out.lines.push(text.join(''))
+  walk(list, out, next)
 }
 
 function textOf(children) {
@@ -252,21 +272,21 @@ function textOf(children) {
 let lines = []
 let buttons = []
 let checkboxes = []
+let inputs = []
 
 function renderOnce() {
   slotIndex = 0
   queuedEffects = []
-  const nextLines = []
-  const nextButtons = []
-  const nextBoxes = []
-  walk(contribution.render(), nextLines, nextButtons, nextBoxes, null)
+  const out = { lines: [], buttons: [], boxes: [], inputs: [] }
+  walk(contribution.render(), out, { row: null })
   const effects = queuedEffects
   queuedEffects = []
   for (const run of effects) run()
-  const changed = JSON.stringify(nextLines) !== JSON.stringify(lines)
-  lines = nextLines
-  buttons = nextButtons
-  checkboxes = nextBoxes
+  const changed = JSON.stringify(out.lines) !== JSON.stringify(lines)
+  lines = out.lines
+  buttons = out.buttons
+  checkboxes = out.boxes
+  inputs = out.inputs
   return changed
 }
 
@@ -284,6 +304,21 @@ async function settle() {
   throw new Error(`the pane did not settle in ${MAX_ROUNDS} rounds`)
 }
 
+// An Input selector is an object with `placeholder` and or `row`. It must match exactly one Input.
+function findInput(selector) {
+  const wanted = selector ?? {}
+  const matches = inputs.filter(
+    entry =>
+      (wanted.placeholder === undefined || entry.placeholder === wanted.placeholder) &&
+      (wanted.row === undefined || entry.row === wanted.row)
+  )
+  if (matches.length === 0) throw new Error(`no input matches ${JSON.stringify(wanted)}`)
+  if (matches.length > 1) {
+    throw new Error(`${matches.length} inputs match ${JSON.stringify(wanted)}`)
+  }
+  return matches[0]
+}
+
 await settle()
 for (const step of steps) {
   if (step.click !== undefined) {
@@ -296,6 +331,16 @@ for (const step of steps) {
     if (matches.length === 0) throw new Error(`no checkbox in row ${row}`)
     if (matches.length > 1) throw new Error(`${matches.length} checkboxes in row ${row}`)
     await matches[0].onCheckedChange(value)
+  } else if (step.type !== undefined) {
+    await findInput(step.type.input).onChange({ target: { value: step.type.text } })
+  } else if (step.key !== undefined) {
+    const record = findInput(step.key.input)
+    await record.onKeyDown({
+      key: step.key.key,
+      preventDefault() {},
+      nativeEvent: { isComposing: false }
+    })
+    if (step.key.blur === true) await record.onBlur({})
   } else if (step.event !== undefined) {
     for (const entry of [...listeners]) {
       if (entry.type === step.event.type) await entry.fn(step.event)
@@ -319,6 +364,7 @@ const output = {
   intervals,
   eventTypes,
   buttons: buttons.map(entry => entry.label),
-  checkboxes: checkboxes.map(({ onCheckedChange, ...rest }) => rest)
+  checkboxes: checkboxes.map(({ onCheckedChange, ...rest }) => rest),
+  inputs: inputs.map(({ onChange, onKeyDown, onBlur, onFocus, ...rest }) => rest)
 }
 process.stdout.write(`${JSON.stringify(output)}\n`, () => process.exit(0))
