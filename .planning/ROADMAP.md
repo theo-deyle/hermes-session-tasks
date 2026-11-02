@@ -143,7 +143,7 @@ Plans:
   3. Theo adds an item inline and keeps typing the next one. Theo edits an item's text inline and adds a subtask. Theo deletes an item, and the pane confirms when subtasks go with it.
   4. When the agent writes to the board, the pane updates with no reload, through the event. Polling covers the case where no event arrives.
   5. Theo copies the board to the clipboard as a plain markdown checklist. The pane is one plain ESM file with three allowed imports, SDK components, `var(--ui-*)` theme vars and no hardcoded colour.
-**Plans**: 6/9 plans executed in 7 waves
+**Plans**: 7/9 plans executed in 7 waves
 Plans:
 **Wave 1**
 - [x] 04-01-PLAN.md - First end to end test: a check in the real pane reaches the store; checkbox rows, header count, Phase 3 contracts kept, hooks guard (wave 1)
@@ -160,7 +160,7 @@ Plans:
 - [x] 04-05-PLAN.md - View: subtask groups, collapse, done style, header copy as markdown, empty states, focus switch (wave 4)
 
 **Wave 5** *(blocked on Wave 4 completion)*
-- [ ] 04-06-PLAN.md - Add line and subtask add line with the plus button (wave 5)
+- [x] 04-06-PLAN.md - Add line and subtask add line with the plus button (wave 5)
 
 **Wave 6** *(blocked on Wave 5 completion)*
 - [ ] 04-07-PLAN.md - Inline text edit, delete with the confirm dialog, reload and focus rules for typing (wave 6)
@@ -217,7 +217,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 | 1. Core, storage and session identity | 6/6 | Complete    | 2026-10-30 |
 | 2. Agent tools and skill | 7/7 | Complete    | 2026-10-31 |
 | 3. REST router and client install spike | 9/12 | In Progress | - |
-| 4. Pane | 6/9 | In Progress | - |
+| 4. Pane | 7/9 | In Progress | - |
 | 5. Agent sees Theo's edits | 0/TBD | Not started | - |
 | 6. Cross-session boards | 0/TBD | Not started | - |
 | 7. Deploy and hardening | 0/TBD | Not started | - |
