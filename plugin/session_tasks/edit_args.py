@@ -44,7 +44,7 @@ class ParsedEdit:
     confirmed: bool
 
 
-def _whole(value: object) -> int | None:
+def whole_number(value: object) -> int | None:
     """Return a whole number from 0 to `MAX_WHOLE` from an int (not a bool) or ASCII digits.
 
     A value outside the SQLite integer range gives None, so it never reaches the store.
@@ -64,7 +64,7 @@ def _whole(value: object) -> int | None:
 
 
 def _id(value: object, field: str, minimum: int) -> int:
-    number = _whole(value)
+    number = whole_number(value)
     if number is None:
         raise EditArgsError(f"{field} must be a whole number")
     if number < minimum:
@@ -177,10 +177,10 @@ def _op_list(value: object) -> Sequence[object]:
     return decoded
 
 
-def _base_rev(value: object) -> int | None:
+def base_rev_arg(value: object) -> int | None:
     if value is None:
         return None
-    number = _whole(value)
+    number = whole_number(value)
     if number is None:
         raise EditArgsError(BASE_REV_BAD)
     try:
@@ -201,7 +201,7 @@ def parse(args: Mapping[str, object]) -> ParsedEdit:
     """
     items = _op_list(args.get("ops"))
     ops = tuple(_parse_op(raw, index) for index, raw in enumerate(items))
-    base_rev = _base_rev(args.get("base_rev"))
+    base_rev = base_rev_arg(args.get("base_rev"))
     if base_rev is None:
         for index, op in enumerate(ops):
             if target_id(op) is not None:

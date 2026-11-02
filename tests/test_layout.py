@@ -45,6 +45,9 @@ DASHBOARD_THIRD_PARTY = frozenset({"fastapi", "pydantic"})
 ARGUMENT_NAMES = frozenset({"args", "function_args"})
 ARGUMENT_READERS = frozenset({"get", "pop"})
 FUNCTION_NODES = (ast.FunctionDef, ast.AsyncFunctionDef, ast.Lambda)
+# The one read of `session_id` from the tool arguments that D-38 allows: it only names a
+# board to read. Pairs of (file name, function name).
+SANCTIONED_ARG_READS = frozenset({("copy_args.py", "read_target")})
 
 
 def _python_files(directory: Path) -> list[Path]:
@@ -211,11 +214,27 @@ def _is_session_id_literal(node: ast.AST) -> bool:
     return isinstance(node, ast.Constant) and node.value == "session_id"
 
 
+def _sanctioned_node_ids(path: Path, tree: ast.AST) -> set[int]:
+    """Return the ids of every node inside a sanctioned top-level function of this file."""
+    skipped: set[int] = set()
+    for node in getattr(tree, "body", []):
+        if isinstance(node, ast.FunctionDef) and (path.name, node.name) in SANCTIONED_ARG_READS:
+            skipped.update(id(inner) for inner in ast.walk(node))
+    return skipped
+
+
 def session_id_arg_findings(core_dir: Path) -> list[str]:
-    """Report a read of `session_id` from the tool arguments (TOOL-06)."""
+    """Report a read of `session_id` from the tool arguments (TOOL-06).
+
+    Only the functions in `SANCTIONED_ARG_READS` may read it.
+    """
     findings: list[str] = []
     for path in _python_files(core_dir):
-        for node in ast.walk(_parse(path)):
+        tree = _parse(path)
+        skipped = _sanctioned_node_ids(path, tree)
+        for node in ast.walk(tree):
+            if id(node) in skipped:
+                continue
             if (
                 isinstance(node, ast.Subscript)
                 and _is_arguments_name(node.value)
