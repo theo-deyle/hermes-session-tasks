@@ -228,7 +228,7 @@ def test_read_only_rows_keep_the_done_style(rig: Rig, tmp_path: Path) -> None:
 def test_collapse_works_and_has_its_own_map(rig: Rig, tmp_path: Path) -> None:
     seed_trip(rig.store, "s1", "Plan trip", "Book flight", "Pack")
     seed_trip(rig.store, "s2", "Plan move", "Rent van", "Box books")
-    run = {"sessionList": SESSION_LIST}
+    run: dict[str, Any] = {"sessionList": SESSION_LIST}
 
     picked = rig.run(tmp_path, steps=[COLLAPSE_ROW_1, *PICK_S2], **run)
     collapsed = rig.run(tmp_path, steps=[COLLAPSE_ROW_1, *PICK_S2, COLLAPSE_ROW_1], **run)
@@ -248,7 +248,7 @@ def test_collapse_works_and_has_its_own_map(rig: Rig, tmp_path: Path) -> None:
 def test_read_only_view_sends_no_write(rig: Rig, tmp_path: Path) -> None:
     seed_trip(rig.store, "s2", "Plan move", "Rent van", "Box books")
     seed_call_john(rig.store)
-    config = {"sessionList": SESSION_LIST}
+    config: dict[str, Any] = {"sessionList": SESSION_LIST}
 
     result = rig.run(
         tmp_path,
@@ -271,7 +271,7 @@ def test_read_only_view_sends_no_write(rig: Rig, tmp_path: Path) -> None:
 
 def test_picking_the_focused_row_or_the_shown_row_goes_back(rig: Rig, tmp_path: Path) -> None:
     seed_two_boards(rig)
-    config = {"sessionList": SESSION_LIST}
+    config: dict[str, Any] = {"sessionList": SESSION_LIST}
 
     focused = rig.run(tmp_path, steps=[*PICK_S2, OPEN_MENU, {"pick": S1_TITLE}], **config)
     shown = rig.run(tmp_path, steps=[*PICK_S2, OPEN_MENU, {"pick": S2_TITLE}], **config)

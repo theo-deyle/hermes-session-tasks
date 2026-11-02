@@ -1085,7 +1085,8 @@ function Pane({ ctx }) {
     setPicked(rootId)
     setPickedServer(null)
     setPickedCollapsed({})
-    reloadPicked()
+    // The picked board loads after a write that saveEdit just queued.
+    state.queue.then(reloadPicked)
   }
 
   const onCheck = (item, value) => sendOp({ op: 'set_checked', item_id: item.id, checked: value === true })
