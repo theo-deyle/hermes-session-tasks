@@ -7,7 +7,16 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-from pane_rig import EVENT_TYPE, Rig, board_gets, checkbox, posts, seed_call_john, stale_body
+from pane_rig import (
+    EVENT_TYPE,
+    Rig,
+    board_gets,
+    checkbox,
+    posts,
+    seed_call_john,
+    stale_body,
+    the_input,
+)
 from session_tasks.board_json import board_dict
 from session_tasks.model import AddItem, Board, RemoveItem
 
@@ -269,3 +278,63 @@ def test_one_thrown_error_does_not_stop_later_writes(rig: Rig, tmp_path: Path) -
 
     assert [call["body"]["ops"][0]["text"] for call in posts(result)] == ["First", "Second"]
     assert [item.text for item in rig.store.get_board("s1").items] == ["Call John", "Second"]
+
+
+def test_add_line_of_the_new_session_works_while_the_old_write_runs(
+    rig: Rig, tmp_path: Path
+) -> None:
+    seed_call_john(rig.store)
+    other = [
+        {"focus": "s2"},
+        {"render": True},
+        add_text("Other"),
+        {"render": True},
+        ADD_ENTER,
+    ]
+
+    result = rig.run(tmp_path, duringWrite=other, steps=[add_text("New"), ADD_ENTER])
+
+    sent = [(call["body"]["session_id"], call["body"]["ops"][0]["text"]) for call in posts(result)]
+    assert sent == [("s1", "New"), ("s2", "Other")]
+    assert [item.text for item in rig.store.get_board("s2").items] == ["Other"]
+
+
+def test_old_subtask_write_does_not_touch_the_line_of_the_same_parent_later(
+    rig: Rig, tmp_path: Path
+) -> None:
+    rig.store.apply("s1", [AddItem("Plan trip")], actor="agent", base_rev=0)
+    sub = {"input": {"placeholder": SUBTASK, "row": "1"}}
+    add_sub = {"click": {"label": "Add subtask", "row": "1"}}
+    back = [
+        {"focus": "s2"},
+        {"render": True},
+        {"focus": "s1"},
+        {"render": True},
+        add_sub,
+        {"render": True},
+        {"type": {**sub, "text": "Second"}},
+        {"render": True},
+    ]
+
+    result = rig.run(
+        tmp_path,
+        duringWrite=back,
+        steps=[add_sub, {"type": {**sub, "text": "Pack"}}, {"key": {**sub, "key": "Enter"}}],
+    )
+
+    line = the_input(result, placeholder=SUBTASK, row="1")
+    assert line["value"] == "Second"
+    assert line["readOnly"] is False
+
+
+def test_load_failed_notice_does_not_follow_a_focus_change(rig: Rig, tmp_path: Path) -> None:
+    seed_call_john(rig.store)
+
+    result = rig.run(
+        tmp_path,
+        restSequences={GET_BOARD: ["__error__"]},
+        restOverrides={"/board?session_id=s2": {"ok": False}},
+        steps=[{"focus": "s2"}],
+    )
+
+    assert LOAD_FAILED_NOTICE not in result["lines"]
