@@ -44,7 +44,18 @@ class BoardTools:
             resolution = self.resolver.resolve(session_id)
         except InvalidSession:
             return error_result(NO_SESSION)
-        return read_result(self.store.get_board(resolution.root_id))
+        board = self.store.get_board(resolution.root_id)
+        # A delegate reads the delegator's board, but the delegator never sees that result.
+        if resolution.kind != "delegate":
+            self._mark_seen(resolution.root_id, board.rev)
+        return read_result(board)
+
+    def _mark_seen(self, root_id: str, rev: int) -> None:
+        """Record that the agent saw the board at `rev`. A fault here never breaks a tool result."""
+        try:
+            self.store.mark_seen(root_id, rev)
+        except Exception:
+            log.warning("board seen mark failed", exc_info=True)
 
     def board_edit(
         self, args: Mapping[str, object], session_id: str | None = None, **kwargs: object
