@@ -9,7 +9,7 @@ from datetime import UTC, datetime
 from typing import Literal, TypeAlias
 
 Actor: TypeAlias = Literal["agent", "user"]
-ChangeOp: TypeAlias = Literal["add", "text", "check", "uncheck", "remove", "forked"]
+ChangeOp: TypeAlias = Literal["add", "text", "check", "uncheck", "remove", "forked", "copied"]
 StaleReason: TypeAlias = Literal["stale", "not_found"]
 Clock: TypeAlias = Callable[[], str]
 
@@ -128,6 +128,16 @@ WriteResult: TypeAlias = Applied | Stale
 
 
 @dataclass(frozen=True, slots=True)
+class CopyApplied:
+    """The result of a board copy: the write plus the copied, skipped and overflow counts."""
+
+    applied: Applied
+    copied: int
+    skipped: int
+    overflow: int
+
+
+@dataclass(frozen=True, slots=True)
 class Change:
     rev: int
     actor: Actor
@@ -162,6 +172,18 @@ class DepthExceeded(BoardError):
 
 
 class BadParentRef(BoardError):
+    pass
+
+
+NO_SOURCE_BOARD = "no board for that session id; call board_sessions"
+SAME_BOARD = "copy from another session's board; this is the same board"
+
+
+class NoSourceBoard(BoardError):
+    pass
+
+
+class SameBoard(BoardError):
     pass
 
 

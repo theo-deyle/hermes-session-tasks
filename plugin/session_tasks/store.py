@@ -3,14 +3,17 @@
 from __future__ import annotations
 
 import sqlite3
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field, replace
 
 from . import aliases, rows, schema
+from .copy_plan import plan_copy
 from .db import ConnFactory, read_txn, write_txn
 from .model import (
     JOURNAL_KEEP,
     MAX_ITEMS,
+    NO_SOURCE_BOARD,
+    SAME_BOARD,
     Actor,
     AddItem,
     Applied,
@@ -20,10 +23,13 @@ from .model import (
     Change,
     ChangeOp,
     Clock,
+    CopyApplied,
     DepthExceeded,
     Item,
+    NoSourceBoard,
     Op,
     RemoveItem,
+    SameBoard,
     SetChecked,
     SetText,
     Stale,
@@ -176,6 +182,28 @@ def _remove(batch: _Batch, index: int, op: RemoveItem) -> None:
         batch.journal("remove", removed.id, removed.text)
 
 
+def _provenance(source_root: str, source_ids: Sequence[int]) -> Callable[[_Batch], None]:
+    """Return the after-ops hook that journals where each copied item came from.
+
+    One `copied` row per op, at the batch rev. The rows never join `changed` or `entries`,
+    so `summary_line` and the delta note still count the `add` rows only.
+    """
+
+    def write(batch: _Batch) -> None:
+        for index, source_id in enumerate(source_ids):
+            change = Change(
+                batch.new_rev,
+                batch.actor,
+                "copied",
+                batch.added[index],
+                f"{source_root}#{source_id}",
+                batch.now,
+            )
+            rows.insert_change(batch.conn, batch.root_id, change)
+
+    return write
+
+
 def _run_op(batch: _Batch, index: int, op: Op) -> None:
     match op:
         case AddItem():
@@ -274,6 +302,45 @@ class BoardStore:
             board = self.get_board(root_id)
             return Stale(board, stale.reason, stale.op_index, stale.item_id)
 
+    def copy_items(
+        self,
+        target_root: str,
+        source_root: str,
+        item_ids: Sequence[int] | None,
+        *,
+        actor: Actor,
+    ) -> CopyApplied | Stale:
+        """Copy items of another board onto the target board in one write transaction.
+
+        The skip check, the cap and every insert share the lock of one `BEGIN IMMEDIATE`, so
+        no other writer can add a duplicate between the check and the insert. The source
+        board is only read. A copy is an add, so a zero base rev is safe.
+        """
+        check_session_id(target_root)
+        check_session_id(source_root)
+        if target_root == source_root:
+            raise SameBoard(SAME_BOARD)
+        try:
+            with schema.open_db(self.connect) as conn, write_txn(conn):
+                if rows.read_board(conn, source_root) is None:
+                    raise NoSourceBoard(NO_SOURCE_BOARD)
+                source = rows.read_items(conn, source_root)
+                target = rows.read_items(conn, target_root)
+                plan = plan_copy(source, item_ids, target, MAX_ITEMS - len(target))
+                if plan.missing_id is not None and plan.missing_index is not None:
+                    raise _StaleSignal("not_found", plan.missing_index, plan.missing_id)
+                if not plan.ops:
+                    board = _read_board(conn, target_root)
+                    return CopyApplied(
+                        Applied(board, board.rev, ()), 0, plan.skipped, plan.overflow
+                    )
+                provenance = _provenance(source_root, plan.source_ids)
+                applied = self._apply(conn, target_root, plan.ops, actor, 0, after_ops=provenance)
+                return CopyApplied(applied, len(plan.ops), plan.skipped, plan.overflow)
+        except _StaleSignal as stale:
+            board = self.get_board(target_root)
+            return Stale(board, stale.reason, stale.op_index, stale.item_id)
+
     def _apply(
         self,
         conn: sqlite3.Connection,
@@ -281,6 +348,7 @@ class BoardStore:
         ops: Sequence[Op],
         actor: Actor,
         base_rev: int,
+        after_ops: Callable[[_Batch], None] | None = None,
     ) -> Applied:
         now = self.clock()
         pre = _read_board(conn, root_id)
@@ -295,6 +363,8 @@ class BoardStore:
             raise BoardFull(f"a board holds at most {MAX_ITEMS} items", None)
         if not batch.changed:
             return Applied(_read_board(conn, root_id), row.rev, ())
+        if after_ops is not None:
+            after_ops(batch)
         rows.save_board(conn, root_id, batch.new_rev, batch.next_id, now)
         rows.prune_changes(conn, root_id, JOURNAL_KEEP)
         if actor == "agent":
