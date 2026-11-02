@@ -690,3 +690,37 @@ def test_port_clash_names_a_shared_port_and_a_public_listener() -> None:
     assert any("8644" in line for line in live.port_clash({("127.0.0.1", 8644)}, real))
     assert any("0.0.0.0" in line for line in live.port_clash({("0.0.0.0", 51000)}, real))
     assert live.port_clash({("127.0.0.1", 51000)}, real) == []
+
+
+def test_per_turn_tokens_reads_the_difference_of_the_session_total() -> None:
+    live = load_live("delta_live", DELTA_LIVE)
+
+    assert live.per_turn_tokens([100, 250, 450]) == [100, 150, 200]
+    assert live.per_turn_tokens([]) == []
+
+
+def test_session_totals_pass_the_band_only_after_the_per_turn_step() -> None:
+    live = load_live("delta_live", DELTA_LIVE)
+    edits, quiet = arm_pair(ratio=0.3)
+
+    def totals(arm: list[Any]) -> list[Any]:
+        running = 0
+        out = []
+        for item in arm:
+            running += item.input_tokens
+            out.append(replace(item, input_tokens=running))
+        return out
+
+    raw = live.compare(totals(edits), totals(quiet), bare_from(totals(quiet)), live.EDIT_RUNS)
+    stepped = [
+        replace(item, input_tokens=value)
+        for item, value in zip(
+            totals(edits),
+            live.per_turn_tokens([i.input_tokens for i in totals(edits)]),
+            strict=True,
+        )
+    ]
+    judged = live.compare(stepped, quiet, bare_from(quiet), live.EDIT_RUNS)
+
+    assert raw["token_growth_ratio_in_band"] is False
+    assert judged["token_growth_ratio_in_band"] is True

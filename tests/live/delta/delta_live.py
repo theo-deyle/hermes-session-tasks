@@ -383,6 +383,18 @@ def _injected(row: Row, reminder: str) -> tuple[bool, str | None]:
     return split_reminder(note_of(row.content, row.api_content), reminder)
 
 
+def per_turn_tokens(cumulative: Sequence[int]) -> list[int]:
+    """Turn the session total of input tokens after each run into the tokens of that run alone.
+
+    The `result` event holds the total of the whole session: every turn re-sends the history, and
+    the counter adds that up. A note stays in the history, so its cost in the total is one share
+    per later turn. The 0.15 to 0.5 band is a per-turn size, so the judge reads the difference.
+    """
+    return [
+        value - (cumulative[index - 1] if index else 0) for index, value in enumerate(cumulative)
+    ]
+
+
 def build_runs(rows: Sequence[Row], tokens: Sequence[int], reminder: str) -> list[ArmRun]:
     """Build one ArmRun per user row. Characters are cumulative up to each run."""
     users = [row for row in rows if row.role == "user"]
@@ -548,7 +560,8 @@ def _arms_body(
     reminder = _read_reminder(args.reminder_file)
     arms = [("edits", plugin_home), ("quiet", plugin_home), ("bare", bare_home)]
     try:
-        sessions, tokens = run_arms(arms, args.runs, out)
+        sessions, totals = run_arms(arms, args.runs, out)
+        tokens = {name: per_turn_tokens(values) for name, values in totals.items()}
         built = {
             name: build_runs(read_rows(path / "state.db", sessions[name]), tokens[name], reminder)
             for name, path in arms
@@ -563,6 +576,7 @@ def _arms_body(
     report["system_prompt_chars_plugin"] = prompts["quiet"]
     report["system_prompt_chars_bare"] = prompts["bare"]
     report["sessions"] = sessions
+    report["session_total_input_tokens"] = {name: values[-1] for name, values in totals.items()}
     report["runs"] = {
         name: [
             {"run": item.run, "input_tokens": item.input_tokens, "note": item.note}
