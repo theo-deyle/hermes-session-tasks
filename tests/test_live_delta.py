@@ -150,9 +150,22 @@ def arm_pair(
     return edits, quiet
 
 
-def compare_pair(edits: list[Any], quiet: list[Any]) -> dict[str, object]:
+FIXED_COST = 2000
+
+
+def bare_from(quiet: list[Any]) -> list[Any]:
+    """A bare arm: no note, the quiet arm's user characters, input tokens a fixed amount lower."""
+    return [
+        replace(run, input_tokens=run.input_tokens - FIXED_COST, reminder=False) for run in quiet
+    ]
+
+
+def compare_pair(
+    edits: list[Any], quiet: list[Any], bare: list[Any] | None = None, reminder_chars: int = 0
+) -> dict[str, object]:
     live = load_live("delta_live", DELTA_LIVE)
-    return live.compare(edits, quiet, live.EDIT_RUNS)
+    chosen = bare_from(quiet) if bare is None else bare
+    return live.compare(edits, quiet, chosen, live.EDIT_RUNS, reminder_chars)
 
 
 def test_parse_result_reads_the_last_result_event() -> None:
@@ -322,3 +335,359 @@ def test_build_runs_counts_cumulative_characters(tmp_path: Path) -> None:
     assert [(r.run, r.input_tokens, r.note) for r in runs] == [(1, 100, None), (2, 130, "NOTE")]
     assert [r.user_chars for r in runs] == [2, 2 + len("ok\n\nNOTE")]
     assert [r.assistant_chars for r in runs] == [2, 5]
+
+
+# ---- twin test homes, the no-plugin arm, the gateway stop and the port check ----
+
+MAKE_HOME = LIVE_DIR / "make_home.py"
+SOURCE_MARKERS = ("MARKER-BASE-URL-1", "MARKER-SECRET-2")
+FAKE_SOURCE: dict[str, Any] = {
+    "_config_version": 7,
+    "model": {"provider": "prov", "default": "m1", "base_url": SOURCE_MARKERS[0]},
+    "platforms": {"telegram": {"enabled": True}, "webhook": {"enabled": True}},
+    "mcp_servers": {"kb": {"oauth": {"client_secret": SOURCE_MARKERS[1]}}},
+    "secrets": {"command": "get-secret"},
+    "memory": {"provider": "hindsight", "memory_enabled": True},
+    "gateway": {"multiplex_profiles": True},
+    "kanban": {"on": True},
+    "telemetry": {"on": True},
+    "updates": {"check": True, "interval": 3},
+    "fallback_providers": ["other"],
+    "agent": {"max_turns": 5},
+    "plugins": {
+        "enabled": ["prov", "a", "b", "c", "d"],
+        "entries": {"prov": {"mode": "x"}, "a": {"mode": "y"}},
+    },
+}
+
+
+def write_source(root: Path, **changes: Any) -> Path:
+    """Write a fake source home with a config, the three secret files and a provider plugin."""
+    home = root / "source-home"
+    (home / "plugins" / "prov").mkdir(parents=True)
+    (home / ".env").write_text("TOKEN=abc\n", encoding="utf-8")
+    (home / "auth.json").write_text("{}", encoding="utf-8")
+    (home / "mcp-tokens").mkdir()
+    # JSON is valid YAML, so the dev environment needs no PyYAML to write the source.
+    (home / "config.yaml").write_text(json.dumps({**FAKE_SOURCE, **changes}), encoding="utf-8")
+    return home
+
+
+def run_make_home(
+    root: Path, hermes_home: Path, *extra: str, out: Path | None = None, source: Path | None = None
+) -> subprocess.CompletedProcess[str]:
+    home = source or write_source(root)
+    repo_plugin = root / "repo-plugin"
+    repo_plugin.mkdir(exist_ok=True)
+    args = [
+        "--out",
+        str(out or root / "out"),
+        "--source",
+        str(home / "config.yaml"),
+        "--plugins-dir",
+        str(home / "plugins"),
+        "--repo-plugin",
+        str(repo_plugin),
+        *extra,
+    ]
+    return run_gateway_python(MAKE_HOME, args, hermes_home)
+
+
+PARSE_YAML = "import json, sys, yaml; print(json.dumps(yaml.safe_load(open(sys.argv[1]))))"
+
+
+def written_config(out: Path) -> dict[str, Any]:
+    """Parse the written config.yaml with the gateway Python, which has PyYAML."""
+    done = subprocess.run(
+        [str(GATEWAY_PYTHON), "-I", "-c", PARSE_YAML, str(out / "config.yaml")],
+        capture_output=True,
+        text=True,
+        timeout=60,
+        check=True,
+    )
+    return json.loads(done.stdout)
+
+
+@pytest.mark.hermes
+def test_make_home_keeps_only_the_allowlist(tmp_path: Path, hermes_home: Path) -> None:
+    done = run_make_home(tmp_path, hermes_home)
+
+    assert done.returncode == 0, done.stderr
+    config = written_config(tmp_path / "out")
+    for dropped in ("mcp_servers", "secrets", "gateway", "kanban", "telemetry"):
+        assert dropped not in config
+    assert "fallback_providers" not in config
+    assert config["updates"] == {"check": False}
+    assert all(block == {"enabled": False} for block in config["platforms"].values())
+    assert {"telegram", "webhook"} <= set(config["platforms"])
+    assert config["memory"]["memory_enabled"] is False
+    assert config["model"] == FAKE_SOURCE["model"]
+
+
+@pytest.mark.hermes
+def test_make_home_enables_only_the_provider_or_also_the_board_plugin(
+    tmp_path: Path, hermes_home: Path
+) -> None:
+    bare = run_make_home(tmp_path, hermes_home, out=tmp_path / "bare")
+    plugin = run_make_home(tmp_path, hermes_home, "--with-plugin", out=tmp_path / "plugin")
+
+    assert bare.returncode == 0, bare.stderr
+    assert plugin.returncode == 0, plugin.stderr
+    assert written_config(tmp_path / "bare")["plugins"]["enabled"] == ["prov"]
+    assert written_config(tmp_path / "plugin")["plugins"]["enabled"] == [
+        "prov",
+        "hermes-session-tasks",
+    ]
+    linked = tmp_path / "plugin" / "plugins"
+    assert (linked / "prov").is_symlink()
+    assert (linked / "prov").resolve() == (tmp_path / "source-home" / "plugins" / "prov").resolve()
+    assert (linked / "hermes-session-tasks").resolve() == (tmp_path / "repo-plugin").resolve()
+    assert not (tmp_path / "bare" / "plugins" / "hermes-session-tasks").exists()
+
+
+@pytest.mark.hermes
+def test_make_home_holds_no_secret_file(tmp_path: Path, hermes_home: Path) -> None:
+    done = run_make_home(tmp_path, hermes_home, "--with-plugin")
+
+    assert done.returncode == 0, done.stderr
+    for name in (".env", "auth.json", "mcp-tokens"):
+        assert not (tmp_path / "out" / name).exists()
+    helped = run_gateway_python(MAKE_HOME, ["--help"], hermes_home).stdout
+    options = {word.rstrip(",") for word in helped.split() if word.startswith("-")}
+    assert options == {
+        "-h",
+        "--help",
+        "--out",
+        "--with-plugin",
+        "--source",
+        "--plugins-dir",
+        "--repo-plugin",
+    }
+
+
+def test_make_home_turns_every_listener_off() -> None:
+    make_home = load_live("make_home", MAKE_HOME)
+    source = {"platforms": {"telegram": {"enabled": True}, "webhook": {"enabled": True}}}
+
+    config = make_home.test_home_config(source, "prov", False)
+
+    assert config["platforms"] == {
+        "telegram": {"enabled": False},
+        "webhook": {"enabled": False},
+        "api_server": {"enabled": False},
+        "msgraph_webhook": {"enabled": False},
+    }
+    assert config["proxy"]["enabled"] is False
+    assert config["updates"]["check"] is False
+    assert config["plugins"]["auto_update_check_hours"] == 0
+
+
+@pytest.mark.hermes
+def test_make_home_refuses_a_kept_port(tmp_path: Path, hermes_home: Path) -> None:
+    refused = run_make_home(
+        tmp_path, hermes_home, source=write_source(tmp_path, web={"port": 8644})
+    )
+
+    assert refused.returncode == 2
+    assert not (tmp_path / "out").exists()
+    allowed = write_source(tmp_path / "ok", web={"port": 0}, streaming={"transport": "auto"})
+    passed = run_make_home(tmp_path / "ok", hermes_home, source=allowed)
+    assert passed.returncode == 0, passed.stderr
+
+
+@pytest.mark.hermes
+def test_make_home_prints_no_config_value(tmp_path: Path, hermes_home: Path) -> None:
+    done = run_make_home(tmp_path, hermes_home, "--with-plugin")
+
+    assert done.returncode == 0, done.stderr
+    for marker in SOURCE_MARKERS:
+        assert marker not in done.stdout
+        assert marker not in done.stderr
+    assert set(json.loads(done.stdout)) == {"home", "enabled", "kept_keys", "listeners_off"}
+
+
+@pytest.mark.hermes
+def test_make_home_refuses_the_real_home_and_a_secret_looking_kept_key(
+    tmp_path: Path, hermes_home: Path
+) -> None:
+    source = write_source(tmp_path)
+    inside = source / "test-home"
+
+    refused_home = run_make_home(tmp_path, hermes_home, out=inside, source=source)
+
+    assert refused_home.returncode == 2
+    assert not inside.exists()
+    leaky = write_source(tmp_path / "leaky", agent={"api_key": "abc"})
+    refused_key = run_make_home(tmp_path / "leaky", hermes_home, source=leaky)
+    assert refused_key.returncode == 2
+    assert not (tmp_path / "leaky" / "out").exists()
+    assert "abc" not in refused_key.stdout + refused_key.stderr
+
+
+@pytest.mark.hermes
+def test_make_home_sets_private_modes(tmp_path: Path, hermes_home: Path) -> None:
+    done = run_make_home(tmp_path, hermes_home)
+
+    assert done.returncode == 0, done.stderr
+    assert (tmp_path / "out").stat().st_mode & 0o777 == 0o700
+    assert (tmp_path / "out" / "config.yaml").stat().st_mode & 0o777 == 0o600
+
+
+def three_arms(**changes: Any) -> tuple[list[Any], list[Any], list[Any]]:
+    edits, quiet = arm_pair()
+    return edits, quiet, bare_from(quiet)
+
+
+def test_compare_three_arms_passes_with_a_positive_fixed_cost() -> None:
+    edits, quiet, bare = three_arms()
+
+    report = compare_pair(edits, quiet, bare)
+
+    assert report["pass"] is True
+    assert report["fixed_cost_tokens_run1"] == FIXED_COST
+    assert report["fixed_cost_tokens_runN"] == FIXED_COST
+    assert (
+        report["edits_minus_bare_tokens_runN"]
+        == report["fixed_cost_tokens_runN"] + report["edits_minus_quiet_tokens_runN"]  # pyright: ignore[reportOperatorIssue]
+    )
+
+
+def test_compare_names_a_note_on_a_bare_run() -> None:
+    edits, quiet, bare = three_arms()
+    bare[3] = replace(bare[3], note="x")
+
+    report = compare_pair(edits, quiet, bare)
+
+    assert report["pass"] is False
+    assert report["bare_arm_has_no_note"] is False
+
+
+def test_compare_names_a_fixed_user_char_difference_off_by_one() -> None:
+    edits, quiet, bare = three_arms()
+    bare[-1] = replace(bare[-1], user_chars=bare[-1].user_chars + 1)
+
+    report = compare_pair(edits, quiet, bare)
+
+    assert report["pass"] is False
+    assert report["fixed_user_chars_match_reminder"] is False
+
+
+def test_compare_names_a_fixed_cost_that_is_not_positive() -> None:
+    edits, quiet, bare = three_arms()
+    bare[0] = replace(bare[0], input_tokens=quiet[0].input_tokens)
+
+    report = compare_pair(edits, quiet, bare)
+
+    assert report["pass"] is False
+    assert report["fixed_cost_positive"] is False
+
+
+def test_fixed_user_chars_with_a_reminder() -> None:
+    reminder_chars = 10
+    extra = reminder_chars + 2
+    edits, quiet = arm_pair()
+    quiet = [
+        replace(run, reminder=True, user_chars=run.user_chars + extra * run.run) for run in quiet
+    ]
+    edits = [
+        replace(run, reminder=True, user_chars=run.user_chars + extra * run.run) for run in edits
+    ]
+    bare = [
+        replace(run, user_chars=run.user_chars - extra * run.run, reminder=False) for run in quiet
+    ]
+
+    passed = compare_pair(edits, quiet, bare, reminder_chars)
+    wrong = compare_pair(
+        edits,
+        quiet,
+        bare[:-1] + [replace(bare[-1], user_chars=bare[-1].user_chars + 1)],
+        reminder_chars,
+    )
+
+    assert quiet[-1].user_chars - bare[-1].user_chars == 30 * 12
+    assert passed["pass"] is True
+    assert wrong["fixed_user_chars_match_reminder"] is False
+
+
+def write_pid_file(home: Path, pid: int, hermes_home: Path) -> None:
+    home.mkdir(parents=True, exist_ok=True)
+    (home / "gateway.pid").write_text(
+        json.dumps({"pid": pid, "kind": "hermes-gateway", "hermes_home": str(hermes_home)}),
+        encoding="utf-8",
+    )
+
+
+def test_stop_refuses_a_pid_file_for_another_home(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    live = load_live("delta_live", DELTA_LIVE)
+    calls: list[tuple[int, int]] = []
+    monkeypatch.setattr(os, "kill", lambda pid, sig: calls.append((pid, sig)))
+    home = tmp_path / "test-home"
+    write_pid_file(home, os.getpid(), tmp_path / "another-home")
+
+    assert live.stop_test_gateway(home) == "refused"
+    assert calls == []
+
+
+def test_stop_reports_not_running_without_a_pid_file(tmp_path: Path) -> None:
+    live = load_live("delta_live", DELTA_LIVE)
+
+    assert live.stop_test_gateway(tmp_path / "test-home") == "not running"
+
+
+def test_stop_ends_a_process_whose_environment_names_the_home(tmp_path: Path) -> None:
+    live = load_live("delta_live", DELTA_LIVE)
+    home = tmp_path / "test-home"
+    home.mkdir()
+    child = subprocess.Popen(["sleep", "60"], env={**os.environ, "HERMES_HOME": str(home)})
+    write_pid_file(home, child.pid, home)
+    try:
+        assert live.stop_test_gateway(home) == "stopped"
+    finally:
+        child.kill()
+        child.wait()
+
+
+def test_stop_refuses_a_process_whose_environment_names_another_home(tmp_path: Path) -> None:
+    live = load_live("delta_live", DELTA_LIVE)
+    home = tmp_path / "test-home"
+    home.mkdir()
+    child = subprocess.Popen(
+        ["sleep", "60"], env={**os.environ, "HERMES_HOME": str(tmp_path / "real")}
+    )
+    write_pid_file(home, child.pid, home)
+    try:
+        assert live.stop_test_gateway(home) == "refused"
+        assert child.poll() is None
+    finally:
+        child.kill()
+        child.wait()
+
+
+SS_SAMPLE = """State  Recv-Q Send-Q  Local Address:Port  Peer Address:PortProcess
+LISTEN 0      128           0.0.0.0:8644       0.0.0.0:*    users:(("hermes",pid=2635829,fd=43))
+LISTEN 0      2048        127.0.0.1:43759      0.0.0.0:*    users:(("hermes",pid=2635829,fd=23))
+LISTEN 0      4096        127.0.0.1:27019      0.0.0.0:*
+LISTEN 0      128              [::]:8644          [::]:*    users:(("hermes",pid=2635829,fd=44))
+LISTEN 0      2048        127.0.0.1:44041      0.0.0.0:*    users:(("hermes",pid=324070,fd=11))
+"""
+
+
+def test_parse_ss_reads_the_ports_of_one_pid() -> None:
+    live = load_live("delta_live", DELTA_LIVE)
+
+    assert live.parse_ss(SS_SAMPLE, 2635829) == {
+        ("0.0.0.0", 8644),
+        ("127.0.0.1", 43759),
+        ("::", 8644),
+    }
+
+
+def test_port_clash_names_a_shared_port_and_a_public_listener() -> None:
+    live = load_live("delta_live", DELTA_LIVE)
+    real = {("0.0.0.0", 8644)}
+
+    assert any("8644" in line for line in live.port_clash({("127.0.0.1", 8644)}, real))
+    assert any("0.0.0.0" in line for line in live.port_clash({("0.0.0.0", 51000)}, real))
+    assert live.port_clash({("127.0.0.1", 51000)}, real) == []
