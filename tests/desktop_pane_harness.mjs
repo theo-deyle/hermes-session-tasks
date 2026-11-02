@@ -3,18 +3,53 @@
 // Usage: node --experimental-vm-modules tests/desktop_pane_harness.mjs <plugin.js> <config.json>
 //
 // It loads the plugin with stub SDK, react and jsx-runtime modules, runs the registered
-// pane through a small hook runtime, and prints one JSON line:
-//   lines, restCalls, contribution, intervals, eventTypes, buttons, checkboxes.
+// pane through a small hook runtime, and prints one JSON line.
+//
+// SDK stubs: Button, Checkbox, ConfirmDialog, CopyButton, EmptyState, Input, ScrollArea, Tip,
+// icons (Trash2, Plus, ChevronRight, ChevronDown), host, useValue, cn.
 //
 // Config keys:
-//   baseUrl       relay URL; ctx.rest forwards to baseUrl + path with fetch
-//   focused       the focused stored session id, or null
-//   restOverrides map of path to a reply body, or the string "__error__" to reject
-//   steps         list of {"click": "<button label>"}, {"event": {...}} or
-//                 {"check": {"row": "<data-item-id>", "value": true|false}}
+//   baseUrl        relay URL; ctx.rest forwards to baseUrl + path with fetch
+//   focused        the focused stored session id, or null
+//   restOverrides  map of path to a reply body, or the string "__error__" to reject
+//   restSequences  map of path to a list. Each call to that path takes the next entry: a reply
+//                  body, "__error__" (reject with 500) or "__relay__" (forward to the relay).
+//                  An empty list falls back to restOverrides, then to the relay.
+//   duringWrite    list of steps. They run once, inside the first POST, before it is forwarded.
+//                  The harness then waits until only the held POST is pending.
+//   steps          the step list below
 //
-// A checkbox is recorded as {row, label, checked, disabled}. `row` is the data-item-id of the
-// nearest ancestor host element, or null.
+// Step kinds:
+//   {"click": "<label>"} or {"click": {"label": "<label>", "row": "<id>"}}
+//                  the one enabled Button with that aria-label or text; zero, two or more
+//                  matches, or a disabled match, fail the run
+//   {"clickText": "<text>"}               the host element with an onClick and that direct text
+//   {"check": {"row": "<id>", "value": true|false}}
+//   {"type": {"input": <selector>, "text": "..."}}
+//   {"key": {"input": <selector>, "key": "Enter", "blur": true}}   blur is optional
+//   {"blur": <selector>}                  an Input selector is {placeholder, row}; it must match one Input
+//   {"confirm": true} and {"cancel": true}  the open ConfirmDialog; none open fails the run
+//   {"focus": "<sid>"} or {"focus": null}
+//   {"event": {...}}                      calls every ctx.onEvent listener of that type
+//   {"outside": {"session_id": "s1", "ops": [...], "base_rev": 1}}
+//                  a POST to baseUrl + /board/edit that the pane does not see
+//   {"timers": true}                      runs every pending ctx.setTimeout callback not cancelled
+//   An unknown step fails the run.
+//
+// Output keys:
+//   name, lines, restCalls, contribution, intervals, eventTypes,
+//   inputs      {placeholder, row, value, readOnly, disabled, maxLength, size, autoFocus}
+//   buttons     {label, row, disabled, className}
+//   checkboxes  {row, label, checked, disabled, guarded}; guarded means an ancestor onMouseDown prevents the default
+//   confirm     null, or the last ConfirmDialog {open, title, description, confirmLabel, cancelLabel, destructive}
+//   copy        null, or the last CopyButton {text, disabled, label, appearance}
+//   tips        Tip labels in render order
+//   nodes       {text, className, style, row, scroll} per host element with direct string children
+//   timeouts    ms of every ctx.setTimeout call
+//   outsideCalls  {body, reply} per outside step
+//   atWrite     one {lines, checkboxes, inputs} per POST, taken before the POST is forwarded
+//
+// `row` is the data-item-id of the nearest ancestor host element, or null.
 
 import fs from 'node:fs/promises'
 import process from 'node:process'
@@ -31,14 +66,23 @@ const config = JSON.parse(await fs.readFile(configPath, 'utf8'))
 const source = await fs.readFile(pluginPath, 'utf8')
 const overrides = config.restOverrides ?? {}
 const steps = config.steps ?? []
+const duringWrite = config.duringWrite ?? []
+// Each path takes its entries in order; an empty list falls back to restOverrides, then to the relay.
+const sequences = structuredClone(config.restSequences ?? {})
 
 const restCalls = []
 const intervals = []
 const eventTypes = []
+const timeouts = []
+const timerQueue = []
+const outsideCalls = []
+const atWrite = []
 const listeners = []
 let contribution = null
 let activity = false
 let pending = 0
+let peeking = false
+let writeSeen = false
 
 // ---- hook runtime: one component tree, slots by call order ----
 const slots = []
@@ -94,6 +138,8 @@ function useCallback(fn, deps) {
 function useEffect(effect, deps) {
   assertTopLevel()
   const index = slotIndex++
+  // A peek render only moves the slot index: it never updates deps and never queues an effect.
+  if (peeking) return
   if (!slots[index]) slots[index] = { deps: undefined, cleanup: undefined, fresh: true }
   const slot = slots[index]
   if (slot.fresh || depsChanged(slot.deps, deps)) {
@@ -117,7 +163,8 @@ function ScrollArea() {}
 function Tip() {}
 function IconStub() {}
 const icons = { Trash2: IconStub, Plus: IconStub, ChevronRight: IconStub, ChevronDown: IconStub }
-const focusedAtom = { get: () => config.focused ?? null }
+let focused = config.focused ?? null
+const focusedAtom = { get: () => focused }
 const sdkValues = {
   Button,
   Checkbox,
@@ -165,22 +212,42 @@ await module.link(async specifier => {
 await module.evaluate()
 
 // ---- ctx stub ----
+async function forward(path, method, options) {
+  const init = { method, headers: { 'Content-Type': 'application/json' } }
+  if (options.body !== undefined) init.body = JSON.stringify(options.body)
+  const response = await fetch(config.baseUrl + path, init)
+  const text = await response.text()
+  if (!response.ok) throw new Error(`${response.status}: ${text}`)
+  return JSON.parse(text)
+}
+
+// The first POST runs the duringWrite steps, then waits until only the held POST is pending.
+// Every POST then adds one capture of the pane as it stands before the reply comes back.
+async function captureWrite() {
+  if (!writeSeen) {
+    writeSeen = true
+    for (const step of duringWrite) await runStep(step)
+    while (pending > 1) await sleep(SETTLE_MS)
+  }
+  atWrite.push(peek())
+}
+
 async function rest(path, options = {}) {
   const method = options.method ?? 'GET'
   restCalls.push({ method, path, body: options.body ?? null })
   activity = true
   pending += 1
   try {
-    if (Object.hasOwn(overrides, path)) {
+    if (method === 'POST') await captureWrite()
+    const list = sequences[path]
+    const entry = list && list.length > 0 ? list.shift() : undefined
+    if (entry === '__error__') throw new Error('500: forced failure')
+    if (entry !== undefined && entry !== '__relay__') return entry
+    if (entry === undefined && Object.hasOwn(overrides, path)) {
       if (overrides[path] === '__error__') throw new Error('500: forced failure')
       return overrides[path]
     }
-    const init = { method, headers: { 'Content-Type': 'application/json' } }
-    if (options.body !== undefined) init.body = JSON.stringify(options.body)
-    const response = await fetch(config.baseUrl + path, init)
-    const text = await response.text()
-    if (!response.ok) throw new Error(`${response.status}: ${text}`)
-    return JSON.parse(text)
+    return await forward(path, method, options)
   } finally {
     pending -= 1
   }
@@ -205,7 +272,14 @@ const ctx = {
     intervals.push(ms)
     return () => {}
   },
-  setTimeout: () => () => {},
+  setTimeout: (fn, ms) => {
+    timeouts.push(ms)
+    const entry = { fn, cancelled: false, ran: false }
+    timerQueue.push(entry)
+    return () => {
+      entry.cancelled = true
+    }
+  },
   onDispose: () => {}
 }
 
@@ -393,6 +467,33 @@ function renderOnce() {
   return changed
 }
 
+// One render that runs no effects and changes no global list. Used to see the pane at write time.
+function peek() {
+  peeking = true
+  slotIndex = 0
+  try {
+    const out = {
+      lines: [],
+      buttons: [],
+      boxes: [],
+      inputs: [],
+      nodes: [],
+      tips: [],
+      clickables: [],
+      confirm: null,
+      copy: null
+    }
+    walk(contribution.render(), out, { row: null, scroll: false, guard: false })
+    return {
+      lines: out.lines,
+      checkboxes: out.boxes.map(({ onCheckedChange, ...rest }) => rest),
+      inputs: out.inputs.map(({ onChange, onKeyDown, onBlur, onFocus, ...rest }) => rest)
+    }
+  } finally {
+    peeking = false
+  }
+}
+
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms))
 
 async function settle() {
@@ -449,8 +550,7 @@ function openDialog() {
   return confirmRecord
 }
 
-await settle()
-for (const step of steps) {
+async function runStep(step) {
   if (step.click !== undefined) {
     await findButton(step.click).onClick()
   } else if (step.clickText !== undefined) {
@@ -481,9 +581,34 @@ for (const step of steps) {
     for (const entry of [...listeners]) {
       if (entry.type === step.event.type) await entry.fn(step.event)
     }
+  } else if (step.focus !== undefined) {
+    focused = step.focus
+    activity = true
+  } else if (step.outside !== undefined) {
+    const body = { session_id: step.outside.session_id ?? focused, ops: step.outside.ops }
+    if (step.outside.base_rev !== undefined) body.base_rev = step.outside.base_rev
+    const response = await fetch(`${config.baseUrl}/board/edit`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    })
+    const text = await response.text()
+    if (!response.ok) throw new Error(`outside write failed ${response.status}: ${text}`)
+    outsideCalls.push({ body, reply: JSON.parse(text) })
+  } else if (step.timers !== undefined) {
+    for (const entry of [...timerQueue]) {
+      if (entry.cancelled || entry.ran) continue
+      entry.ran = true
+      await entry.fn()
+    }
   } else {
     throw new Error(`unknown step ${JSON.stringify(step)}`)
   }
+}
+
+await settle()
+for (const step of steps) {
+  await runStep(step)
   await settle()
 }
 
@@ -510,6 +635,9 @@ const output = {
   confirm: confirmRecord === null ? null : stripHandlers(confirmRecord),
   copy: copyRecord,
   tips,
-  nodes
+  nodes,
+  timeouts,
+  outsideCalls,
+  atWrite
 }
 process.stdout.write(`${JSON.stringify(output)}\n`, () => process.exit(0))
