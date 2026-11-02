@@ -55,6 +55,7 @@ const PLUS_CLASS = `${REVEAL_CLASS} shrink-0`
 const ESCAPED_HASH = /^\\*#[0-9]+(?:\s|$)/
 const HIT_CLASS = 'flex size-6 shrink-0 items-center justify-center'
 const TEXT_CLASS = 'min-w-0 flex-1 py-1 text-xs'
+const EDIT_CLASS = 'min-w-0 flex-1'
 const DONE_CLASS = 'text-(--ui-text-secondary)'
 const TEXT_STYLE = { overflowWrap: 'anywhere', whiteSpace: 'pre-wrap' }
 const DONE_STYLE = { ...TEXT_STYLE, textDecoration: 'line-through' }
@@ -151,11 +152,12 @@ function applyOp(board, op, pendingKey) {
   if (op.op === 'add') {
     return { ...board, items: insertPending(items, pendingItem(op, pendingKey)) }
   }
-  if (op.op !== 'set_checked') return board
+  const field = op.op === 'set_text' ? { text: op.text } : { checked: op.checked }
+  if (op.op !== 'set_checked' && op.op !== 'set_text') return board
   if (!items.some(item => item.id === op.item_id)) return board
   return {
     ...board,
-    items: items.map(item => (item.id === op.item_id ? { ...item, checked: op.checked } : item))
+    items: items.map(item => (item.id === op.item_id ? { ...item, ...field } : item))
   }
 }
 
@@ -248,7 +250,29 @@ function PlusButton({ onClick }) {
   })
 }
 
-function ItemRow({ item, subtasks, collapsed, onToggle, onCheck, onAddSubtask }) {
+// The text of a saved item shows as a clickable span, or as the one edit Input while it is edited.
+function RowText({ item, textClass, actions }) {
+  const { edit } = actions
+  if (edit !== null && edit.id === item.id) {
+    return jsx(AddLine, {
+      className: EDIT_CLASS,
+      value: edit.text,
+      autoFocus: true,
+      onChange: actions.onEditChange,
+      onKeyDown: actions.onEditKey,
+      onBlur: actions.onEditBlur,
+      onFocus: caretToEnd
+    })
+  }
+  return jsx('span', {
+    className: textClass,
+    style: item.checked ? DONE_STYLE : TEXT_STYLE,
+    onClick: isPending(item) ? undefined : () => actions.onEdit(item),
+    children: item.text
+  })
+}
+
+function ItemRow({ item, subtasks, collapsed, onToggle, actions }) {
   const textClass = item.checked ? `${TEXT_CLASS} ${DONE_CLASS}` : TEXT_CLASS
   const top = isTopLevel(item)
   const pendingRow = isPending(item)
@@ -262,26 +286,22 @@ function ItemRow({ item, subtasks, collapsed, onToggle, onCheck, onAddSubtask })
         children: jsx(Checkbox, {
           checked: item.checked,
           disabled: pendingRow,
-          onCheckedChange: value => (pendingRow ? undefined : onCheck(item, value)),
+          onCheckedChange: value => (pendingRow ? undefined : actions.onCheck(item, value)),
           'aria-label': item.text
         })
       }),
-      jsx('span', {
-        className: textClass,
-        style: item.checked ? DONE_STYLE : TEXT_STYLE,
-        children: item.text
-      }),
+      jsx(RowText, { item, textClass, actions }),
       top && subtasks.length > 0
         ? jsx('span', { className: COUNT_CLASS, children: subtaskCountText(subtasks) })
         : null,
-      top && !pendingRow ? jsx(PlusButton, { onClick: () => onAddSubtask(item.id) }) : null
+      top && !pendingRow ? jsx(PlusButton, { onClick: () => actions.onAddSubtask(item.id) }) : null
     ]
   })
 }
 
 // One top-level item: its row, one row per subtask, then its open subtask add line.
 // `subtask` holds that line ({ line, onChange, onKeyDown, onBlur }) and is null when none is open.
-function ItemBlock({ group, collapsed, onToggle, onCheck, onAddSubtask, subtask }) {
+function ItemBlock({ group, collapsed, onToggle, actions, subtask }) {
   const { item, children } = group
   const showLine = subtask !== null && !collapsed
   return jsxs('div', {
@@ -292,12 +312,11 @@ function ItemBlock({ group, collapsed, onToggle, onCheck, onAddSubtask, subtask 
         subtasks: children,
         collapsed,
         onToggle: () => onToggle(item.id),
-        onCheck,
-        onAddSubtask
+        actions
       }),
       ...(collapsed
         ? []
-        : children.map(child => jsx(ItemRow, { item: child, subtasks: [], onCheck }, itemKey(child)))),
+        : children.map(child => jsx(ItemRow, { item: child, subtasks: [], actions }, itemKey(child)))),
       showLine
         ? jsx(
             AddLine,
@@ -328,7 +347,8 @@ function AddLine({
   inputRef,
   onChange,
   onKeyDown,
-  onBlur
+  onBlur,
+  onFocus
 }) {
   return jsx('div', {
     className,
@@ -342,9 +362,16 @@ function AddLine({
       size: 'sm',
       onChange: event => onChange(event.target.value),
       onKeyDown,
-      onBlur
+      onBlur,
+      onFocus
     })
   })
+}
+
+// Puts the caret after the last character when an edit Input takes focus.
+function caretToEnd(event) {
+  const field = event.target
+  field.setSelectionRange(field.value.length, field.value.length)
 }
 
 function isEnter(event) {
@@ -369,6 +396,8 @@ function Pane({ ctx }) {
   const addRef = useRef(null)
   // The open subtask add lines, keyed by parent id: { text, busy }.
   const [subLines, setSubLines] = useState({})
+  // The one item under edit: { id, text, original }, or null. The ref copy lives in `current`.
+  const [edit, setEdit] = useState(null)
   const shown = server !== null && server.sid === (sid || null) ? server : null
   // The listener, the interval and the writes live longer than one render, so they read this ref.
   // revs holds the newest accepted rev of each session. queue chains the writes one after another.
@@ -381,18 +410,28 @@ function Pane({ ctx }) {
     entrySeq: 0,
     addBusy: false,
     subBusy: {},
+    edit: null,
+    board: null,
     noticeCleanup: null
   })
   const focused = sid || null
   if (current.current.sid !== focused) {
     current.current.sid = focused
     delete current.current.revs[focused]
+    current.current.board = null
   }
 
   function take(asked, reply) {
     current.current.revs[asked] = reply.rev
     if (current.current.sid !== asked) return
+    current.current.board = reply.board
     setServer({ sid: asked, rev: reply.rev, root_id: reply.root_id, board: reply.board })
+  }
+
+  // The ref is the truth for handlers that run before the next render.
+  function changeEdit(next) {
+    current.current.edit = next
+    setEdit(next)
   }
 
   // A reload reply never undoes a write: it is dropped while a write is in flight, and when its rev is
@@ -572,6 +611,40 @@ function Pane({ ctx }) {
     }
   }
 
+  function startEdit(item) {
+    const open = current.current.edit
+    if (open !== null && open.id === item.id) return
+    saveEdit()
+    changeEdit({ id: item.id, text: item.text, original: item.text })
+  }
+
+  // Reads the edit from the ref, so an Enter followed by a blur sends one write.
+  // A stale or failed write puts the typed text back when the item is still on the board.
+  function saveEdit() {
+    const state = current.current
+    const open = state.edit
+    if (open === null) return
+    changeEdit(null)
+    const text = open.text.trim()
+    if (text === '' || text === open.original) return
+    sendOp({ op: 'set_text', item_id: open.id, text }, outcome => {
+      if (outcome === 'ok' || state.edit !== null || !hasItem(state.board, open.id)) return
+      changeEdit({ ...open, text })
+    })
+  }
+
+  const editHandlers = {
+    onEditChange: value => {
+      const open = current.current.edit
+      if (open !== null) changeEdit({ ...open, text: value })
+    },
+    onEditKey: event => {
+      if (isEnter(event)) saveEdit()
+      else if (event.key === 'Escape') changeEdit(null)
+    },
+    onEditBlur: () => saveEdit()
+  }
+
   function onCheck(item, value) {
     sendOp({ op: 'set_checked', item_id: item.id, checked: value === true })
   }
@@ -580,6 +653,7 @@ function Pane({ ctx }) {
     setCollapsed(prev => ({ ...prev, [itemId]: !prev[itemId] }))
   }
 
+  const actions = { edit, onCheck, onAddSubtask: openSubLine, onEdit: startEdit, ...editHandlers }
   const focusedEntries = pending.filter(entry => entry.sid === focused)
   const board = shown === null ? null : viewBoard(shown.board, focusedEntries)
   const items = boardItems(board)
@@ -612,8 +686,7 @@ function Pane({ ctx }) {
                       group,
                       collapsed: collapsed[group.item.id] === true,
                       onToggle,
-                      onCheck,
-                      onAddSubtask: openSubLine,
+                      actions,
                       subtask: subLines[group.item.id]
                         ? subtaskHandlers(group.item.id, subLines[group.item.id])
                         : null
