@@ -12,10 +12,10 @@ from fakes import SEVEN_ROW_FIXTURE, FakeReaderFactory, SessionSpec
 from session_tasks import copy_args
 from session_tasks.board_tools import BoardTools
 from session_tasks.db import ConnFactory
-from session_tasks.model import NO_SOURCE_BOARD, SAME_BOARD, AddItem, SetChecked
+from session_tasks.model import NO_SOURCE_BOARD, SAME_BOARD, AddItem, RemoveItem, SetChecked
 from session_tasks.results import DELEGATE_COPY, NO_SESSION, OTHER_BOARD_NOTE
 from session_tasks.store import BoardStore
-from session_tasks.titles import TitleLookup
+from session_tasks.titles import UNTITLED, TitleLookup
 
 Calls = list[tuple[str, str, int]]
 
@@ -331,3 +331,114 @@ def test_board_read_names_another_board_and_marks_nothing(
     )
     assert after == before
     assert calls == []
+
+
+@pytest.mark.parametrize("blank", ["", "   "])
+def test_blank_argument_is_an_own_read(
+    store: BoardStore, resolver_for: ResolverFor, connect: ConnFactory, blank: str
+) -> None:
+    tools, _, _ = cross_tools(store, resolver_for, {})
+    store.apply("s1", [AddItem("Mine")], actor="agent", base_rev=0)
+    store.apply("s1", [AddItem("Also mine")], actor="user", base_rev=1)
+
+    result = call(tools, "board_read", "s1", {"session_id": blank})
+
+    assert result == {"ok": True, "rev": 2, "board": "- [ ] #1 Mine\n- [ ] #2 Also mine\n"}
+    assert seen(connect, "s1") == 2
+
+
+def test_an_id_of_the_own_lineage_is_an_own_read(
+    store: BoardStore, resolver_for: ResolverFor, connect: ConnFactory
+) -> None:
+    tools, _, _ = cross_tools(store, resolver_for, SEVEN_ROW_FIXTURE)
+    store.apply("root", [AddItem("Call John")], actor="agent", base_rev=0)
+
+    result = call(tools, "board_read", "comp2", {"session_id": "comp1"})
+
+    assert result == {"ok": True, "rev": 1, "board": "- [ ] #1 Call John\n"}
+    assert seen(connect, "root") == 1
+
+
+@pytest.mark.parametrize("bad", [5, ["s2"]])
+def test_a_non_string_argument_is_an_error(
+    store: BoardStore, resolver_for: ResolverFor, bad: object
+) -> None:
+    tools, _, _ = cross_tools(store, resolver_for, {})
+    store.apply("s1", [AddItem("Mine")], actor="agent", base_rev=0)
+
+    result = call(tools, "board_read", "s1", {"session_id": bad})
+
+    assert result == {"error": copy_args.TARGET_BAD}
+
+
+def test_an_unknown_id_gives_no_board_and_creates_no_row(
+    store: BoardStore, resolver_for: ResolverFor, connect: ConnFactory
+) -> None:
+    tools, _, _ = cross_tools(store, resolver_for, {})
+    store.apply("s1", [AddItem("Mine")], actor="agent", base_rev=0)
+    boards = count_rows(connect, "boards")
+
+    result = call(tools, "board_read", "s1", {"session_id": "typo"})
+
+    assert result == {"error": NO_SOURCE_BOARD}
+    assert count_rows(connect, "boards") == boards
+
+
+def test_a_delegate_can_read_another_board_and_marks_nothing(
+    store: BoardStore, resolver_for: ResolverFor, connect: ConnFactory
+) -> None:
+    tools, _, _ = cross_tools(store, resolver_for, SEVEN_ROW_FIXTURE)
+    store.apply("root", [AddItem("Parent item")], actor="agent", base_rev=0)
+    store.apply("plain", [AddItem("Other item")], actor="agent", base_rev=0)
+    before = (seen(connect, "root"), seen(connect, "plain"))
+
+    result = call(tools, "board_read", "dg", {"session_id": "plain"})
+
+    assert result["ok"] is True
+    assert result["board"] == "- [ ] #1 Other item\n"
+    assert (seen(connect, "root"), seen(connect, "plain")) == before
+
+
+def test_an_empty_other_board_says_so(store: BoardStore, resolver_for: ResolverFor) -> None:
+    tools, _, _ = cross_tools(store, resolver_for, {})
+    store.apply("s2", [AddItem("Gone soon")], actor="agent", base_rev=0)
+    store.apply("s2", [RemoveItem(1)], actor="agent", base_rev=1)
+
+    result = call(tools, "board_read", "s1", {"session_id": "s2"})
+
+    assert result["rev"] == 2
+    assert result["board"] == ""
+    assert result["note"].endswith("; empty board")
+
+
+def test_a_cross_read_of_a_branch_id_copies_its_parent_board_once(
+    store: BoardStore, resolver_for: ResolverFor, connect: ConnFactory
+) -> None:
+    tools, _, _ = cross_tools(store, resolver_for, SEVEN_ROW_FIXTURE)
+    store.apply("root", [AddItem("Parent item")], actor="agent", base_rev=0)
+
+    first = call(tools, "board_read", "plain", {"session_id": "br"})
+
+    assert first["ok"] is True
+    assert first["board"] == "- [ ] #1 Parent item\n"
+    assert first["session_id"] == "br"
+    conn = connect()
+    try:
+        assert conn.execute("SELECT 1 FROM boards WHERE root_id = 'br'").fetchone() is not None
+    finally:
+        conn.close()
+    rows = (count_rows(connect, "boards"), count_rows(connect, "changes"))
+
+    second = call(tools, "board_read", "plain", {"session_id": "br"})
+
+    assert second == first
+    assert (count_rows(connect, "boards"), count_rows(connect, "changes")) == rows
+
+
+def test_the_title_falls_back_to_untitled(store: BoardStore, resolver_for: ResolverFor) -> None:
+    tools, _, _ = cross_tools(store, resolver_for, {"s2": SessionSpec()})
+    store.apply("s2", [AddItem("Item")], actor="agent", base_rev=0)
+
+    result = call(tools, "board_read", "s1", {"session_id": "s2"})
+
+    assert result["title"] == UNTITLED
