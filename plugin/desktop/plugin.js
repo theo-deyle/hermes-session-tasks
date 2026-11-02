@@ -10,6 +10,7 @@ import {
   Checkbox,
   CopyButton,
   EmptyState,
+  Input,
   ScrollArea,
   Tip,
   host,
@@ -32,6 +33,8 @@ const LOAD_FAILED_NOTICE = 'Could not load the board. Retrying.'
 const EMPTY_TITLE = 'The agent adds items here.'
 const EMPTY_HINT = 'Add one below.'
 const NO_CHAT_TITLE = 'Open a chat to see its items.'
+const ADD_PLACEHOLDER = 'Add an item'
+const MAX_TEXT_CHARS = 500
 const PANE_CLASS = 'flex h-full flex-col text-xs'
 const HEADER_CLASS = 'text-sm font-medium text-(--ui-text-secondary)'
 const HEADER_ROW_CLASS =
@@ -43,6 +46,7 @@ const CHEVRON_COL_CLASS = 'flex size-6 shrink-0 items-center justify-center'
 const COUNT_CLASS = 'shrink-0 py-1 text-xs text-(--ui-text-secondary)'
 const LIST_CLASS = 'min-h-0 flex-1'
 const LIST_BODY_CLASS = 'flex flex-col p-2'
+const ADD_LINE_CLASS = 'mt-2'
 const ESCAPED_HASH = /^\\*#[0-9]+(?:\s|$)/
 const HIT_CLASS = 'flex size-6 shrink-0 items-center justify-center'
 const TEXT_CLASS = 'min-w-0 flex-1 py-1 text-xs'
@@ -53,6 +57,19 @@ const NOTICE_STYLE = { whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: '
 
 function isTopLevel(item) {
   return item.parent_id === null || item.parent_id === undefined
+}
+
+// A pending item has no id yet, so its key and its row id come from the pending key.
+function isPending(item) {
+  return item.id === null
+}
+
+function itemKey(item) {
+  return isPending(item) ? item.pendingKey : item.id
+}
+
+function rowId(item) {
+  return isPending(item) ? 'pending' : String(item.id)
 }
 
 function boardItems(board) {
@@ -104,10 +121,32 @@ function boardMarkdown(items) {
     .join('')
 }
 
+function pendingItem(op, pendingKey) {
+  const parent = op.parent_id === undefined ? null : op.parent_id
+  return { id: null, pendingKey, parent_id: parent, text: op.text, checked: false }
+}
+
+// A subtask goes after the last subtask of its parent. A top-level item goes last.
+// An add under a parent that the board does not hold changes nothing.
+function insertPending(items, entry) {
+  if (isTopLevel(entry)) return [...items, entry]
+  const parentAt = items.findIndex(item => item.id === entry.parent_id)
+  if (parentAt < 0) return items
+  let at = parentAt
+  items.forEach((item, index) => {
+    if (item.parent_id === entry.parent_id) at = index
+  })
+  return [...items.slice(0, at + 1), entry, ...items.slice(at + 1)]
+}
+
 // Returns a new board. Never mutates its input. An op it does not know leaves the board as it is.
-function applyOp(board, op) {
-  if (op.op !== 'set_checked') return board
+// An add shows as a pending item with no id: pendingKey names it until the reply brings the real item.
+function applyOp(board, op, pendingKey) {
   const items = boardItems(board)
+  if (op.op === 'add') {
+    return { ...board, items: insertPending(items, pendingItem(op, pendingKey)) }
+  }
+  if (op.op !== 'set_checked') return board
   if (!items.some(item => item.id === op.item_id)) return board
   return {
     ...board,
@@ -115,9 +154,9 @@ function applyOp(board, op) {
   }
 }
 
-// Returns a new board with every pending op applied in order. Never mutates its input.
-function viewBoard(board, pendingOps) {
-  return pendingOps.reduce(applyOp, board)
+// Returns a new board with every pending write applied in order. Never mutates its input.
+function viewBoard(board, pendingEntries) {
+  return pendingEntries.reduce((view, entry) => applyOp(view, entry.op, `pending-${entry.seq}`), board)
 }
 
 function hasItem(board, itemId) {
@@ -193,16 +232,18 @@ function Chevron({ hasChildren, collapsed, onToggle }) {
 function ItemRow({ item, subtasks, collapsed, onToggle, onCheck }) {
   const textClass = item.checked ? `${TEXT_CLASS} ${DONE_CLASS}` : TEXT_CLASS
   const top = isTopLevel(item)
+  const pendingRow = isPending(item)
   return jsxs('div', {
     className: top ? ROW_CLASS : SUBTASK_ROW_CLASS,
-    'data-item-id': String(item.id),
+    'data-item-id': rowId(item),
     children: [
       top ? jsx(Chevron, { hasChildren: subtasks.length > 0, collapsed, onToggle }) : null,
       jsx('span', {
         className: HIT_CLASS,
         children: jsx(Checkbox, {
           checked: item.checked,
-          onCheckedChange: value => onCheck(item, value),
+          disabled: pendingRow,
+          onCheckedChange: value => (pendingRow ? undefined : onCheck(item, value)),
           'aria-label': item.text
         })
       }),
@@ -218,18 +259,41 @@ function ItemRow({ item, subtasks, collapsed, onToggle, onCheck }) {
   })
 }
 
-// One top-level item: its row, then one row per subtask. Plan 04-06 adds the subtask add line here.
+// One top-level item: its row, then one row per subtask.
 function ItemBlock({ group, collapsed, onToggle, onCheck }) {
   const { item, children } = group
   return jsxs('div', {
-    'data-item-id': String(item.id),
+    'data-item-id': rowId(item),
     children: [
       jsx(ItemRow, { item, subtasks: children, collapsed, onToggle: () => onToggle(item.id), onCheck }),
       ...(collapsed
         ? []
-        : children.map(child => jsx(ItemRow, { item: child, subtasks: [], onCheck }, child.id)))
+        : children.map(child => jsx(ItemRow, { item: child, subtasks: [], onCheck }, itemKey(child))))
     ]
   })
+}
+
+// One text line. It holds no state: the caller owns the text, the busy flag and the handlers.
+function AddLine({ placeholder, value, readOnly, autoFocus, inputRef, onChange, onKeyDown, onBlur }) {
+  return jsx('div', {
+    className: ADD_LINE_CLASS,
+    children: jsx(Input, {
+      ref: inputRef,
+      placeholder,
+      value,
+      readOnly,
+      autoFocus,
+      maxLength: MAX_TEXT_CHARS,
+      size: 'sm',
+      onChange: event => onChange(event.target.value),
+      onKeyDown,
+      onBlur
+    })
+  })
+}
+
+function isEnter(event) {
+  return event.key === 'Enter' && !(event.nativeEvent && event.nativeEvent.isComposing)
 }
 
 function Pane({ ctx }) {
@@ -244,6 +308,10 @@ function Pane({ ctx }) {
   const [loadFailed, setLoadFailed] = useState(false)
   // The parents whose subtasks are hidden, keyed by item id. It lives here only and starts empty.
   const [collapsed, setCollapsed] = useState({})
+  // The add line: its text and whether a write for it is in flight. addRef holds its Input element.
+  const [addText, setAddText] = useState('')
+  const [addBusy, setAddBusy] = useState(false)
+  const addRef = useRef(null)
   const shown = server !== null && server.sid === (sid || null) ? server : null
   // The listener, the interval and the writes live longer than one render, so they read this ref.
   // revs holds the newest accepted rev of each session. queue chains the writes one after another.
@@ -254,6 +322,7 @@ function Pane({ ctx }) {
     queue: Promise.resolve(),
     seq: 0,
     entrySeq: 0,
+    addBusy: false,
     noticeCleanup: null
   })
   const focused = sid || null
@@ -348,6 +417,7 @@ function Pane({ ctx }) {
 
   useEffect(() => {
     setCollapsed({})
+    setAddText('')
     if (!sid) {
       setServer(null)
       return undefined
@@ -369,6 +439,28 @@ function Pane({ ctx }) {
     current.current.queue = current.current.queue.then(() => runWrite(asked, entry, onOutcome))
   }
 
+  // Enter in the add line. The ref guards a second Enter that arrives before the next render.
+  function submitAdd() {
+    const state = current.current
+    const text = addText.trim()
+    if (state.addBusy || text === '') return
+    const asked = state.sid
+    state.addBusy = true
+    setAddBusy(true)
+    sendOp({ op: 'add', text }, outcome => {
+      state.addBusy = false
+      setAddBusy(false)
+      if (outcome !== 'ok' || state.sid !== asked) return
+      setAddText('')
+      const input = addRef.current
+      if (input && typeof input.scrollIntoView === 'function') input.scrollIntoView({ block: 'nearest' })
+    })
+  }
+
+  function onAddKeyDown(event) {
+    if (isEnter(event)) submitAdd()
+  }
+
   function onCheck(item, value) {
     sendOp({ op: 'set_checked', item_id: item.id, checked: value === true })
   }
@@ -377,8 +469,8 @@ function Pane({ ctx }) {
     setCollapsed(prev => ({ ...prev, [itemId]: !prev[itemId] }))
   }
 
-  const focusedOps = pending.filter(entry => entry.sid === focused).map(entry => entry.op)
-  const board = shown === null ? null : viewBoard(shown.board, focusedOps)
+  const focusedEntries = pending.filter(entry => entry.sid === focused)
+  const board = shown === null ? null : viewBoard(shown.board, focusedEntries)
   const items = boardItems(board)
   if (focused === null) {
     return jsxs('div', {
@@ -399,15 +491,25 @@ function Pane({ ctx }) {
         className: LIST_CLASS,
         children: jsx('div', {
           className: LIST_BODY_CLASS,
-          children: isEmpty
-            ? jsx(EmptyState, { title: EMPTY_TITLE, description: EMPTY_HINT })
-            : buildTree(items).map(group =>
-                jsx(
-                  ItemBlock,
-                  { group, collapsed: collapsed[group.item.id] === true, onToggle, onCheck },
-                  group.item.id
-                )
-              )
+          children: [
+            isEmpty
+              ? jsx(EmptyState, { title: EMPTY_TITLE, description: EMPTY_HINT }, 'empty')
+              : buildTree(items).map(group =>
+                  jsx(
+                    ItemBlock,
+                    { group, collapsed: collapsed[group.item.id] === true, onToggle, onCheck },
+                    itemKey(group.item)
+                  )
+                ),
+            jsx(AddLine, {
+              placeholder: ADD_PLACEHOLDER,
+              value: addText,
+              readOnly: addBusy,
+              inputRef: addRef,
+              onChange: setAddText,
+              onKeyDown: onAddKeyDown
+            }, 'add')
+          ]
         })
       })
     ]
@@ -438,6 +540,8 @@ export {
   POLL_MS,
   STALE_NOTICE,
   WRITE_FAILED_NOTICE,
+  ADD_PLACEHOLDER,
+  MAX_TEXT_CHARS,
   applyOp,
   boardItems,
   boardMarkdown,
