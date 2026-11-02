@@ -6,7 +6,7 @@ import json
 from pathlib import Path
 
 from fakes import FakeCtx, FakeReaderFactory
-from session_tasks import tool_text
+from session_tasks import delta, tool_text
 from session_tasks.db import ConnFactory
 from session_tasks.edit_args import OP_FIELDS
 from session_tasks.model import AddItem
@@ -137,16 +137,18 @@ def test_registered_edit_handler_and_hook_work_together(connect: ConnFactory) ->
     assert applied["changed"] == ["- removed #1"]
 
 
-def test_registered_pre_llm_call_returns_the_nudge_and_the_board(
+def test_registered_pre_llm_call_returns_theo_changes_once(
     connect: ConnFactory, store: BoardStore
 ) -> None:
     ctx = registered(connect)
-    store.apply("s1", [AddItem("Call John")], actor="agent", base_rev=0)
+    store.apply("s1", [AddItem("Call John")], actor="user", base_rev=0)
+    pre_llm = ctx.hooks["pre_llm_call"][0]
 
-    out = ctx.hooks["pre_llm_call"][0](session_id="s1", user_message="hi", is_first_turn=True)
+    out = pre_llm(session_id="s1", user_message="hi", is_first_turn=True)
 
     assert isinstance(out, str)
-    assert out.startswith(tool_text.NUDGE_LINE)
-    assert "- [ ] #1 Call John" in out
-    assert out.count('<task-board rev="1">') == 1
-    assert out.count("</task-board>") == 1
+    assert "added #1 Call John" in out
+    assert out.startswith(f'<{delta.DELTA_TAG} rev="1">')
+    assert out.count(f"<{delta.DELTA_TAG} ") == 1
+    assert out.count(f"</{delta.DELTA_TAG}>") == 1
+    assert pre_llm(session_id="s1", user_message="hi", is_first_turn=True) is None

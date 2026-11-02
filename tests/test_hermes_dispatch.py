@@ -13,7 +13,7 @@ from pathlib import Path
 
 import pytest
 from conftest import HERMES_AGENT_REPO
-from session_tasks import tool_text
+from session_tasks import delta, tool_text
 
 pytestmark = pytest.mark.hermes
 
@@ -50,15 +50,18 @@ def test_hermes_dispatches_board_read_with_the_handler_session(hermes_home: Path
     assert "board_read" in out["tools"]  # pyright: ignore[reportOperatorIssue]
 
 
-def test_hermes_runs_pre_llm_call_and_gets_the_nudge_and_the_board(hermes_home: Path) -> None:
+def test_hermes_runs_pre_llm_call_and_gets_only_theo_changes(hermes_home: Path) -> None:
     out = run_snippet(hermes_home)
 
-    pre_llm = out["pre_llm"]
-    assert isinstance(pre_llm, list)
-    assert len(pre_llm) == 1
-    assert isinstance(pre_llm[0], str)
-    assert pre_llm[0].startswith(tool_text.NUDGE_LINE)
-    assert "- [ ] #1 Call John" in pre_llm[0]
+    assert out["pre_llm"] == []
+    pre_llm_theo = out["pre_llm_theo"]
+    assert isinstance(pre_llm_theo, list)
+    assert len(pre_llm_theo) == 1
+    assert isinstance(pre_llm_theo[0], str)
+    assert "added #1 Call John" in pre_llm_theo[0]
+    assert 'rev="1">' in pre_llm_theo[0]
+    assert delta.DELTA_NOTE in pre_llm_theo[0]
+    assert out["pre_llm_again"] == []
     assert out["pre_llm_blank"] == []
 
 

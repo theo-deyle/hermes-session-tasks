@@ -112,6 +112,9 @@ def main() -> None:
     }
     result["pre_llm"] = pre_llm("s1")
     result["pre_llm_blank"] = pre_llm("")
+    BoardStore(paths.connect).apply("s5", [AddItem("Call John")], actor="user", base_rev=0)
+    result["pre_llm_theo"] = pre_llm("s5")
+    result["pre_llm_again"] = pre_llm("s5")
     add: dict[str, object] = {"ops": [{"op": "add", "text": "Book the van"}]}
     result["edit_add"] = call(add, "s1", "board_edit")
     result["blocked"] = call(REMOVE_ONE, "s1", "board_edit")
