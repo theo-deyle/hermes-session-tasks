@@ -349,3 +349,24 @@ def test_row_buttons_keep_their_space_at_320px(rig: Rig, tmp_path: Path) -> None
     text = [node for node in result["nodes"] if node["text"] == long_text]
     assert len(text) == 1
     assert {"min-w-0", "flex-1"} <= set(text[0]["className"].split())
+
+
+# Review 04-REVIEW CR-01: item ids are per board, so an edit must name the session it started on.
+
+
+def test_blur_after_a_focus_change_never_writes_to_the_new_session(
+    rig: Rig, tmp_path: Path
+) -> None:
+    seed(rig.store, CALL)
+    seed(rig.store, "Email Ann", sid="s2")
+    gap = {"burst": [{"focus": "s2"}, {"peek": True}, {"blur": ROW_1}]}
+
+    result = rig.run(
+        tmp_path,
+        steps=[CLICK_CALL, edit_text(CALL_AT_3), gap, RELOAD],
+    )
+
+    assert [call for call in posts(result) if call["body"]["session_id"] == "s2"] == []
+    assert rig.store.get_board("s2").items[0].text == "Email Ann"
+    assert inputs(result, row="1") == []
+    assert "Email Ann" in result["lines"]

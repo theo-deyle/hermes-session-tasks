@@ -11,12 +11,13 @@
 // Config keys:
 //   baseUrl        relay URL; ctx.rest forwards to baseUrl + path with fetch
 //   focused        the focused stored session id, or null
-//   restOverrides  map of path to a reply body, or the string "__error__" to reject
+//   restOverrides  map of path to a reply body, "__error__" to reject or "__empty__" to resolve with nothing
 //   restSequences  map of path to a list. Each call to that path takes the next entry: a reply
 //                  body, "__error__" (reject with 500) or "__relay__" (forward to the relay).
 //                  An empty list falls back to restOverrides, then to the relay.
 //   duringWrite    list of steps. They run once, inside the first POST, before it is forwarded.
 //                  The harness then waits until only the held POST is pending.
+//   timeoutThrows  when true, every ctx.setTimeout call throws, as after a plugin dispose
 //   steps          the step list below
 //
 // Step kinds:
@@ -34,6 +35,9 @@
 //   {"outside": {"session_id": "s1", "ops": [...], "base_rev": 1}}
 //                  a POST to baseUrl + /board/edit that the pane does not see
 //   {"timers": true}                      runs every pending ctx.setTimeout callback not cancelled
+//   {"render": true}                      one full render with its effects, and no waiting
+//   {"peek": true}                        one render with no effects: the render phase without the commit
+//   {"burst": [<step>, ...]}              the inner steps with no render and no waiting between them
 //   An unknown step fails the run.
 //
 // Output keys:
@@ -245,6 +249,7 @@ async function rest(path, options = {}) {
     if (entry !== undefined && entry !== '__relay__') return entry
     if (entry === undefined && Object.hasOwn(overrides, path)) {
       if (overrides[path] === '__error__') throw new Error('500: forced failure')
+      if (overrides[path] === '__empty__') return undefined
       return overrides[path]
     }
     return await forward(path, method, options)
@@ -273,6 +278,7 @@ const ctx = {
     return () => {}
   },
   setTimeout: (fn, ms) => {
+    if (config.timeoutThrows === true) throw new Error('the plugin is disposed')
     timeouts.push(ms)
     const entry = { fn, cancelled: false, ran: false }
     timerQueue.push(entry)
@@ -597,6 +603,12 @@ async function runStep(step) {
     const text = await response.text()
     if (!response.ok) throw new Error(`outside write failed ${response.status}: ${text}`)
     outsideCalls.push({ body, reply: JSON.parse(text) })
+  } else if (step.render !== undefined) {
+    renderOnce()
+  } else if (step.peek !== undefined) {
+    peek()
+  } else if (step.burst !== undefined) {
+    for (const inner of step.burst) await runStep(inner)
   } else if (step.timers !== undefined) {
     for (const entry of [...timerQueue]) {
       if (entry.cancelled || entry.ran) continue
