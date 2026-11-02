@@ -53,13 +53,15 @@
 // Output keys:
 //   name, lines, restCalls, contribution, intervals, eventTypes,
 //   inputs      {placeholder, row, value, readOnly, disabled, maxLength, size, autoFocus}
-//   buttons     {label, row, disabled, className}
+//   buttons     {label, row, disabled, className, variant, size}
 //   checkboxes  {row, label, checked, disabled, guarded}; guarded means an ancestor onMouseDown prevents the default
 //   confirm     null, or the last ConfirmDialog {open, title, description, confirmLabel, cancelLabel, destructive}
 //   copy        null, or the last CopyButton {text, disabled, label, appearance}
 //   tips        Tip labels in render order
 //   nodes       {text, className, style, row, scroll, button} per host element with direct string children;
 //               button is true inside a Button
+//   titled      {title, className, style, texts} per host element with a string `title` prop; texts are the
+//               direct strings of the element and its host descendants in order
 //   menuItems   in render order: {texts, disabled, current, check} per DropdownMenuItem, {separator: true}
 //               per DropdownMenuSeparator; texts are the direct strings of the host descendants in order
 //   menuContent null, or the last DropdownMenuContent {style, align}
@@ -67,7 +69,7 @@
 //   callResults   the JSON result of each `calls` entry, in order
 //   timeouts    ms of every ctx.setTimeout call
 //   outsideCalls  {body, reply} per outside step
-//   atWrite     one {lines, checkboxes, inputs} per POST, taken before the POST is forwarded
+//   atWrite     one {lines, buttons, checkboxes, inputs} per POST, taken before the POST is forwarded
 //
 // `row` is the data-item-id of the nearest ancestor host element, or null.
 
@@ -377,6 +379,8 @@ function walk(node, out, here) {
       row: here.row,
       disabled: props.disabled === true,
       className: props.className ?? null,
+      variant: props.variant ?? null,
+      size: props.size ?? null,
       onClick: props.onClick
     })
     // The children show in nodes and lines, marked as inside a button.
@@ -518,6 +522,14 @@ function walk(node, out, here) {
     })
     if (typeof props.onClick === 'function') out.clickables.push({ text: joined, onClick: props.onClick })
   }
+  if (isHost && typeof props.title === 'string') {
+    out.titled.push({
+      title: props.title,
+      className: props.className ?? null,
+      style: props.style ?? null,
+      texts: hostTexts({ type: 'span', props: { children: props.children } })
+    })
+  }
   walk(list, out, next)
 }
 
@@ -561,6 +573,7 @@ function newOut() {
     menus: [],
     menuItems: [],
     menuContent: null,
+    titled: [],
     confirm: null,
     copy: null
   }
@@ -571,6 +584,7 @@ let buttons = []
 let checkboxes = []
 let inputs = []
 let nodes = []
+let titled = []
 let tips = []
 let confirmRecord = null
 let copyRecord = null
@@ -593,6 +607,7 @@ function renderOnce() {
   checkboxes = out.boxes
   inputs = out.inputs
   nodes = out.nodes
+  titled = out.titled
   tips = out.tips
   clickables = out.clickables
   menus = out.menus
@@ -612,6 +627,7 @@ function peek() {
     walk(contribution.render(), out, START)
     return {
       lines: out.lines,
+      buttons: out.buttons.map(({ onClick, ...rest }) => rest),
       checkboxes: out.boxes.map(({ onCheckedChange, ...rest }) => rest),
       inputs: out.inputs.map(({ onChange, onKeyDown, onBlur, onFocus, ...rest }) => rest)
     }
@@ -783,6 +799,7 @@ const output = {
   copy: copyRecord,
   tips,
   nodes,
+  titled,
   menuItems: menuItems.map(({ onSelect, ...rest }) => rest),
   menuContent: menuContentRecord,
   requestCalls,
