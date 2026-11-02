@@ -5,12 +5,28 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass
 
-from . import edit_args, events, paths, session_reader
+from . import copy_args, edit_args, events, paths, session_reader
 from .board_json import board_dict
 from .db import ConnFactory
 from .lineage import ReaderFactory, Resolution, SessionResolver
-from .model import Applied, BoardError, InvalidSession, Stale
-from .results import DELEGATE_EDIT, NO_SESSION, describe, stale_text, summary_line
+from .model import (
+    NO_SOURCE_BOARD,
+    SAME_BOARD,
+    Applied,
+    BoardError,
+    CopyApplied,
+    InvalidSession,
+    Stale,
+)
+from .results import (
+    DELEGATE_COPY,
+    DELEGATE_EDIT,
+    NO_SESSION,
+    describe,
+    source_missing_text,
+    stale_text,
+    summary_line,
+)
 from .store import BoardStore
 
 log = logging.getLogger(__name__)
@@ -37,14 +53,14 @@ def _invalid(op_index: int | None, rule: str, message: str) -> ApiReply:
     return ApiReply(200, body)
 
 
-def _stale_reply(stale: Stale, base_rev: int, root_id: str) -> ApiReply:
+def _stale_reply(stale: Stale, base_rev: int, root_id: str, message: str | None = None) -> ApiReply:
     body: dict[str, object] = {
         "ok": False,
         "error": "stale",
         "reason": stale.reason,
         "op_index": stale.op_index,
         "item_id": stale.item_id,
-        "message": stale_text(stale, base_rev),
+        "message": message if message is not None else stale_text(stale, base_rev),
         "root_id": root_id,
         "rev": stale.board.rev,
         "board": board_dict(stale.board),
@@ -62,6 +78,17 @@ def _applied_reply(applied: Applied, root_id: str) -> ApiReply:
         "board": board_dict(applied.board),
     }
     return ApiReply(200, body)
+
+
+def _copied_reply(result: CopyApplied, root_id: str) -> ApiReply:
+    reply = _applied_reply(result.applied, root_id)
+    body = {
+        **reply.body,
+        "copied": result.copied,
+        "skipped": result.skipped,
+        "overflow": result.overflow,
+    }
+    return ApiReply(reply.status, body)
 
 
 def _no_listener(root_id: str, session_id: str, rev: int) -> None:
@@ -136,6 +163,47 @@ class BoardApi:
             except Exception:
                 log.warning("board after_write listener failed", exc_info=True)
         return _applied_reply(result, root_id)
+
+    def copy(
+        self, session_id: str, from_session_id: object, item_ids: object, base_rev: object
+    ) -> ApiReply:
+        """Copy items of another board onto the target board as actor user (D-46).
+
+        The target is the focused session. The source board is only read, and a delegate
+        target is refused before any write.
+        """
+        target = self._resolve(session_id)
+        if target is None:
+            return _no_session()
+        if target.kind == "delegate":
+            return _invalid(None, DELEGATE_COPY, DELEGATE_COPY)
+        root_id = target.root_id
+        base = 0
+        try:
+            parsed = copy_args.parse({
+                "from_session_id": from_session_id,
+                "item_ids": item_ids,
+                "base_rev": base_rev,
+            })
+            base = parsed.base_rev if parsed.base_rev is not None else 0
+            source = self._resolve(parsed.from_session_id)
+            if source is None:
+                return _invalid(None, NO_SOURCE_BOARD, NO_SOURCE_BOARD)
+            if source.root_id == root_id:
+                return _invalid(None, SAME_BOARD, SAME_BOARD)
+            result = self.store.copy_items(root_id, source.root_id, parsed.item_ids, actor="user")
+        except BoardError as exc:
+            return _invalid(exc.op_index, str(exc), describe(exc))
+        if isinstance(result, Stale):
+            message = source_missing_text(result.item_id or 0)
+            return _stale_reply(result, base, root_id, message)
+        if result.applied.changed_ids:
+            # The copy is committed already. A listener fault must not turn it into an error.
+            try:
+                self.after_write(root_id, session_id, result.applied.rev)
+            except Exception:
+                log.warning("board after_write listener failed", exc_info=True)
+        return _copied_reply(result, root_id)
 
 
 def build(

@@ -34,6 +34,17 @@ class EditBody(BaseModel):
     base_rev: StrictInt | None = None
 
 
+class CopyBody(BaseModel):
+    """The body of POST /board/copy. An unknown field, such as `confirmed`, is refused (D-46)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    session_id: str = Field(min_length=1, max_length=SESSION_ID_MAX)
+    from_session_id: str = Field(min_length=1, max_length=SESSION_ID_MAX)
+    item_ids: list[Any] | None = None
+    base_rev: StrictInt | None = None
+
+
 def load_core() -> ModuleType:
     """Load `session_tasks` by path under a fixed key. The same module serves every request."""
     cached = sys.modules.get(CORE_KEY)
@@ -86,6 +97,12 @@ def list_boards(api: ApiDep) -> JSONResponse:
 @router.post("/board/edit")
 def edit_board(body: EditBody, api: ApiDep) -> JSONResponse:
     reply = api.edit(body.session_id, body.ops, body.base_rev)
+    return JSONResponse(reply.body, status_code=reply.status)
+
+
+@router.post("/board/copy")
+def copy_board(body: CopyBody, api: ApiDep) -> JSONResponse:
+    reply = api.copy(body.session_id, body.from_session_id, body.item_ids, body.base_rev)
     return JSONResponse(reply.body, status_code=reply.status)
 
 
