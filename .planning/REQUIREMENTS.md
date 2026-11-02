@@ -45,19 +45,19 @@ Requirements for the first release. Each maps to a roadmap phase.
 
 ### Pane
 
-- [ ] **PANE-01**: A right-side pane (`placement: 'right'`) shows the board of the focused session and follows the focus change.
-- [ ] **PANE-02**: The pane renders items as checkboxes with subtasks indented and collapsible.
-- [ ] **PANE-03**: Theo can check and uncheck items; the pane updates at once and reconciles on the returned revision.
-- [ ] **PANE-04**: Theo can add an item inline and keep typing the next one.
-- [ ] **PANE-05**: Theo can edit an item's text inline.
-- [ ] **PANE-06**: Theo can add a subtask to an item.
-- [ ] **PANE-07**: Theo can delete an item; the pane confirms when subtasks go with it.
-- [ ] **PANE-08**: The pane updates live when the agent writes, through the broadcast event, and polls as a fallback.
+- [x] **PANE-01**: A right-side pane (`placement: 'right'`) shows the board of the focused session and follows the focus change.
+- [x] **PANE-02**: The pane renders items as checkboxes with subtasks indented and collapsible.
+- [x] **PANE-03**: Theo can check and uncheck items; the pane updates at once and reconciles on the returned revision.
+- [x] **PANE-04**: Theo can add an item inline and keep typing the next one.
+- [x] **PANE-05**: Theo can edit an item's text inline.
+- [x] **PANE-06**: Theo can add a subtask to an item.
+- [x] **PANE-07**: Theo can delete an item; the pane confirms when subtasks go with it.
+- [x] **PANE-08**: The pane updates live when the agent writes, through the broadcast event, and polls as a fallback.
 - [ ] **PANE-09**: A session picker lists sessions that have a board with title, open count and last update, and shows another session's board read-only.
 - [ ] **PANE-10**: Theo can copy one item or all open items from another session's board into the focused board.
-- [ ] **PANE-11**: Theo can copy the board to the clipboard as a plain markdown checklist.
-- [ ] **PANE-12**: The pane shows an empty state that says the agent adds items here.
-- [ ] **PANE-13**: The pane is one plain ESM file that imports only `@hermes/plugin-sdk`, `react` and `react/jsx-runtime`, uses SDK components and `var(--ui-*)` theme vars, and has no hardcoded colours.
+- [x] **PANE-11**: Theo can copy the board to the clipboard as a plain markdown checklist.
+- [x] **PANE-12**: The pane shows an empty state that says the agent adds items here.
+- [x] **PANE-13**: The pane is one plain ESM file that imports only `@hermes/plugin-sdk`, `react` and `react/jsx-runtime`, uses SDK components and `var(--ui-*)` theme vars, and has no hardcoded colours.
 
 ### Dev and deploy
 
@@ -131,19 +131,19 @@ Each v1 requirement maps to exactly one phase.
 | API-01 | Phase 3 | Pending |
 | API-02 | Phase 3 | Pending |
 | API-03 | Phase 3 | Pending |
-| PANE-01 | Phase 4 | Pending |
-| PANE-02 | Phase 4 | Pending |
-| PANE-03 | Phase 4 | Pending |
-| PANE-04 | Phase 4 | Pending |
-| PANE-05 | Phase 4 | Pending |
-| PANE-06 | Phase 4 | Pending |
-| PANE-07 | Phase 4 | Pending |
-| PANE-08 | Phase 4 | Pending |
+| PANE-01 | Phase 4 | Complete |
+| PANE-02 | Phase 4 | Complete |
+| PANE-03 | Phase 4 | Complete |
+| PANE-04 | Phase 4 | Complete |
+| PANE-05 | Phase 4 | Complete |
+| PANE-06 | Phase 4 | Complete |
+| PANE-07 | Phase 4 | Complete |
+| PANE-08 | Phase 4 | Complete |
 | PANE-09 | Phase 6 | Pending |
 | PANE-10 | Phase 6 | Pending |
-| PANE-11 | Phase 4 | Pending |
-| PANE-12 | Phase 4 | Pending |
-| PANE-13 | Phase 4 | Pending |
+| PANE-11 | Phase 4 | Complete |
+| PANE-12 | Phase 4 | Complete |
+| PANE-13 | Phase 4 | Complete |
 | DEV-01 | Phase 1 | Complete |
 | DEV-02 | Phase 1 | Complete |
 | DEV-03 | Phase 3 | Complete |

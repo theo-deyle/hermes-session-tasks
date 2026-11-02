@@ -22,7 +22,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 1: Core, storage and session identity** - A safe SQLite board per session that follows its session through compression and branches. (completed 2026-10-30)
 - [x] **Phase 2: Agent tools and skill** - The agent reads and edits the board, and puts its own multi-step plan on the board. (completed 2026-10-31)
 - [ ] **Phase 3: REST router and client install spike** - The backend routes work, and a stub pane runs on the Mac and the Windows PC.
-- [ ] **Phase 4: Pane** - Theo sees and edits the focused session's board in a right-side pane that updates live.
+- [x] **Phase 4: Pane** - Theo sees and edits the focused session's board in a right-side pane that updates live. (completed 2026-11-01)
 - [ ] **Phase 5: Agent sees Theo's edits** - The agent learns of Theo's changes on its next turn, and a deleted session loses its board.
 - [ ] **Phase 6: Cross-session boards** - The agent and Theo list, read and copy items from other sessions' boards.
 - [ ] **Phase 7: Deploy and hardening** - The plugin runs on devpc and on both clients, with the README and the GitHub repo in place.
@@ -143,7 +143,7 @@ Plans:
   3. Theo adds an item inline and keeps typing the next one. Theo edits an item's text inline and adds a subtask. Theo deletes an item, and the pane confirms when subtasks go with it.
   4. When the agent writes to the board, the pane updates with no reload, through the event. Polling covers the case where no event arrives.
   5. Theo copies the board to the clipboard as a plain markdown checklist. The pane is one plain ESM file with three allowed imports, SDK components, `var(--ui-*)` theme vars and no hardcoded colour.
-**Plans**: 9/9 plans executed in 7 waves
+**Plans**: 9/9 plans complete in 7 waves
 Plans:
 **Wave 1**
 - [x] 04-01-PLAN.md - First end to end test: a check in the real pane reaches the store; checkbox rows, header count, Phase 3 contracts kept, hooks guard (wave 1)
@@ -217,7 +217,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 | 1. Core, storage and session identity | 6/6 | Complete    | 2026-10-30 |
 | 2. Agent tools and skill | 7/7 | Complete    | 2026-10-31 |
 | 3. REST router and client install spike | 9/12 | In Progress | - |
-| 4. Pane | 9/9 | In Progress | - |
+| 4. Pane | 9/9 | Complete    | 2026-11-01 |
 | 5. Agent sees Theo's edits | 0/TBD | Not started | - |
 | 6. Cross-session boards | 0/TBD | Not started | - |
 | 7. Deploy and hardening | 0/TBD | Not started | - |
