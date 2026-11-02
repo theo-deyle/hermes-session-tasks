@@ -15,7 +15,7 @@ Requirements for the first release. Each maps to a roadmap phase.
 - [x] **STOR-04**: Every board has a revision number. A write that targets an item changed since the caller's base revision is rejected and returns the current board.
 - [x] **STOR-05**: Writes are safe when the agent tool and the pane write at the same time from different gateway processes (SQLite transaction, no in-process lock).
 - [x] **STOR-06**: A board follows its session through context compression and branches, so Theo does not lose the list mid-session.
-- [ ] **STOR-07**: When Hermes deletes a session, the plugin removes that session's board; an archived session keeps its board.
+- [x] **STOR-07**: When Hermes deletes a session, the plugin removes that session's board; an archived session keeps its board.
 - [x] **STOR-08**: The board round-trips to and from a markdown checklist (`- [ ]`, `- [x]`, indented subtasks) with a stdlib-only renderer and parser.
 
 ### Agent tools
@@ -113,7 +113,7 @@ Each v1 requirement maps to exactly one phase.
 | STOR-04 | Phase 1 | Complete |
 | STOR-05 | Phase 1 | Complete |
 | STOR-06 | Phase 1 | Complete |
-| STOR-07 | Phase 5 | Pending |
+| STOR-07 | Phase 5 | Complete |
 | STOR-08 | Phase 1 | Complete |
 | TOOL-01 | Phase 2 | Complete |
 | TOOL-02 | Phase 2 | Complete |
