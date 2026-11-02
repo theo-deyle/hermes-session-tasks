@@ -20,6 +20,8 @@ import {
 import { useEffect, useRef, useState } from 'react'
 import { jsx, jsxs } from 'react/jsx-runtime'
 
+const EVENT_TYPE = 'plugin.hermes-session-tasks.board.updated'
+
 function boardPath(sid) {
   return `/board?session_id=${encodeURIComponent(sid)}`
 }
@@ -60,11 +62,15 @@ function Probe({ ctx }) {
   const [value, setValue] = useState('')
   const [line, setLine] = useState('')
   const [confirmId, setConfirmId] = useState(null)
-  const current = useRef({ sid: null, rev: null, value: '', confirmId: null })
+  const [busy, setBusy] = useState(false)
+  const [optimistic, setOptimistic] = useState(null)
+  const timerStop = useRef(null)
+  const current = useRef({ sid: null, rev: null, value: '', confirmId: null, busy: false })
   current.current.sid = sid || null
   current.current.rev = server === null ? null : server.rev
   current.current.value = value
   current.current.confirmId = confirmId
+  current.current.busy = busy
 
   function load() {
     const asked = current.current.sid
@@ -87,34 +93,44 @@ function Probe({ ctx }) {
     load()
   }, [sid])
 
-  // Starts the write and returns nothing: a caller must never wait on the write.
-  function write(op, onOk) {
+  useEffect(() => ctx.onEvent(EVENT_TYPE, () => load()), [])
+
+  // Returns the write promise, or a resolved null when there is nothing to write to.
+  function send(op) {
     const asked = current.current.sid
     const baseRev = current.current.rev
-    if (!asked || baseRev === null) return
-    ctx
-      .rest('/board/edit', {
-        method: 'POST',
-        body: { session_id: asked, ops: [op], base_rev: baseRev }
-      })
-      .then(reply => {
-        if (reply && reply.ok === true) onOk()
-        return load()
-      })
-      .catch(() => load())
+    if (!asked || baseRev === null) return Promise.resolve(null)
+    return ctx.rest('/board/edit', {
+      method: 'POST',
+      body: { session_id: asked, ops: [op], base_rev: baseRev }
+    })
   }
 
+  // Starts the write and returns nothing: a caller must never wait on the write.
   function add() {
     const text = current.current.value
-    if (text === '') return
-    write({ op: 'add', text }, () => setValue(''))
+    if (text === '' || current.current.busy) return
+    setBusy(true)
+    setOptimistic(text)
+    send({ op: 'add', text })
+      .then(reply => {
+        if (reply && reply.ok === true) setValue('')
+      })
+      .catch(() => setLine('probe write failed'))
+      .then(() => {
+        setBusy(false)
+        setOptimistic(null)
+        return load()
+      })
   }
 
   function confirmRemove() {
     const itemId = current.current.confirmId
     setConfirmId(null)
     if (itemId === null) return
-    write({ op: 'remove', item_id: itemId }, () => {})
+    send({ op: 'remove', item_id: itemId })
+      .catch(() => {})
+      .then(() => load())
   }
 
   const items = server !== null && server.sid === (sid || null) ? server.items : []
@@ -140,7 +156,22 @@ function Probe({ ctx }) {
             : null
         ]
       }),
+      sid ? jsx('div', { children: `probe session ${sid}` }) : null,
+      optimistic === null ? null : jsx('div', { children: optimistic }),
       line === '' ? null : jsx('div', { children: line }),
+      jsx(Button, {
+        onClick: () => {
+          timerStop.current = ctx.setTimeout(() => setLine('probe timer fired'), 4000)
+        },
+        children: 'Probe timer'
+      }),
+      jsx(Button, {
+        onClick: () => {
+          const stop = ctx.setTimeout(() => setLine('probe timer fired'), 4000)
+          stop()
+        },
+        children: 'Probe timer cancel'
+      }),
       jsx(Button, { disabled: items.length === 0, onClick: () => {}, children: 'Probe copy all' }),
       jsx(CopyButton, {
         appearance: 'icon',
@@ -151,6 +182,7 @@ function Probe({ ctx }) {
       jsx(Input, {
         placeholder: 'Probe add',
         value,
+        readOnly: busy,
         onChange: event => setValue(event.target.value),
         onKeyDown: event => {
           if (event.key === 'Enter') add()

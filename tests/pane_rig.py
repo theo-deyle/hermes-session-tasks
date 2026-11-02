@@ -10,7 +10,9 @@ from typing import TYPE_CHECKING, Any
 from api_client import PREFIX, load_plugin_api, make_client
 from rest_relay import RestRelay
 from session_tasks.board_api import BoardApi
-from session_tasks.model import AddItem
+from session_tasks.board_json import board_dict
+from session_tasks.model import AddItem, Board, Stale
+from session_tasks.results import stale_text
 from session_tasks.store import BoardStore
 
 if TYPE_CHECKING:
@@ -131,3 +133,19 @@ def button(result: dict[str, Any], label: str, row: str | None = None) -> dict[s
     ]
     assert len(found) == 1, f"{len(found)} buttons labelled {label!r} in row {row}"
     return found[0]
+
+
+def stale_body(board: Board, root_id: str) -> dict[str, Any]:
+    """A stale reply body in the D-22 shape, built the way the router builds it."""
+    stale = Stale(board, "stale", 0, None)
+    return {
+        "ok": False,
+        "error": "stale",
+        "reason": stale.reason,
+        "op_index": stale.op_index,
+        "item_id": stale.item_id,
+        "message": stale_text(stale, max(board.rev - 1, 0)),
+        "root_id": root_id,
+        "rev": board.rev,
+        "board": board_dict(board),
+    }
