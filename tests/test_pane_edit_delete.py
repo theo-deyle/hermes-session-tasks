@@ -370,3 +370,53 @@ def test_blur_after_a_focus_change_never_writes_to_the_new_session(
     assert rig.store.get_board("s2").items[0].text == "Email Ann"
     assert inputs(result, row="1") == []
     assert "Email Ann" in result["lines"]
+
+
+# Review 04-REVIEW WR-04: a stale or failed text save keeps the typed text for the item (D-34).
+
+
+def check_op(item_id: int) -> dict[str, object]:
+    return {"op": "set_checked", "item_id": item_id, "checked": True}
+
+
+def test_failed_text_is_kept_when_another_edit_opened_meanwhile(rig: Rig, tmp_path: Path) -> None:
+    seed(rig.store, CALL, "Email Ann")
+
+    result = rig.run(
+        tmp_path,
+        duringWrite=[{"clickText": "Email Ann"}],
+        steps=[
+            outside(check_op(1), base_rev=2),
+            CLICK_CALL,
+            edit_text(CALL_AT_3),
+            press(ENTER),
+            press("Escape", row="2"),
+            CLICK_CALL,
+        ],
+    )
+
+    assert STALE in result["lines"]
+    assert the_input(result, row="1")["value"] == CALL_AT_3
+    assert rig.store.get_board("s1").items[0].text == CALL
+
+
+def test_failed_text_is_kept_when_the_focus_changed_meanwhile(rig: Rig, tmp_path: Path) -> None:
+    seed(rig.store, CALL)
+    seed(rig.store, "Email Ann", sid="s2")
+
+    result = rig.run(
+        tmp_path,
+        duringWrite=[{"focus": "s2"}, {"render": True}],
+        steps=[
+            outside(check_op(1), base_rev=1),
+            CLICK_CALL,
+            edit_text(CALL_AT_3),
+            press(ENTER),
+            RELOAD,
+            {"focus": "s1"},
+            CLICK_CALL,
+        ],
+    )
+
+    assert the_input(result, row="1")["value"] == CALL_AT_3
+    assert rig.store.get_board("s2").items[0].text == "Email Ann"
