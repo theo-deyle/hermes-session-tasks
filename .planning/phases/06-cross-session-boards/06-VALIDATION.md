@@ -112,7 +112,7 @@ Claude runs every other check: the test-home runs with the real model (list, rea
 - [ ] Sampling continuity: no 3 consecutive tasks without automated verify
 - [ ] Wave 0 covers all MISSING references
 - [ ] No watch-mode flags
-- [ ] Feedback latency < 6s
+- [ ] Feedback latency about 30 seconds per task (targeted files only)
 - [ ] `nyquist_compliant: true` set in frontmatter
 
 **Approval:** {pending / approved YYYY-MM-DD}
