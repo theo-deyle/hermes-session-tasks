@@ -135,6 +135,7 @@ function Pane({ ctx }) {
   const [pending, setPending] = useState([])
   // The one notice that shows: { kind: 'stale' | 'failed', seq }, or null.
   const [notice, setNotice] = useState(null)
+  const [loadFailed, setLoadFailed] = useState(false)
   const shown = server !== null && server.sid === (sid || null) ? server : null
   // The listener, the interval and the writes live longer than one render, so they read this ref.
   // revs holds the newest accepted rev of each session. queue chains the writes one after another.
@@ -172,8 +173,11 @@ function Pane({ ctx }) {
         if (state.sid !== asked || state.inFlight > 0) return
         if (body.rev < (state.revs[asked] ?? 0)) return
         take(asked, body)
+        setLoadFailed(false)
       })
-      .catch(() => {})
+      .catch(() => {
+        if (current.current.sid === asked) setLoadFailed(true)
+      })
   }
 
   function showNotice(kind) {
@@ -216,7 +220,10 @@ function Pane({ ctx }) {
       current.current.inFlight -= 1
       setPending(prev => prev.filter(item => item !== entry))
     }
-    if (outcome === 'failed') reload()
+    if (outcome === 'failed') {
+      showNotice('failed')
+      reload()
+    }
     if (onOutcome) onOutcome(outcome)
   }
 
@@ -264,7 +271,7 @@ function Pane({ ctx }) {
     className: 'flex h-full flex-col gap-2 p-2 text-xs',
     children: [
       jsx(Header, { counts: openCounts(items) }),
-      jsx(Notice, { text: noticeText({ meta, notice, loadFailed: false }) }),
+      jsx(Notice, { text: noticeText({ meta, notice, loadFailed }) }),
       jsx('div', {
         className: 'flex flex-col',
         children: items.map(item => jsx(ItemRow, { item, onCheck }, item.id))
