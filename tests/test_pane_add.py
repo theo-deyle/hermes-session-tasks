@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
+import re
 import shutil
 from pathlib import Path
+from typing import Any
 
 import pytest
-from pane_rig import Rig, checkbox, posts, the_input
+from pane_rig import Rig, button, checkbox, posts, the_input
 from session_tasks.model import AddItem
 from session_tasks.store import BoardStore
 
@@ -142,3 +144,128 @@ def test_enter_during_a_write_sends_nothing(rig: Rig, tmp_path: Path) -> None:
 
     assert len(posts(result)) == 1
     assert texts(rig.store) == ["Call John"]
+
+
+SUB = "Add a subtask"
+PLUS_ROW_1 = {"click": {"label": "Add subtask", "row": "1"}}
+PLUS_ROW_2 = {"click": {"label": "Add subtask", "row": "2"}}
+STALE_NOTICE = "Board changed, showing the latest"
+PLUGIN_SOURCE = (
+    Path(__file__).resolve().parent.parent / "plugin" / "desktop" / "plugin.js"
+).read_text(encoding="utf-8")
+
+
+def sub_line(row: str, text: str) -> dict[str, object]:
+    return {"type": {"input": {"placeholder": SUB, "row": row}, "text": text}}
+
+
+def seed_plan_trip(store: BoardStore, subtask: bool = False) -> None:
+    ops = [AddItem("Plan trip")]
+    if subtask:
+        ops.append(AddItem("Pack", parent_ref=0))
+    store.apply("s1", ops, actor="agent", base_rev=0)
+
+
+def sub_inputs(result: dict[str, Any]) -> list[dict[str, Any]]:
+    return [entry for entry in result["inputs"] if entry["placeholder"] == SUB]
+
+
+def test_plus_opens_a_subtask_line_and_enter_adds_under_the_parent(
+    rig: Rig, tmp_path: Path
+) -> None:
+    seed_plan_trip(rig.store)
+
+    result = rig.run(tmp_path, steps=[PLUS_ROW_1, sub_line("1", "Pack"), press(ENTER, SUB, "1")])
+
+    opened = rig.run(tmp_path, steps=[PLUS_ROW_1])
+    line = the_input(opened, placeholder=SUB, row="1")
+    assert line["autoFocus"] is True
+    sent = posts(result)
+    assert [call["body"]["ops"] for call in sent] == [
+        [{"op": "add", "text": "Pack", "parent_id": 1}]
+    ]
+    assert sent[0]["body"]["base_rev"] == 1
+    items = rig.store.get_board("s1").items
+    assert [(item.id, item.text, item.parent_id) for item in items] == [
+        (1, "Plan trip", None),
+        (2, "Pack", 1),
+    ]
+    assert the_input(result, placeholder=SUB, row="1")["value"] == ""
+
+
+def test_subtask_rows_have_no_plus(rig: Rig, tmp_path: Path) -> None:
+    seed_plan_trip(rig.store, subtask=True)
+
+    result = rig.run(tmp_path)
+
+    button(result, "Add subtask", row="1")
+    assert [b for b in result["buttons"] if b["label"] == "Add subtask" and b["row"] == "2"] == []
+
+
+def test_plus_expands_a_collapsed_parent(rig: Rig, tmp_path: Path) -> None:
+    seed_plan_trip(rig.store, subtask=True)
+    collapse = {"click": {"label": "Collapse subtasks", "row": "1"}}
+
+    result = rig.run(tmp_path, steps=[collapse, PLUS_ROW_1])
+
+    assert "Pack" in result["lines"]
+    the_input(result, placeholder=SUB)
+
+
+def test_subtask_line_escape_and_blur(rig: Rig, tmp_path: Path) -> None:
+    close = {"blur": {"placeholder": SUB}}
+    escaped = rig.run(tmp_path, steps=[PLUS_ROW_1, press("Escape", SUB)])
+    blurred = rig.run(tmp_path, steps=[PLUS_ROW_1, close])
+    typed = rig.run(tmp_path, steps=[PLUS_ROW_1, sub_line("1", "Pa"), close])
+
+    assert sub_inputs(escaped) == []
+    assert sub_inputs(blurred) == []
+    assert the_input(typed, placeholder=SUB)["value"] == "Pa"
+    assert posts(typed) == []
+
+
+def test_opening_another_line_keeps_typed_text(rig: Rig, tmp_path: Path) -> None:
+    rig.store.apply("s1", [AddItem("Plan trip"), AddItem("Call John")], actor="agent", base_rev=0)
+
+    typed = rig.run(tmp_path, steps=[PLUS_ROW_1, sub_line("1", "Pack"), PLUS_ROW_2])
+    empty = rig.run(tmp_path, steps=[PLUS_ROW_1, PLUS_ROW_2])
+
+    assert sorted(entry["row"] for entry in sub_inputs(typed)) == ["1", "2"]
+    assert the_input(typed, placeholder=SUB, row="1")["value"] == "Pack"
+    assert [entry["row"] for entry in sub_inputs(empty)] == ["2"]
+
+
+def test_stale_subtask_add_keeps_the_text(rig: Rig, tmp_path: Path) -> None:
+    seed_plan_trip(rig.store)
+    outside = {
+        "outside": {
+            "ops": [{"op": "set_text", "item_id": 1, "text": "Plan the trip"}],
+            "base_rev": 1,
+        }
+    }
+
+    result = rig.run(
+        tmp_path,
+        steps=[outside, PLUS_ROW_1, sub_line("1", "Pack"), press(ENTER, SUB, "1")],
+    )
+
+    sent = posts(result)
+    assert len(sent) == 1
+    assert sent[0]["body"]["base_rev"] == 1
+    assert the_input(result, placeholder=SUB, row="1")["value"] == "Pack"
+    assert "Plan the trip" in result["lines"]
+    assert STALE_NOTICE in result["lines"]
+    assert len(rig.store.get_board("s1").items) == 1
+
+
+def test_plus_reveals_on_hover_and_focus(rig: Rig, tmp_path: Path) -> None:
+    seed_plan_trip(rig.store)
+
+    result = rig.run(tmp_path)
+
+    classes = str(button(result, "Add subtask", row="1")["className"]).split()
+    for token in ("opacity-0", "group-hover:opacity-100", "group-focus-within:opacity-100"):
+        assert token in classes
+    assert "Add subtask" in result["tips"]
+    constants = re.findall(r"const [A-Z_]+_CLASS = '([^']*)'", PLUGIN_SOURCE)
+    assert "group" in [token for value in constants for token in value.split()]
