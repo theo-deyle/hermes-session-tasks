@@ -316,12 +316,21 @@ DESKTOP_SUFFIXES = (".ts", ".tsx", ".css")
 
 def class_tokens(source: str) -> list[str]:
     """Every class name in a `className` literal or a `*_CLASS` constant, in order, once each."""
-    raise NotImplementedError
+    found: dict[str, None] = {}
+    for match in CLASS_LITERAL_RE.finditer(source):
+        for token in "".join(g for g in match.groups() if g is not None).split():
+            found.setdefault(token)
+    return list(found)
 
 
 def unshipped_classes(tokens: list[str], desktop_src: Path) -> list[str]:
     """The tokens that no Desktop source file holds. Desktop compiles only the classes it uses."""
-    raise NotImplementedError
+    text = "\n".join(
+        path.read_text(encoding="utf-8")
+        for path in sorted(desktop_src.rglob("*"))
+        if path.is_file() and path.suffix in DESKTOP_SUFFIXES
+    )
+    return [token for token in tokens if token not in text]
 
 
 def test_class_tokens_reads_props_and_constants() -> None:
