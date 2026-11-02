@@ -24,7 +24,7 @@ Requirements for the first release. Each maps to a roadmap phase.
 - [x] **TOOL-02**: The agent can add, rename, check, uncheck and remove items in one call with a list of item-level operations. No replace-all write.
 - [ ] **TOOL-03**: The agent can list the sessions that have a board, with open and total counts and last update.
 - [ ] **TOOL-04**: The agent can read another session's board by session id.
-- [ ] **TOOL-05**: The agent can copy chosen items, or all open items, from another session's board into the current board.
+- [x] **TOOL-05**: The agent can copy chosen items, or all open items, from another session's board into the current board.
 - [x] **TOOL-06**: The tools take the current session from the `session_id` Hermes passes to the handler, never from the model's arguments.
 - [x] **TOOL-07**: Every write returns the new revision, a one-line change summary, and the board content the agent needs; a rejected stale write always returns the current board (full versus compact result is set in discuss-phase).
 - [x] **TOOL-08**: Tool names share one prefix, avoid the word "todo", and never read, write, wrap or replace `todo_list`.
@@ -54,7 +54,7 @@ Requirements for the first release. Each maps to a roadmap phase.
 - [x] **PANE-07**: Theo can delete an item; the pane confirms when subtasks go with it.
 - [x] **PANE-08**: The pane updates live when the agent writes, through the broadcast event, and polls as a fallback.
 - [ ] **PANE-09**: A session picker lists sessions that have a board with title, open count and last update, and shows another session's board read-only.
-- [ ] **PANE-10**: Theo can copy one item or all open items from another session's board into the focused board.
+- [x] **PANE-10**: Theo can copy one item or all open items from another session's board into the focused board.
 - [x] **PANE-11**: Theo can copy the board to the clipboard as a plain markdown checklist.
 - [x] **PANE-12**: The pane shows an empty state that says the agent adds items here.
 - [x] **PANE-13**: The pane is one plain ESM file that imports only `@hermes/plugin-sdk`, `react` and `react/jsx-runtime`, uses SDK components and `var(--ui-*)` theme vars, and has no hardcoded colours.
@@ -119,7 +119,7 @@ Each v1 requirement maps to exactly one phase.
 | TOOL-02 | Phase 2 | Complete |
 | TOOL-03 | Phase 6 | Pending |
 | TOOL-04 | Phase 6 | Pending |
-| TOOL-05 | Phase 6 | Pending |
+| TOOL-05 | Phase 6 | Complete |
 | TOOL-06 | Phase 2 | Complete |
 | TOOL-07 | Phase 2 | Complete |
 | TOOL-08 | Phase 2 | Complete |
@@ -140,7 +140,7 @@ Each v1 requirement maps to exactly one phase.
 | PANE-07 | Phase 4 | Complete |
 | PANE-08 | Phase 4 | Complete |
 | PANE-09 | Phase 6 | Pending |
-| PANE-10 | Phase 6 | Pending |
+| PANE-10 | Phase 6 | Complete |
 | PANE-11 | Phase 4 | Complete |
 | PANE-12 | Phase 4 | Complete |
 | PANE-13 | Phase 4 | Complete |
