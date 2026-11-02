@@ -38,6 +38,15 @@ def count_rows(connect: ConnFactory, table: str) -> int:
         conn.close()
 
 
+def seen(connect: ConnFactory, root: str) -> int:
+    conn = connect()
+    try:
+        row = conn.execute("SELECT agent_seen_rev FROM boards WHERE root_id = ?", (root,))
+        return int(row.fetchone()[0])
+    finally:
+        conn.close()
+
+
 def test_read_empty_board_returns_rev_zero_and_the_empty_note(
     store: BoardStore, resolver_for: ResolverFor, connect: ConnFactory
 ) -> None:
@@ -73,16 +82,18 @@ def test_read_blank_session_returns_the_no_session_error(
     assert factory.opens == 0
 
 
-def test_read_ignores_a_session_id_in_the_arguments(
-    store: BoardStore, resolver_for: ResolverFor
+def test_own_read_still_comes_from_the_keyword(
+    store: BoardStore, resolver_for: ResolverFor, connect: ConnFactory
 ) -> None:
     tools, _ = tools_for(store, resolver_for)
     store.apply("s1", [AddItem("mine")], actor="agent", base_rev=0)
     store.apply("s2", [AddItem("theirs")], actor="agent", base_rev=0)
 
-    result = read(tools, "s1", {"session_id": "s2"})
+    named = read(tools, "s1", {"session_id": "s1"})
 
-    assert result["board"] == "- [ ] #1 mine\n"
+    assert named["board"] == "- [ ] #1 mine\n"
+    assert seen(connect, "s1") == 1
+    assert read(tools, "s1", {})["board"] == "- [ ] #1 mine\n"
 
 
 def test_delegate_session_reads_the_delegator_board(

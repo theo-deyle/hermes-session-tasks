@@ -13,7 +13,7 @@ from session_tasks import copy_args
 from session_tasks.board_tools import BoardTools
 from session_tasks.db import ConnFactory
 from session_tasks.model import NO_SOURCE_BOARD, SAME_BOARD, AddItem, SetChecked
-from session_tasks.results import DELEGATE_COPY, NO_SESSION
+from session_tasks.results import DELEGATE_COPY, NO_SESSION, OTHER_BOARD_NOTE
 from session_tasks.store import BoardStore
 from session_tasks.titles import TitleLookup
 
@@ -297,3 +297,37 @@ def test_agent_copy_advances_seen_when_up_to_date(
 
     assert result["rev"] == 2
     assert seen(connect, "s1") == 2
+
+
+def test_board_read_names_another_board_and_marks_nothing(
+    store: BoardStore, resolver_for: ResolverFor, connect: ConnFactory
+) -> None:
+    specs = {"s2": SessionSpec(title="Syncro ticket 4910")}
+    tools, calls, _ = cross_tools(store, resolver_for, specs)
+    store.apply("s1", [AddItem("Mine")], actor="agent", base_rev=0)
+    store.apply("s2", [AddItem("Reply to the customer")], actor="agent", base_rev=0)
+    before = (
+        seen(connect, "s1"),
+        seen(connect, "s2"),
+        count_rows(connect, "boards"),
+        count_rows(connect, "changes"),
+    )
+
+    result = call(tools, "board_read", "s1", {"session_id": "s2"})
+
+    assert result == {
+        "ok": True,
+        "rev": 1,
+        "session_id": "s2",
+        "title": "Syncro ticket 4910",
+        "note": OTHER_BOARD_NOTE,
+        "board": "- [ ] #1 Reply to the customer\n",
+    }
+    after = (
+        seen(connect, "s1"),
+        seen(connect, "s2"),
+        count_rows(connect, "boards"),
+        count_rows(connect, "changes"),
+    )
+    assert after == before
+    assert calls == []

@@ -14,6 +14,7 @@ from pathlib import Path
 import pytest
 from conftest import HERMES_AGENT_REPO
 from session_tasks import delta, tool_text
+from session_tasks.model import NO_SOURCE_BOARD
 
 pytestmark = pytest.mark.hermes
 
@@ -45,7 +46,8 @@ def test_hermes_dispatches_board_read_with_the_handler_session(hermes_home: Path
 
     expected = {"ok": True, "rev": 1, "board": BOARD}
     assert out["read"] == expected
-    assert out["spoofed"] == expected
+    # D-38: the argument names a board to read. s2 has no board in the snippet.
+    assert out["spoofed"] == {"error": NO_SOURCE_BOARD}
     assert out["no_session"] == {"error": NO_SESSION}
     assert "board_read" in out["tools"]  # pyright: ignore[reportOperatorIssue]
 
