@@ -443,6 +443,7 @@ function Pane({ ctx }) {
     queue: Promise.resolve(),
     seq: 0,
     entrySeq: 0,
+    visit: 0,
     addBusy: false,
     subBusy: {},
     edit: null,
@@ -556,13 +557,18 @@ function Pane({ ctx }) {
     }
   }, [])
 
+  // A focus change starts a new visit. A write that settles in a later visit changes no line state.
   useEffect(() => {
+    current.current.visit += 1
+    current.current.addBusy = false
+    current.current.subBusy = {}
     setCollapsed({})
     setAddText('')
     setAddBusy(false)
     setSubLines({})
     changeEdit(null)
     setConfirm(null)
+    setLoadFailed(false)
     if (!sid) {
       setServer(null)
       return undefined
@@ -592,13 +598,14 @@ function Pane({ ctx }) {
     const state = current.current
     const text = addText.trim()
     if (state.addBusy || text === '') return
-    const asked = state.sid
+    const visit = state.visit
     state.addBusy = true
     setAddBusy(true)
     sendOp({ op: 'add', text }, outcome => {
+      if (state.visit !== visit) return
       state.addBusy = false
       setAddBusy(false)
-      if (outcome !== 'ok' || state.sid !== asked) return
+      if (outcome !== 'ok') return
       setAddText('')
       const input = addRef.current
       if (input && typeof input.scrollIntoView === 'function') input.scrollIntoView({ block: 'nearest' })
@@ -634,13 +641,13 @@ function Pane({ ctx }) {
     const state = current.current
     const text = line.text.trim()
     if (state.subBusy[parentId] || text === '') return
-    const asked = state.sid
+    const visit = state.visit
     state.subBusy[parentId] = true
     patchSubLine(parentId, { busy: true })
     sendOp({ op: 'add', text, parent_id: parentId }, outcome => {
+      if (state.visit !== visit) return
       delete state.subBusy[parentId]
-      const cleared = outcome === 'ok' && state.sid === asked
-      patchSubLine(parentId, cleared ? { text: '', busy: false } : { busy: false })
+      patchSubLine(parentId, outcome === 'ok' ? { text: '', busy: false } : { busy: false })
     })
   }
 
