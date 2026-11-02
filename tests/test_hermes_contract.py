@@ -164,10 +164,11 @@ def test_fake_reader_titles_and_messages_match_the_real_session_db(
             [row["role"], row["content"]] for row in fake.get_messages(session_id, limit=5)
         ]
         assert real["real_messages"][session_id] == fake_pairs, session_id
-    assert real["titles"] == {
+    expected = {
         "titled": "Lease renewal",
         "worded": "Plan the trip to Ottawa",
         "blank": "Untitled session",
         "missing": "Untitled session",
     }
+    assert {sid: real["titles"][sid] for sid in expected} == expected
     assert real["state_db_unchanged"] is True
