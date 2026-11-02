@@ -210,7 +210,7 @@ Plans:
   2. On request, the agent reads another session's board by session id. The agent copies chosen items, or all open items, into the current board.
   3. A session picker in the pane lists boards with title, open count and last update. A picked board shows read-only.
   4. Theo copies one item, or all open items, from the shown board into the focused board.
-**Plans**: 4/12 plans executed in 5 waves
+**Plans**: 7/12 plans executed in 5 waves
 Plans:
 **Wave 1**
 - [x] 06-01-PLAN.md - Copy in the board store: one transaction, the copy rules, the journal of where each copy came from (wave 1)
@@ -219,9 +219,9 @@ Plans:
 - [x] 06-04-PLAN.md - Chat picker in the pane with titles, and the first read-only view of another board (wave 1)
 
 **Wave 2** *(blocked on Wave 1 completion)*
-- [ ] 06-05-PLAN.md - board_copy handler: copy into the caller's board, guards and the copy sentence (wave 2)
-- [ ] 06-06-PLAN.md - Read-only view: Back, focus change, live update by board, empty and failure states, no writes (wave 2)
-- [ ] 06-07-PLAN.md - Tools for the live check: seed a source board in a test home, read boards, list tool calls (wave 2)
+- [x] 06-05-PLAN.md - board_copy handler: copy into the caller's board, guards and the copy sentence (wave 2)
+- [x] 06-06-PLAN.md - Read-only view: Back, focus change, live update by board, empty and failure states, no writes (wave 2)
+- [x] 06-07-PLAN.md - Tools for the live check: seed a source board in a test home, read boards, list tool calls (wave 2)
 
 **Wave 3** *(blocked on Wave 2 completion)*
 - [ ] 06-08-PLAN.md - board_sessions and board_read of another session's board, with no seen change (wave 3)
@@ -260,5 +260,5 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 | 3. REST router and client install spike | 12/12 | Complete    | 2026-11-02 |
 | 4. Pane | 9/9 | Complete    | 2026-11-01 |
 | 5. Agent sees Theo's edits | 7/7 | Complete    | 2026-11-02 |
-| 6. Cross-session boards | 4/12 | In Progress | - |
+| 6. Cross-session boards | 7/12 | In Progress | - |
 | 7. Deploy and hardening | 0/TBD | Not started | - |
