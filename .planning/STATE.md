@@ -3,16 +3,16 @@ gsd_state_version: "1.0"
 current_phase: 3
 current_phase_name: REST router and client install spike
 status: executing
-stopped_at: Completed 03-11-PLAN.md
-last_updated: "2026-11-02T18:32:18.619Z"
+stopped_at: Completed 03-12-PLAN.md
+last_updated: "2026-11-02T18:43:50.000Z"
 last_activity: 2026-11-02
 last_activity_desc: Phase 05 complete, transitioned to Phase 3
-state_head: dd16d72822d71598960949aeca8000fae9e434dd
+state_head: c6e70f1ef9c408745125a7f049a02839f33e4cad
 progress:
   total_phases: 7
   completed_phases: 4
   total_plans: 41
-  completed_plans: 40
+  completed_plans: 41
   percent: 57
 ---
 
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-10-30)
 Phase: 3 — REST router and client install spike
 Plan: 11
 Status: Ready to execute
-Last activity: 2026-11-02 - Completed 03-10-PLAN.md, next is 03-11
+Last activity: 2026-11-02 - Completed 03-12-PLAN.md, phase 3 complete
 
 Progress: [██████░░░░] 57%
 
@@ -97,6 +97,7 @@ Progress: [██████░░░░] 57%
 | Phase 05 P07 | 23 min | 3 tasks | 2 files |
 | Phase 03 P10 | 60 min | 3 tasks | 0 files |
 | Phase 03 P11 | 20m | 3 tasks | 1 files |
+| Phase 03 P12 | 15 min | 2 tasks | 0 files |
 
 ## Accumulated Context
 
@@ -174,6 +175,7 @@ Recent decisions affecting current work:
 - [Phase 05]: Token test judges input tokens per turn (difference between runs); session totals stay in the report. Measured: plugin 516 tokens per turn, notes 291 at turn 30 for 790 characters.
 - [Phase 03]: 03-10: the Windows live test installs the frozen Phase 3 test pane with -RemotePath, because plugin.js at HEAD holds the Phase 4 board pane
 - [Phase 03]: The README names the live SSH alias of each machine (devbox on the Mac, devpc-ts on the Windows PC) in its commands
+- [Phase 03]: Plan 03-12: the cleanup script lives in the session scratchpad, not the repo; items and changes cascade from the boards rows with foreign keys on
 
 ### Pending Todos
 
@@ -205,6 +207,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-11-02T18:32:18.126Z
-Stopped at: Completed 03-11-PLAN.md
+Last session: 2026-11-02T18:43:49.573Z
+Stopped at: Completed 03-12-PLAN.md
 Resume file: None
