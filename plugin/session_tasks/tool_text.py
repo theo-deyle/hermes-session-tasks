@@ -131,9 +131,3 @@ SKILL_DESCRIPTION = (
     "Rules for Theo's task board. "
     "When to add items, your own plan on the board, and when to ask Theo first."
 )
-
-NUDGE_LINE = (
-    "For a job of 3 or more steps, your steps go on the board: "
-    "add them with board_edit before you start, and check each one off when it is done. "
-    "If board_edit is not in your tool list, find it with tool_search."
-)
