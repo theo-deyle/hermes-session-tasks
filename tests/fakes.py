@@ -1,7 +1,7 @@
 """Test doubles for the Hermes session reader.
 
-`FakeSessionReader` mirrors the four public `SessionDB` lineage methods that the plugin
-uses. It imports no `session_tasks` module: the match with the plugin Protocol is structural.
+`FakeSessionReader` mirrors the six public `SessionDB` methods that the plugin
+uses (four for lineage, two for titles). It imports no `session_tasks` module: the match with the plugin Protocol is structural.
 The `hermes` contract test pins this fake to a real `SessionDB`.
 """
 
@@ -20,6 +20,8 @@ class SessionSpec:
     end_reason: str | None = None
     model_config: dict[str, Any] | None = None
     source: str = "desktop"
+    title: str | None = None
+    messages: tuple[tuple[str, str], ...] = ()
 
     def marker(self, key: str) -> str:
         value = (self.model_config or {}).get(key)
@@ -99,6 +101,19 @@ class FakeSessionReader:
             lineage.append(child)
             tip = child
         return lineage if session_id in lineage else [session_id]
+
+    def get_session_title(self, session_id: str) -> str | None:
+        self._maybe_raise("get_session_title")
+        spec = self._specs.get(session_id)
+        return spec.title if spec is not None else None
+
+    def get_messages(self, session_id: str, *, limit: int | None = None) -> list[dict[str, Any]]:
+        self._maybe_raise("get_messages")
+        spec = self._specs.get(session_id)
+        if spec is None:
+            return []
+        rows = [{"role": role, "content": content} for role, content in spec.messages]
+        return rows if limit is None else rows[:limit]
 
     def close(self) -> None:
         self.closed = True

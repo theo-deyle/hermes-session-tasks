@@ -20,13 +20,19 @@ log = logging.getLogger(__name__)
 
 
 class SessionReader(Protocol):
-    """The four public `SessionDB` methods the plugin uses."""
+    """The six public `SessionDB` methods the plugin uses."""
 
     def get_session(self, session_id: str) -> dict[str, Any] | None: ...
 
     def get_compression_lineage(self, session_id: str) -> list[str]: ...
 
     def is_explicit_fork_child(self, session_id: str) -> bool: ...
+
+    def get_session_title(self, session_id: str) -> str | None: ...
+
+    def get_messages(
+        self, session_id: str, *, limit: int | None = None
+    ) -> list[dict[str, Any]]: ...
 
     def close(self) -> None: ...
 
