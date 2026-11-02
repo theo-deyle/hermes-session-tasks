@@ -43,3 +43,5 @@ def test_hermes_delete_paths_reach_the_plugin(hermes_home: Path) -> None:
 
     assert sorted(out["boards_left"]) == ["arch", "arch-root", "keep"]
     assert [event["reason"] for event in out["events"]] == ["delete", "delete", "delete", "archive"]
+    chain = out["events"][2]
+    assert chain["deleted_ids"] == ["chain", "chain-root"]
