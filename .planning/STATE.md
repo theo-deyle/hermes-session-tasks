@@ -3,16 +3,16 @@ gsd_state_version: "1.0"
 current_phase: 05
 current_phase_name: Agent sees Theo's edits
 status: executing
-stopped_at: Completed 05-02-PLAN.md
-last_updated: "2026-11-02T13:44:31.648Z"
+stopped_at: Completed 05-03-PLAN.md
+last_updated: "2026-11-02T13:56:15.373Z"
 last_activity: 2026-11-02
 last_activity_desc: Phase 05 execution started
-state_head: e4da092b5ac95465bb1b0d79085d49722c8853f7
+state_head: a06c76bcff1cd96670c6f60e4af13d200d265e2e
 progress:
   total_phases: 7
   completed_phases: 3
   total_plans: 41
-  completed_plans: 33
+  completed_plans: 34
   percent: 43
 ---
 
@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-10-30)
 ## Current Position
 
 Phase: 05 (Agent sees Theo's edits) — EXECUTING
-Plan: 3 of 7
+Plan: 4 of 7
 Status: Ready to execute
 Last activity: 2026-11-02 — Phase 05 execution started
 
@@ -89,6 +89,7 @@ Progress: [████░░░░░░] 43%
 | Phase 04 P07 | 45 min | 3 tasks | 2 files |
 | Phase 05 P01 | 40 min | 3 tasks | 12 files |
 | Phase 05 P02 | 55 min | 3 tasks | 6 files |
+| Phase 05 P03 | 25 min | 3 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -158,6 +159,7 @@ Recent decisions affecting current work:
 - [Phase 05]: 05-01: an uncovered journal gap gives the pointer line even with no visible Theo row
 - [Phase 05]: 05-02: three arms run in twin test homes built from one allowlisted config, so quiet minus bare is the plugin alone; no secret file is used — The model provider reads the Claude Code store outside HERMES_HOME. The MCP servers, memory prefetch, skills and SOUL.md of the real home would otherwise add to the difference.
 - [Phase 05]: 05-02: the optional reminder split is built now in delta_live.py — D-36 names the one reminder line as its fallback and the own-plan gate in 05-05 may need it. Plan 05-07 then needs no tool change in a live plan.
+- [Phase 05]: Plan 05-03: board_read and a stale or not-found reply mark the board seen (they carry the whole board); an applied board_edit marks seen only through the plan 05-01 conditional advance; a delegate never marks seen.
 
 ### Pending Todos
 
@@ -189,6 +191,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-11-02T13:44:30.764Z
-Stopped at: Completed 05-02-PLAN.md
+Last session: 2026-11-02T13:56:15.014Z
+Stopped at: Completed 05-03-PLAN.md
 Resume file: None
