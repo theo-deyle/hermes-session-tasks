@@ -365,15 +365,35 @@ function Notice({ text, copied }) {
   return jsx('div', { className: NOTICE_CLASS, style: NOTICE_STYLE, title, children: text })
 }
 
-function Header({ items }) {
-  return jsx('div', {
-    className: HEADER_ROW_CLASS,
-    children: jsx(CopyButton, {
-      appearance: 'icon',
-      label: 'Copy as markdown',
-      text: () => boardMarkdown(items),
-      disabled: items.length === 0
+// Copy all open to the focused board. The label truncates; the full label is in the Tip and the aria-label.
+function CopyAllButton({ label, disabled, onClick }) {
+  return jsx(Tip, {
+    label,
+    children: jsx(Button, {
+      variant: 'outline',
+      size: 'sm',
+      className: 'min-w-0',
+      'aria-label': label,
+      disabled,
+      onClick,
+      children: jsx('span', { style: TRUNCATE_STYLE, children: label })
     })
+  })
+}
+
+// `copyAll` is { label, disabled, onClick } in the read-only view and null on the focused board.
+function Header({ items, copyAll }) {
+  return jsxs('div', {
+    className: HEADER_ROW_CLASS,
+    children: [
+      copyAll === null ? null : jsx(CopyAllButton, copyAll),
+      jsx(CopyButton, {
+        appearance: 'icon',
+        label: 'Copy as markdown',
+        text: () => boardMarkdown(items),
+        disabled: items.length === 0
+      })
+    ]
   })
 }
 
@@ -1195,6 +1215,7 @@ function Pane({ ctx }) {
   }
   const focusedRoot = shown === null ? focused : shown.root_id
   const focusedLabel = boardLabel(focusedRoot, titles)
+  const copyAllLabel = `${COPY_ALL_PREFIX}${focusedLabel}`
   const readOnlyActions = {
     readOnly: true,
     edit: null,
@@ -1233,7 +1254,16 @@ function Pane({ ctx }) {
       viewing
         ? jsx(ReadOnlyBanner, { focusedLabel, onBack: back })
         : null,
-      jsx(Header, { items: shownItems }),
+      jsx(Header, {
+        items: shownItems,
+        copyAll: viewing
+          ? {
+              label: copyAllLabel,
+              disabled: copyBusy || openCounts(shownItems).open === 0,
+              onClick: () => copyItems(null, focusedLabel)
+            }
+          : null
+      }),
       noticeLine,
       jsx(ScrollArea, {
         className: LIST_CLASS,

@@ -257,7 +257,14 @@ def test_read_only_view_sends_no_write(rig: Rig, tmp_path: Path) -> None:
     )
 
     # Row Copy adds to the focused board only; the picked board gets no write (plan 06-11).
-    allowed = ("Session: ", "Back to ", "Collapse subtasks", "Expand subtasks", "Copy item to ")
+    allowed = (
+        "Session: ",
+        "Back to ",
+        "Collapse subtasks",
+        "Expand subtasks",
+        "Copy item to ",
+        "Copy all open to ",
+    )
     enabled = [b["label"] for b in result["buttons"] if not b["disabled"]]
     assert enabled
     assert all(label.startswith(allowed) for label in enabled)
