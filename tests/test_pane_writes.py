@@ -242,3 +242,30 @@ def test_notice_line_truncates(rig: Rig, tmp_path: Path) -> None:
         "textOverflow": "ellipsis",
     }
     assert {"text-xs", "text-(--ui-text-secondary)"} <= set(nodes[0]["className"].split())
+
+
+# Review 04-REVIEW: the write queue, the busy flags and the focus rules.
+
+ADD = "Add an item"
+SUBTASK = "Add a subtask"
+
+
+def add_text(text: str) -> dict[str, Any]:
+    return {"type": {"input": {"placeholder": ADD}, "text": text}}
+
+
+ADD_ENTER = {"key": {"input": {"placeholder": ADD}, "key": "Enter"}}
+
+
+def test_one_thrown_error_does_not_stop_later_writes(rig: Rig, tmp_path: Path) -> None:
+    seed_call_john(rig.store)
+
+    result = rig.run(
+        tmp_path,
+        timeoutThrows=True,
+        restSequences={EDIT: ["__error__"]},
+        steps=[add_text("First"), ADD_ENTER, add_text("Second"), ADD_ENTER],
+    )
+
+    assert [call["body"]["ops"][0]["text"] for call in posts(result)] == ["First", "Second"]
+    assert [item.text for item in rig.store.get_board("s1").items] == ["Call John", "Second"]
