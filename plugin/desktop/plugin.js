@@ -88,6 +88,7 @@ const MENU_STYLE = { width: '304px' }
 // A one-line text that ends with an ellipsis. A count never wraps and never shrinks.
 const TRUNCATE_STYLE = { overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }
 const NOWRAP_STYLE = { whiteSpace: 'nowrap' }
+const COPIED_NOTICE_STYLE = { ...NOTICE_STYLE, display: 'flex' }
 const ROW_COPY_CLASS = `${REVEAL_CLASS} shrink-0`
 const PICKER_ROW_CLASS = 'px-2 pt-2'
 const PICKER_BUTTON_CLASS = 'min-h-8 w-full justify-between'
@@ -359,10 +360,20 @@ function copiedNotice({ meta, notice }) {
   return copyNoticeText(notice.data)
 }
 
+// The copied notice is one flex line of three pieces: head and tail never shrink, only the title ends with an ellipsis.
 function Notice({ text, copied }) {
   if (!text) return null
-  const title = copied ? copied.full : undefined
-  return jsx('div', { className: NOTICE_CLASS, style: NOTICE_STYLE, title, children: text })
+  if (!copied) return jsx('div', { className: NOTICE_CLASS, style: NOTICE_STYLE, children: text })
+  return jsxs('div', {
+    className: NOTICE_CLASS,
+    style: COPIED_NOTICE_STYLE,
+    title: copied.full,
+    children: [
+      jsx('span', { className: 'shrink-0', children: copied.head }),
+      jsx('span', { style: TRUNCATE_STYLE, children: copied.title }),
+      jsx('span', { className: 'shrink-0', children: copied.tail })
+    ]
+  })
 }
 
 // Copy all open to the focused board. The label truncates; the full label is in the Tip and the aria-label.
