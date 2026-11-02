@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import re
 import shutil
 import subprocess
@@ -11,7 +12,9 @@ from typing import Any
 import pytest
 from pane_rig import (
     EVENT_TYPE,
+    HARNESS,
     PLUGIN_JS,
+    ROOT,
     Rig,
     board_gets,
     checkbox,
@@ -145,6 +148,74 @@ def test_item_text_stays_plain_text(rig: Rig, tmp_path: Path) -> None:
     result = rig.run(tmp_path)
 
     assert "<b>bold</b>" in result["lines"]
+
+
+def test_plugin_name_and_registration(rig: Rig, tmp_path: Path) -> None:
+    result = rig.run(tmp_path)
+
+    assert result["name"] == "Session tasks"
+    assert result["contribution"] == {
+        "id": "pane",
+        "area": "panes",
+        "title": "Session tasks",
+        "data": {
+            "placement": "right",
+            "dock": {"pane": "workspace", "pos": "right"},
+            "width": "320px",
+        },
+    }
+
+
+HOOK_PLUGIN = """import { useState } from 'react'
+import { jsx } from 'react/jsx-runtime'
+
+function Child() {
+  %(child)s
+  return jsx('div', { children: 'child' })
+}
+
+function Top() {
+  %(top)s
+  return jsx(Child, {})
+}
+
+export default {
+  id: 'hook-probe',
+  name: 'Hook probe',
+  register(ctx) {
+    ctx.register({ id: 'pane', area: 'panes', title: 'Probe', data: {}, render: () => jsx(Top, {}) })
+  }
+}
+"""
+
+
+def run_probe(tmp_path: Path, child: str, top: str) -> subprocess.CompletedProcess[str]:
+    """Run the harness on a tiny plugin whose hooks sit in the child or in the top component."""
+    plugin = tmp_path / "probe.js"
+    plugin.write_text(HOOK_PLUGIN % {"child": child, "top": top}, encoding="utf-8")
+    config = tmp_path / "probe-config.json"
+    config.write_text(json.dumps({"focused": None, "steps": []}), encoding="utf-8")
+    return subprocess.run(
+        ["node", "--experimental-vm-modules", str(HARNESS), str(plugin), str(config)],
+        cwd=ROOT,
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=60,
+    )
+
+
+def test_hooks_outside_the_top_level_component_fail_the_harness(tmp_path: Path) -> None:
+    completed = run_probe(tmp_path, child="useState(0)", top="")
+
+    assert completed.returncode != 0
+    assert "hooks run only in the top-level pane component" in completed.stderr
+
+
+def test_hooks_in_the_top_level_component_pass(tmp_path: Path) -> None:
+    completed = run_probe(tmp_path, child="", top="useState(0)")
+
+    assert completed.returncode == 0, completed.stderr
 
 
 # The Desktop loader's own import regex: apps/desktop/src/contrib/runtime-loader.ts:72.
