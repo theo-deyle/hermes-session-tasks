@@ -534,11 +534,15 @@ function Pane({ ctx }) {
       current.current.inFlight -= 1
       setPending(prev => prev.filter(item => item !== entry))
     }
-    if (outcome === 'failed') {
-      showNotice('failed')
-      reload()
+    // onOutcome runs even when the notice throws, so a busy flag never stays set.
+    try {
+      if (outcome === 'failed') {
+        reload()
+        showNotice('failed')
+      }
+    } finally {
+      if (onOutcome) onOutcome(outcome)
     }
-    if (onOutcome) onOutcome(outcome)
   }
 
   useEffect(() => {
@@ -577,7 +581,10 @@ function Pane({ ctx }) {
     current.current.entrySeq += 1
     const entry = { seq: current.current.entrySeq, sid: asked, op }
     setPending(prev => [...prev, entry])
-    current.current.queue = current.current.queue.then(() => runWrite(asked, entry, onOutcome))
+    // A throw ends this write only: the catch keeps the queue alive for the next one.
+    current.current.queue = current.current.queue
+      .then(() => runWrite(asked, entry, onOutcome))
+      .catch(() => undefined)
   }
 
   // Enter in the add line. The ref guards a second Enter that arrives before the next render.
