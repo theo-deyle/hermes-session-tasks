@@ -110,13 +110,26 @@ function useEffect(effect, deps) {
 function Button() {}
 function Checkbox() {}
 function Input() {}
+function ConfirmDialog() {}
+function CopyButton() {}
+function EmptyState() {}
+function ScrollArea() {}
+function Tip() {}
+function IconStub() {}
+const icons = { Trash2: IconStub, Plus: IconStub, ChevronRight: IconStub, ChevronDown: IconStub }
 const focusedAtom = { get: () => config.focused ?? null }
 const sdkValues = {
   Button,
   Checkbox,
+  ConfirmDialog,
+  CopyButton,
+  EmptyState,
   Input,
+  ScrollArea,
+  Tip,
   cn: (...values) => values.filter(Boolean).join(' '),
   host: { state: { focusedStoredSessionId: focusedAtom } },
+  icons,
   useValue: atom => atom.get()
 }
 const Fragment = Symbol.for('react.fragment')
@@ -206,7 +219,8 @@ if (!contribution || typeof contribution.render !== 'function') {
 }
 
 // ---- render walk ----
-// `out` holds the lists one render fills. `here` is {row} and grows with each host element.
+// `out` holds the lists one render fills. `here` is {row, scroll, guard} and grows with each host element.
+// A stub type is never called as a component: each stub has its own case before the function case.
 function walk(node, out, here) {
   if (node === null || node === undefined || typeof node === 'boolean') return
   if (Array.isArray(node)) {
@@ -216,7 +230,13 @@ function walk(node, out, here) {
   if (typeof node !== 'object') return
   const { type, props } = node
   if (type === Button) {
-    out.buttons.push({ label: textOf(props.children), onClick: props.onClick })
+    out.buttons.push({
+      label: props['aria-label'] ?? textOf(props.children),
+      row: here.row,
+      disabled: props.disabled === true,
+      className: props.className ?? null,
+      onClick: props.onClick
+    })
     return
   }
   if (type === Checkbox) {
@@ -225,6 +245,7 @@ function walk(node, out, here) {
       label: props['aria-label'],
       checked: props.checked === true,
       disabled: props.disabled === true,
+      guarded: here.guard,
       onCheckedChange: props.onCheckedChange
     })
     return
@@ -246,6 +267,46 @@ function walk(node, out, here) {
     })
     return
   }
+  if (type === ScrollArea) {
+    walk(props.children, out, { ...here, scroll: true })
+    return
+  }
+  if (type === Tip) {
+    out.tips.push(props.label)
+    walk(props.children, out, here)
+    return
+  }
+  if (type === ConfirmDialog) {
+    out.confirm = {
+      open: props.open === true,
+      title: props.title ?? null,
+      description: props.description ?? null,
+      confirmLabel: props.confirmLabel ?? null,
+      cancelLabel: props.cancelLabel ?? null,
+      destructive: props.destructive === true,
+      onConfirm: props.onConfirm,
+      onClose: props.onClose
+    }
+    return
+  }
+  if (type === CopyButton) {
+    out.copy = {
+      text: typeof props.text === 'function' ? props.text() : (props.text ?? null),
+      disabled: props.disabled === true,
+      label: props.label ?? null,
+      appearance: props.appearance ?? null
+    }
+    return
+  }
+  if (type === EmptyState) {
+    for (const text of [props.title, props.description]) {
+      if (typeof text !== 'string') continue
+      out.lines.push(text)
+      out.nodes.push({ text, className: null, style: null, row: here.row, scroll: here.scroll })
+    }
+    return
+  }
+  if (Object.values(icons).includes(type)) return
   if (typeof type === 'function') {
     componentDepth += 1
     try {
@@ -255,12 +316,34 @@ function walk(node, out, here) {
     }
     return
   }
+  const isHost = typeof type === 'string'
   const itemId = props['data-item-id']
-  const next = typeof type === 'string' && itemId !== undefined ? { ...here, row: String(itemId) } : here
+  let next = isHost && itemId !== undefined ? { ...here, row: String(itemId) } : here
+  if (isHost && typeof props.onMouseDown === 'function') {
+    // Pane mouse-down handlers must only prevent the default, so calling one here has no other effect.
+    let prevented = false
+    props.onMouseDown({
+      preventDefault: () => {
+        prevented = true
+      }
+    })
+    next = { ...next, guard: prevented }
+  }
   const children = props.children
   const list = Array.isArray(children) ? children : [children]
   const text = list.filter(child => typeof child === 'string' || typeof child === 'number')
-  if (typeof type === 'string' && text.length > 0) out.lines.push(text.join(''))
+  if (isHost && text.length > 0) {
+    const joined = text.join('')
+    out.lines.push(joined)
+    out.nodes.push({
+      text: joined,
+      className: props.className ?? null,
+      style: props.style ?? null,
+      row: next.row,
+      scroll: next.scroll
+    })
+    if (typeof props.onClick === 'function') out.clickables.push({ text: joined, onClick: props.onClick })
+  }
   walk(list, out, next)
 }
 
@@ -273,12 +356,27 @@ let lines = []
 let buttons = []
 let checkboxes = []
 let inputs = []
+let nodes = []
+let tips = []
+let confirmRecord = null
+let copyRecord = null
+let clickables = []
 
 function renderOnce() {
   slotIndex = 0
   queuedEffects = []
-  const out = { lines: [], buttons: [], boxes: [], inputs: [] }
-  walk(contribution.render(), out, { row: null })
+  const out = {
+    lines: [],
+    buttons: [],
+    boxes: [],
+    inputs: [],
+    nodes: [],
+    tips: [],
+    clickables: [],
+    confirm: null,
+    copy: null
+  }
+  walk(contribution.render(), out, { row: null, scroll: false, guard: false })
   const effects = queuedEffects
   queuedEffects = []
   for (const run of effects) run()
@@ -287,6 +385,11 @@ function renderOnce() {
   buttons = out.buttons
   checkboxes = out.boxes
   inputs = out.inputs
+  nodes = out.nodes
+  tips = out.tips
+  clickables = out.clickables
+  confirmRecord = out.confirm
+  copyRecord = out.copy
   return changed
 }
 
@@ -319,12 +422,45 @@ function findInput(selector) {
   return matches[0]
 }
 
+// A click step is a label, or {label, row}. It must match exactly one enabled Button.
+function findButton(selector) {
+  const wanted = typeof selector === 'string' ? { label: selector } : selector
+  const matches = buttons.filter(
+    entry => entry.label === wanted.label && (wanted.row === undefined || entry.row === wanted.row)
+  )
+  const where = wanted.row === undefined ? '' : ` in row ${wanted.row}`
+  if (matches.length === 0) throw new Error(`no button labelled ${JSON.stringify(wanted.label)}${where}`)
+  if (matches.length > 1) {
+    throw new Error(`${matches.length} buttons labelled ${JSON.stringify(wanted.label)}${where}`)
+  }
+  if (matches[0].disabled) throw new Error(`button ${JSON.stringify(wanted.label)} is disabled`)
+  return matches[0]
+}
+
+function findClickable(text) {
+  const matches = clickables.filter(entry => entry.text === text)
+  if (matches.length === 0) throw new Error(`no clickable text ${JSON.stringify(text)}`)
+  if (matches.length > 1) throw new Error(`${matches.length} clickable texts ${JSON.stringify(text)}`)
+  return matches[0]
+}
+
+function openDialog() {
+  if (confirmRecord === null || !confirmRecord.open) throw new Error('no confirm dialog is open')
+  return confirmRecord
+}
+
 await settle()
 for (const step of steps) {
   if (step.click !== undefined) {
-    const button = buttons.find(entry => entry.label === step.click)
-    if (!button) throw new Error(`no button labelled ${JSON.stringify(step.click)}`)
-    await button.onClick()
+    await findButton(step.click).onClick()
+  } else if (step.clickText !== undefined) {
+    await findClickable(step.clickText).onClick()
+  } else if (step.blur !== undefined) {
+    await findInput(step.blur).onBlur({})
+  } else if (step.confirm !== undefined) {
+    await openDialog().onConfirm()
+  } else if (step.cancel !== undefined) {
+    await openDialog().onClose()
   } else if (step.check !== undefined) {
     const { row, value } = step.check
     const matches = checkboxes.filter(entry => entry.row === row)
@@ -351,6 +487,11 @@ for (const step of steps) {
   await settle()
 }
 
+function stripHandlers(record) {
+  const { onConfirm, onClose, ...rest } = record
+  return rest
+}
+
 const output = {
   name: plugin.name,
   lines,
@@ -363,8 +504,12 @@ const output = {
   },
   intervals,
   eventTypes,
-  buttons: buttons.map(entry => entry.label),
+  buttons: buttons.map(({ onClick, ...rest }) => rest),
   checkboxes: checkboxes.map(({ onCheckedChange, ...rest }) => rest),
-  inputs: inputs.map(({ onChange, onKeyDown, onBlur, onFocus, ...rest }) => rest)
+  inputs: inputs.map(({ onChange, onKeyDown, onBlur, onFocus, ...rest }) => rest),
+  confirm: confirmRecord === null ? null : stripHandlers(confirmRecord),
+  copy: copyRecord,
+  tips,
+  nodes
 }
 process.stdout.write(`${JSON.stringify(output)}\n`, () => process.exit(0))
