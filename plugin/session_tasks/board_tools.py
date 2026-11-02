@@ -8,7 +8,7 @@ from dataclasses import dataclass, field
 
 from . import copy_args, edit_args
 from .events import WriteListener
-from .lineage import SessionResolver
+from .lineage import Resolution, SessionResolver
 from .model import NO_SOURCE_BOARD, SAME_BOARD, BoardError, InvalidSession, Stale
 from .results import (
     DELEGATE_COPY,
@@ -16,6 +16,7 @@ from .results import (
     NO_SESSION,
     applied_result,
     copy_result,
+    cross_read_result,
     describe,
     error_result,
     read_result,
@@ -42,18 +43,45 @@ class BoardTools:
     def board_read(
         self, args: Mapping[str, object], session_id: str | None = None, **kwargs: object
     ) -> str:
-        """Return the board of the calling session. `args` is never read (TOOL-06)."""
+        """Return a board as markdown with ids.
+
+        The calling session comes only from the keyword (TOOL-06). The one argument names
+        another session's board to read; without it, or with an id of the own lineage,
+        the result is the own board (D-38).
+        """
         if not isinstance(session_id, str) or not session_id.strip():
             return error_result(NO_SESSION)
         try:
-            resolution = self.resolver.resolve(session_id)
+            own = self.resolver.resolve(session_id)
         except InvalidSession:
             return error_result(NO_SESSION)
+        try:
+            target = copy_args.read_target(args)
+        except BoardError as exc:
+            return error_result(describe(exc))
+        if target is None:
+            return self._own_read(own)
+        try:
+            other = self.resolver.resolve(target)
+        except InvalidSession:
+            return error_result(NO_SOURCE_BOARD)
+        if other.root_id == own.root_id:
+            return self._own_read(own)
+        return self._cross_read(other)
+
+    def _own_read(self, resolution: Resolution) -> str:
         board = self.store.get_board(resolution.root_id)
         # A delegate reads the delegator's board, but the delegator never sees that result.
         if resolution.kind != "delegate":
             self._mark_seen(resolution.root_id, board.rev)
         return read_result(board)
+
+    def _cross_read(self, other: Resolution) -> str:
+        """Read another board. No seen mark and no store write, so its agent still sees edits."""
+        board = self.store.get_board(other.root_id)
+        if board.rev == 0:
+            return error_result(NO_SOURCE_BOARD)
+        return cross_read_result(board, self.titles.title_of(other.root_id))
 
     def _mark_seen(self, root_id: str, rev: int) -> None:
         """Record that the agent saw the board at `rev`. A fault here never breaks a tool result."""

@@ -18,6 +18,7 @@ from .model import (
 
 NO_SESSION = "no session id; the board is not available here"
 EMPTY_NOTE = "empty board"
+OTHER_BOARD_NOTE = "another session's board, read only; its rev is not a base_rev for your board"
 DELEGATE_EDIT = (
     "board_edit does not work in a subagent session. "
     "Report the items to the session that started you; it adds them to the board."
@@ -47,6 +48,20 @@ def read_result(board: Board) -> str:
     }
     if not board.items:
         result["note"] = EMPTY_NOTE
+    return json.dumps(result, ensure_ascii=False)
+
+
+def cross_read_result(board: Board, title: str) -> str:
+    """Return another session's board, says whose it is and that its rev is not yours (D-38)."""
+    note = OTHER_BOARD_NOTE if board.items else f"{OTHER_BOARD_NOTE}; {EMPTY_NOTE}"
+    result: dict[str, object] = {
+        "ok": True,
+        "rev": board.rev,
+        "session_id": board.root_id,
+        "title": title,
+        "note": note,
+        "board": render(board, include_ids=True),
+    }
     return json.dumps(result, ensure_ascii=False)
 
 

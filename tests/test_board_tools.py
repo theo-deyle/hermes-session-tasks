@@ -38,15 +38,6 @@ def count_rows(connect: ConnFactory, table: str) -> int:
         conn.close()
 
 
-def seen(connect: ConnFactory, root: str) -> int:
-    conn = connect()
-    try:
-        row = conn.execute("SELECT agent_seen_rev FROM boards WHERE root_id = ?", (root,))
-        return int(row.fetchone()[0])
-    finally:
-        conn.close()
-
-
 def test_read_empty_board_returns_rev_zero_and_the_empty_note(
     store: BoardStore, resolver_for: ResolverFor, connect: ConnFactory
 ) -> None:
