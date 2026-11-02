@@ -159,13 +159,19 @@ function Pane({ ctx }) {
     setServer({ sid: asked, rev: reply.rev, root_id: reply.root_id, board: reply.board })
   }
 
+  // A reload reply never undoes a write: it is dropped while a write is in flight, and when its rev is
+  // lower than the newest accepted rev of the session. A dropped reply changes no state.
   function reload() {
     const asked = current.current.sid
     if (!asked) return Promise.resolve()
     return ctx
       .rest(boardPath(asked))
       .then(body => {
-        if (body && body.ok === true) take(asked, body)
+        if (!body || body.ok !== true) return
+        const state = current.current
+        if (state.sid !== asked || state.inFlight > 0) return
+        if (body.rev < (state.revs[asked] ?? 0)) return
+        take(asked, body)
       })
       .catch(() => {})
   }
