@@ -31,7 +31,7 @@ The pane stays the only screen. It gains one picker row, one menu, one banner, o
 
 ## Component Inventory
 
-Enumerated by `grep -cE "^export " ~/.hermes/hermes-agent/apps/desktop/src/sdk/index.ts` - 120 export statements (the unit is export statements, not components; the table below is a subset of 14 components from that list) - `@hermes/plugin-sdk@0.22.5` (the Hermes Agent release tag from `git describe --tags` in `~/.hermes/hermes-agent`; the monorepo package.json carries a placeholder 0.0.0) - 2026-11-02.
+Enumerated by `grep -cE "^export " ~/.hermes/hermes-agent/apps/desktop/src/sdk/index.ts` - 120 export statements (the unit is export statements, not components; the table below is a subset of 13 rows from that list, some rows holding more than one component) - `@hermes/plugin-sdk@0.22.5` (the Hermes Agent release tag from `git describe --tags` in `~/.hermes/hermes-agent`; the monorepo package.json carries a placeholder 0.0.0) - 2026-11-02.
 
 Cross-check: `ls ~/.hermes/hermes-agent/apps/desktop/src/components/ui/*.tsx | wc -l` gives 98 files. The SDK re-exports only some of them, so the two numbers measure different things and do not conflict. The new names were checked in the same file: `grep -nE "DropdownMenu" .../sdk/index.ts` returns `DropdownMenu`, `DropdownMenuContent`, `DropdownMenuItem`, `DropdownMenuSeparator`, `DropdownMenuTrigger` at lines 1769-1773; `grep -nE "IconCheck as Check|IconChevronDown as ChevronDown" .../src/lib/icons.ts` returns both.
 
@@ -75,8 +75,7 @@ Exceptions (each one sets a size the SDK does not set):
 | Picker trigger width | 304px (pane width minus 8px on each side) | Full width of the pane content. The trigger is `w-full`. |
 | Picker trigger minimum height | 32px | Same 32px as a row. Set with `min-h-8`. |
 | Menu width | 304px | Matches the trigger. Set with inline `style: { width: '304px' }` because the menu portals out of the pane and sizes to content by default. |
-| Row Copy button width | 46px (SDK-owned) | The SDK `Button` `size: 'sm'` sets this width from its label and padding; the pane does not set it. It is not a multiple of 4. It takes the slot of the Phase 4 plus and trash pair (48px), so the text column does not get narrower than in Phase 4. |
-| Row Copy button height | 24px (SDK-owned) | The same `size: 'sm'` button. A multiple of 4. |
+| Row Copy button height | 24px | The SDK `size: 'sm'` button height. The button width is SDK-owned and is not a declared spacing value; the 320 px Width Check uses a measured estimate for it. |
 | Banner | 1px border, 4px / 8px padding | One line. |
 
 Vertical order of the pane, top to bottom:
@@ -335,7 +334,7 @@ A live check on the Mac with a 60 character title and a `100 of 100 open` board 
 | shadcn official | none (no shadcn in this project) | not required |
 | third-party | none | not applicable |
 
-The SDK UI kit ships inside Hermes Desktop. The pane adds no registry, no package and no import beyond `@hermes/plugin-sdk`, `react` and `react/jsx-runtime`. The pane stays one plain ESM file (`plugin/desktop/plugin.js`): a relative import fails to load (06-RESEARCH.md Open Question 3). The file passes the 800 line soft ceiling; group the new pure helpers together and export them for the harness. Suggested helper names: `shortId`, `titleMap`, `boardLabel`, `orderBoards`, `updatedLabel`, `copyNoticeText`.
+The SDK UI kit ships inside Hermes Desktop. The pane adds no registry, no package and no import beyond `@hermes/plugin-sdk`, `react` and `react/jsx-runtime`. The pane stays one plain ESM file (`plugin/desktop/plugin.js`): a relative import fails to load (06-RESEARCH.md Open Question 3). Decision: the file stays one file and passes the 800 line soft ceiling, because the SDK loads one uncompiled file and rejects a relative import (06-RESEARCH.md Open Question 3). Group the new pure helpers together and export them for the harness. Suggested helper names: `shortId`, `titleMap`, `boardLabel`, `orderBoards`, `updatedLabel`, `copyNoticeText`.
 
 ---
 
