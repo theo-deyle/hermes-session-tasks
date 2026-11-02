@@ -703,6 +703,8 @@ function Pane({ ctx }) {
   const current = useRef({
     sid: null,
     revs: {},
+    rootRevs: {},
+    focusedRoot: null,
     inFlight: 0,
     queue: Promise.resolve(),
     seq: 0,
@@ -722,6 +724,7 @@ function Pane({ ctx }) {
     current.current.revs[asked] = reply.rev
     if (current.current.sid !== asked) return
     current.current.board = reply.board
+    current.current.focusedRoot = reply.root_id
     const open = current.current.edit
     if (open !== null && !hasItem(reply.board, open.id)) {
       changeEdit(null)
@@ -754,6 +757,36 @@ function Pane({ ctx }) {
       .catch(() => {
         if (current.current.sid === asked) setLoadFailed(true)
       })
+  }
+
+  // The root id of the board under view: the picked one, else the focused one once its first reply came.
+  function shownRoot() {
+    const state = current.current
+    return state.picked ?? state.focusedRoot
+  }
+
+  // The same rules as reload for the picked board. Its revs are keyed by root id and never mix with the focused ones.
+  function reloadPicked() {
+    const asked = current.current.picked
+    if (asked === null) return Promise.resolve()
+    return ctx
+      .rest(boardPath(asked))
+      .then(body => {
+        if (!body || body.ok !== true) throw new Error('bad reply')
+        const state = current.current
+        if (state.picked !== asked) return
+        if (body.rev < (state.rootRevs[asked] ?? 0)) return
+        state.rootRevs[asked] = body.rev
+        setPickedServer(body)
+        setLoadFailed(false)
+      })
+      .catch(() => {
+        if (current.current.picked === asked) setLoadFailed(true)
+      })
+  }
+
+  function reloadShown() {
+    return current.current.picked === null ? reload() : reloadPicked()
   }
 
   // Titles come from Hermes. A failed or odd reply keeps the last good titles and shows nothing.
@@ -857,6 +890,7 @@ function Pane({ ctx }) {
     current.current.sid = focused
     current.current.board = null
     current.current.picked = null
+    current.current.focusedRoot = null
     setPicked(null)
     setPickedServer(null)
     setPickedCollapsed({})
@@ -876,10 +910,19 @@ function Pane({ ctx }) {
     }
     loadTitles()
     reload()
-    return ctx.setInterval(reload, POLL_MS)
+    return ctx.setInterval(reloadShown, POLL_MS)
   }, [sid])
 
-  useEffect(() => ctx.onEvent(EVENT_TYPE, () => reload()), [])
+  // An event for another board changes nothing here. A missing payload or root reloads the shown board.
+  useEffect(
+    () =>
+      ctx.onEvent(EVENT_TYPE, event => {
+        const root = event?.payload?.root_id
+        const shown = shownRoot()
+        if (!root || shown === null || root === shown) reloadShown()
+      }),
+    []
+  )
 
   // Starts the write and returns nothing: a caller must never wait on the write.
   // onOutcome runs once with 'ok', 'stale' or 'failed' after the write settles.
@@ -1042,17 +1085,7 @@ function Pane({ ctx }) {
     setPicked(rootId)
     setPickedServer(null)
     setPickedCollapsed({})
-    ctx
-      .rest(boardPath(rootId))
-      .then(body => {
-        if (current.current.picked !== rootId) return
-        const good = body && body.ok === true
-        if (good) setPickedServer(body)
-        setLoadFailed(!good)
-      })
-      .catch(() => {
-        if (current.current.picked === rootId) setLoadFailed(true)
-      })
+    reloadPicked()
   }
 
   const onCheck = (item, value) => sendOp({ op: 'set_checked', item_id: item.id, checked: value === true })
