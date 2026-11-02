@@ -15,6 +15,7 @@ Items the agent lists for Theo and the agent's own steps stay visible and editab
 - ✓ A board follows its session through context compression and branches. - Phase 1
 - ✓ Writes are safe when the agent and the pane write at the same time (revision number, reject stale writes). - Phase 1
 - ✓ Board data lives on devpc under `$HERMES_HOME` in plugin-owned storage, never in `state.db`. - Phase 1
+- ✓ The pane updates live when the agent writes to the board. - Phase 3 (REST routes, `board.updated` event, stub pane proved on the Mac and the Windows PC)
 
 ### Active
 
@@ -28,7 +29,6 @@ Items the agent lists for Theo and the agent's own steps stay visible and editab
 - [ ] On request, the agent can read or copy items from another session's board.
 - [ ] Markdown checklists (`- [ ]`, `- [x]`, indented subtasks) are the text format for import, export and what the agent sees.
 - [ ] The pane renders the list as an interactive board, not as raw markdown.
-- [ ] The pane updates live when the agent writes to the board.
 - [ ] The agent sees Theo's own edits to the board on its next turn, with small injected context.
 - [ ] Deploy on devpc by symlink into `~/.hermes/plugins/`, enable, restart the gateway.
 
@@ -116,6 +116,9 @@ Package layout:
 | Agent asks before an ambiguous board change | Theo's list; a wrong guess costs trust | - Pending |
 | Session lineage through an alias table filled by the compaction hook, with a lazy `SessionDB` read-only walk as fallback | One resolve rule for plain, compression, branch and delegate sessions; a delegate reads its delegator root | ✓ Phase 1: 20-hop loop guard, branch copy once under a race |
 | Stale write returns the current board instead of an error | The caller merges and retries; no lost update across processes | ✓ Phase 1: per-item revision rule, 4-process race test |
+| The REST routes take `session_id` from the request and refuse any extra body field; a stale route write answers HTTP 200 with `ok: false` and the current board | The pane names the focused session; a `confirmed` flag never crosses REST; Desktop turns 4xx into an opaque error string | ✓ Phase 3: D-24, D-25, live on both machines |
+| The Desktop half installs by a PowerShell script over the Desktop's own SSH link, with a host guard, an atomic copy and a SHA-256 line | A disk plugin loads uncompiled; the hash lets Theo compare with devpc in one line | ✓ Phase 3: Mac (`devbox`) and Windows PC (`devpc-ts`, home `%LOCALAPPDATA%\hermes`) |
+| No messaging gateway restart inside Phase 3; the Desktop backends restart by Theo quitting and reopening Desktop after an announcement | Claude stops no process; the schema did not change, so the gateway's older code stays safe | ✓ Phase 3: two announced restarts, `ps` checked each time |
 
 ## Evolution
 
@@ -135,4 +138,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-10-30 after Phase 1*
+*Last updated: 2026-11-02 after Phase 3*

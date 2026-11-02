@@ -20,10 +20,10 @@ progress:
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-10-30)
+See: .planning/PROJECT.md (updated 2026-11-02)
 
 **Core value:** Items the agent lists for Theo stay visible and editable in the pane for the whole session, so Theo never scrolls up or asks the agent to repeat itself.
-**Current focus:** Phase 05 — Agent sees Theo's edits
+**Current focus:** Phase 6 - Cross-session boards
 
 ## Current Position
 
@@ -112,6 +112,9 @@ Recent decisions affecting current work:
 - [Roadmap]: DEV-04 (formal rollout) sits in Phase 7. Earlier live checks on devpc use the same Hermes CLI steps.
 - [Roadmap]: Phases 2 and 3 need no strict order, but Phase 3 follows Phase 2 so the event check can use a real tool write.
 - [Phase 01]: Core modules use relative imports only; the layout guards fail an absolute session_tasks import
+- [Phase 03]: Route writes take session_id from the request, forbid extra body fields, and answer stale as HTTP 200 with ok false and the current board
+- [Phase 03]: The pane file installs by scripts/install-desktop.ps1 over the Desktop SSH link; hash compared with devpc; Windows home is %LOCALAPPDATA%\hermes
+- [Phase 03]: Desktop backends restart only by Theo quitting Desktop after an announcement; Claude stops no process
 - [Phase 01]: Lazy-import guard flags every non-stdlib import outside the public Hermes allowlist
 - [Phase 01]: clean_text measures the 500 char cap on the sanitised text - The sanitised text is what the store keeps.
 - [Phase 01]: An empty op batch writes nothing and returns Applied at the current rev - No board row appears from a no-op write.
