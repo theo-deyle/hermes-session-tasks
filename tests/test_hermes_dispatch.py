@@ -14,7 +14,7 @@ from pathlib import Path
 import pytest
 from conftest import HERMES_AGENT_REPO
 from session_tasks import delta, tool_text
-from session_tasks.model import NO_SOURCE_BOARD
+from session_tasks.results import OTHER_BOARD_NOTE
 
 pytestmark = pytest.mark.hermes
 
@@ -23,6 +23,15 @@ SNIPPET = Path(__file__).resolve().parent / "hermes_dispatch_snippet.py"
 PLUGIN_DIR = Path(__file__).resolve().parents[1] / "plugin"
 BOARD = "- [ ] #1 Call John\n"
 NO_SESSION = "no session id; the board is not available here"
+S2_BOARD = "- [ ] #1 Call John\n- [x] #2 Book the van\n"
+S2_READ = {
+    "ok": True,
+    "rev": 2,
+    "session_id": "s2",
+    "title": "Source board",
+    "note": OTHER_BOARD_NOTE,
+    "board": S2_BOARD,
+}
 
 
 def run_snippet(hermes_home: Path) -> dict[str, object]:
@@ -46,8 +55,8 @@ def test_hermes_dispatches_board_read_with_the_handler_session(hermes_home: Path
 
     expected = {"ok": True, "rev": 1, "board": BOARD}
     assert out["read"] == expected
-    # D-38: the argument names a board to read. s2 has no board in the snippet.
-    assert out["spoofed"] == {"error": NO_SOURCE_BOARD}
+    # D-38: the argument names a board to read. The caller still comes from the keyword.
+    assert out["cross_read"] == S2_READ
     assert out["no_session"] == {"error": NO_SESSION}
     assert "board_read" in out["tools"]  # pyright: ignore[reportOperatorIssue]
 
@@ -98,7 +107,38 @@ def test_hermes_dispatches_board_edit_guard_hooks_prompt_and_skill(hermes_home: 
     assert out["catalog_lines"] == {
         "board_read": first_sentence(tool_text.BOARD_READ_DESCRIPTION),
         "board_edit": first_sentence(tool_text.BOARD_EDIT_DESCRIPTION),
+        "board_sessions": first_sentence(tool_text.BOARD_SESSIONS_DESCRIPTION),
+        "board_copy": first_sentence(tool_text.BOARD_COPY_DESCRIPTION),
     }
+
+
+def test_hermes_dispatches_the_cross_session_tools(hermes_home: Path) -> None:
+    out = run_snippet(hermes_home)
+
+    sessions = out["sessions"]
+    assert isinstance(sessions, dict)
+    lines = sessions["sessions"]
+    assert isinstance(lines, list)
+    by_id = {line.split(" | ")[1]: line for line in lines}
+    assert set(by_id) == {"s1", "s2"}
+    assert by_id["s2"].startswith("- Source board | s2 | 1 of 2 open")
+    assert not by_id["s2"].endswith("(this session)")
+    assert by_id["s1"].endswith("(this session)")
+    assert out["cross_read"] == S2_READ
+    assert out["seen_before"] == out["seen_after"] == 1
+    copy = out["copy"]
+    assert isinstance(copy, dict)
+    assert copy["ok"] is True
+    assert copy["summary"].startswith("Copied 1 to")
+    assert copy["changed"] == ["- [ ] #3 Call John"]
+    broadcasts = out["broadcasts"]
+    assert isinstance(broadcasts, list)
+    name = "plugin.hermes-session-tasks.board.updated"
+    assert broadcasts[-1] == [
+        name,
+        {"session_id": "s1", "root_id": "s1", "rev": copy["rev"], "actor": "agent"},
+    ]
+    assert [item for item in broadcasts if item[1]["root_id"] == "s2"] == []  # pyright: ignore[reportIndexIssue]
 
 
 def test_hermes_dispatch_of_a_write_broadcasts_board_updated(hermes_home: Path) -> None:
@@ -108,4 +148,5 @@ def test_hermes_dispatch_of_a_write_broadcasts_board_updated(hermes_home: Path) 
     assert out["broadcasts"] == [
         [name, {"session_id": "s1", "root_id": "s1", "rev": 2, "actor": "agent"}],
         [name, {"session_id": "s1", "root_id": "s1", "rev": 3, "actor": "agent"}],
+        [name, {"session_id": "s1", "root_id": "s1", "rev": 4, "actor": "agent"}],
     ]
