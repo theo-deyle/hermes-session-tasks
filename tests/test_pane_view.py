@@ -144,3 +144,62 @@ def test_collapse_state_resets_on_focus_change(rig: Rig, tmp_path: Path) -> None
     assert "Book flight" in result["lines"]
     assert "Pack" in result["lines"]
     button(result, "Collapse subtasks", row="1")
+
+
+def test_empty_board_shows_the_empty_state(rig: Rig, tmp_path: Path) -> None:
+    result = rig.run(tmp_path)
+
+    assert "The agent adds items here." in result["lines"]
+    assert "Add one below." in result["lines"]
+    assert not [line for line in result["lines"] if line.endswith(" open")]
+    assert result["copy"]["disabled"] is True
+
+
+def test_no_focused_chat_shows_open_a_chat(rig: Rig, tmp_path: Path) -> None:
+    result = rig.run(tmp_path, focused=None)
+
+    assert "Open a chat to see its items." in result["lines"]
+    assert result["copy"] is None
+    assert not [call for call in result["restCalls"] if call["path"].startswith("/board")]
+
+
+def test_copy_escapes_a_leading_id_token(rig: Rig, tmp_path: Path) -> None:
+    rig.store.apply(
+        "s1",
+        [AddItem("#12 lunch"), AddItem("plain", parent_ref=0)],
+        actor="agent",
+        base_rev=0,
+    )
+
+    result = rig.run(tmp_path)
+
+    text = result["copy"]["text"]
+    assert text == render(rig.store.get_board("s1"), include_ids=False)
+    assert text.startswith("- [ ] \\#12 lunch\n")
+
+
+def test_long_text_wraps_and_is_never_cut(rig: Rig, tmp_path: Path) -> None:
+    long_text = ("word " * 100).strip().ljust(500, "x")
+    assert len(long_text) == 500
+    rig.store.apply("s1", [AddItem(long_text)], actor="agent", base_rev=0)
+
+    result = rig.run(tmp_path)
+
+    shown = node(result, long_text)
+    assert shown["style"]["overflowWrap"] == "anywhere"
+    assert shown["style"]["whiteSpace"] == "pre-wrap"
+    assert "min-w-0" in shown["className"]
+    assert "flex-1" in shown["className"]
+    assert not [line for line in result["lines"] if line.endswith("…")]
+
+
+def test_header_sits_outside_the_scroll_area(rig: Rig, tmp_path: Path) -> None:
+    seed_call_john(rig.store)
+
+    result = rig.run(tmp_path)
+
+    header = node(result, "1 of 1 open")
+    assert header["scroll"] is False
+    assert "text-sm" in header["className"]
+    assert "font-medium" in header["className"]
+    assert node(result, "Call John")["scroll"] is True
