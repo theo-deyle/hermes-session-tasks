@@ -571,8 +571,8 @@ function Pane({ ctx }) {
 
   // Starts the write and returns nothing: a caller must never wait on the write.
   // onOutcome runs once with 'ok', 'stale' or 'failed' after the write settles.
-  function sendOp(op, onOutcome) {
-    const asked = current.current.sid
+  // `asked` names the session the caller started on, and defaults to the focused one.
+  function sendOp(op, onOutcome, asked = current.current.sid) {
     if (!asked) return
     current.current.entrySeq += 1
     const entry = { seq: current.current.entrySeq, sid: asked, op }
@@ -659,10 +659,11 @@ function Pane({ ctx }) {
     const open = current.current.edit
     if (open !== null && open.id === item.id) return
     saveEdit()
-    changeEdit({ id: item.id, text: item.text, original: item.text })
+    changeEdit({ sid: current.current.sid, id: item.id, text: item.text, original: item.text })
   }
 
   // Reads the edit from the ref, so an Enter followed by a blur sends one write.
+  // Item ids are per board, so an edit never writes or comes back on another session than its own.
   // A stale or failed write puts the typed text back when the item is still on the board.
   function saveEdit() {
     const state = current.current
@@ -670,11 +671,12 @@ function Pane({ ctx }) {
     if (open === null) return
     changeEdit(null)
     const text = open.text.trim()
-    if (text === '' || text === open.original) return
+    if (text === '' || text === open.original || open.sid !== state.sid) return
     sendOp({ op: 'set_text', item_id: open.id, text }, outcome => {
-      if (outcome === 'ok' || state.edit !== null || !hasItem(state.board, open.id)) return
+      const sameBoard = state.sid === open.sid && hasItem(state.board, open.id)
+      if (outcome === 'ok' || state.edit !== null || !sameBoard) return
       changeEdit({ ...open, text })
-    })
+    }, open.sid)
   }
 
   const editHandlers = {
