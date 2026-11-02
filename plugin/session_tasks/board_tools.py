@@ -14,12 +14,15 @@ from .results import (
     DELEGATE_COPY,
     DELEGATE_EDIT,
     NO_SESSION,
+    SESSIONS_SHOWN,
     applied_result,
     copy_result,
     cross_read_result,
     describe,
     error_result,
     read_result,
+    session_line,
+    sessions_result,
     source_missing_text,
     stale_result,
 )
@@ -82,6 +85,32 @@ class BoardTools:
         if board.rev == 0:
             return error_result(NO_SOURCE_BOARD)
         return cross_read_result(board, self.titles.title_of(other.root_id))
+
+    def board_sessions(
+        self, args: Mapping[str, object], session_id: str | None = None, **kwargs: object
+    ) -> str:
+        """List the sessions that have a board, newest update first (D-39). Never reads `args`.
+
+        The keyword only picks the own-board marker. A fault there means no marker.
+        """
+        own_root = self._own_root(session_id)
+        summaries = self.store.list_boards()
+        shown = summaries[:SESSIONS_SHOWN]
+        titles = self.titles.titles([summary.root_id for summary in shown])
+        lines = [
+            session_line(summary, titles[summary.root_id], summary.root_id == own_root)
+            for summary in shown
+        ]
+        return sessions_result(lines, len(summaries) - len(shown))
+
+    def _own_root(self, session_id: str | None) -> str | None:
+        if not isinstance(session_id, str) or not session_id.strip():
+            return None
+        try:
+            return self.resolver.resolve(session_id).root_id
+        except Exception:
+            log.warning("board_sessions could not resolve the caller", exc_info=True)
+            return None
 
     def _mark_seen(self, root_id: str, rev: int) -> None:
         """Record that the agent saw the board at `rev`. A fault here never breaks a tool result."""

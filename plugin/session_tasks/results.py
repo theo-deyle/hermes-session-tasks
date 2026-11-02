@@ -15,9 +15,12 @@ from .model import (
     CopyApplied,
     Stale,
 )
+from .rows import BoardSummary
 
 NO_SESSION = "no session id; the board is not available here"
 EMPTY_NOTE = "empty board"
+NO_SESSIONS_NOTE = "no session has a board"
+SESSIONS_SHOWN = 50
 OTHER_BOARD_NOTE = "another session's board, read only; its rev is not a base_rev for your board"
 DELEGATE_EDIT = (
     "board_edit does not work in a subagent session. "
@@ -62,6 +65,23 @@ def cross_read_result(board: Board, title: str) -> str:
         "note": note,
         "board": render(board, include_ids=True),
     }
+    return json.dumps(result, ensure_ascii=False)
+
+
+def session_line(summary: BoardSummary, title: str, own: bool) -> str:
+    """Return one `board_sessions` line. The caller's own board ends with ` (this session)`."""
+    line = (
+        f"- {title} | {summary.root_id} | {summary.open} of {summary.total} open"
+        f" | updated {summary.updated_at}"
+    )
+    return line + " (this session)" if own else line
+
+
+def sessions_result(lines: Sequence[str], more: int) -> str:
+    """Return the board lines and the count of boards not shown. No line adds a note."""
+    result: dict[str, object] = {"ok": True, "sessions": list(lines), "more": more}
+    if not lines:
+        result["note"] = NO_SESSIONS_NOTE
     return json.dumps(result, ensure_ascii=False)
 
 
