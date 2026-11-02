@@ -3,16 +3,16 @@ gsd_state_version: "1.0"
 current_phase: 05
 current_phase_name: Agent sees Theo's edits
 status: executing
-stopped_at: Phase 5 context gathered
-last_updated: "2026-11-02T12:51:44.815Z"
-last_activity: 2026-11-01
-last_activity_desc: Phase 04 complete, transitioned to Phase 3
-state_head: 738a1a9e2349662aac1e08ccc8b18c72fd21d067
+stopped_at: Completed 05-01-PLAN.md
+last_updated: "2026-11-02T13:06:00.861Z"
+last_activity: 2026-11-02
+last_activity_desc: Phase 05 execution started
+state_head: f9d150047bd4302c3fcb5d76c3a8f7193930510d
 progress:
   total_phases: 7
   completed_phases: 3
   total_plans: 41
-  completed_plans: 31
+  completed_plans: 32
   percent: 43
 ---
 
@@ -23,14 +23,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-10-30)
 
 **Core value:** Items the agent lists for Theo stay visible and editable in the pane for the whole session, so Theo never scrolls up or asks the agent to repeat itself.
-**Current focus:** Phase 03 — REST router and client install spike
+**Current focus:** Phase 05 — Agent sees Theo's edits
 
 ## Current Position
 
-Phase: 05 (Agent sees Theo's edits) — READY TO EXECUTE
-Plan: 10
+Phase: 05 (Agent sees Theo's edits) — EXECUTING
+Plan: 2 of 7
 Status: Ready to execute
-Last activity: 2026-11-01 — Phase 04 complete, transitioned to Phase 3
+Last activity: 2026-11-02 — Phase 05 execution started
 
 Progress: [████░░░░░░] 43%
 
@@ -87,6 +87,7 @@ Progress: [████░░░░░░] 43%
 | Phase 04 P05 | 15 min | 3 tasks | 2 files |
 | Phase 04 P06 | 14 min | 3 tasks | 4 files |
 | Phase 04 P07 | 45 min | 3 tasks | 2 files |
+| Phase 05 P01 | 40 min | 3 tasks | 12 files |
 
 ## Accumulated Context
 
@@ -150,6 +151,10 @@ Recent decisions affecting current work:
 - [Phase 04]: 04-06: the hidden plus button keeps its space with opacity-0 and stays in the tab order, since Desktop ships no group-hover:visible class
 - [Phase 04]: 04-07: saveEdit reads the edit from a ref and clears it first, so Enter then blur sends one write; a stale or failed edit reopens with the typed text
 - [Phase 04]: 04-07: the SDK ConfirmDialog has no Cancel focus option, so Enter confirms a parent delete (UI-SPEC Delete rule 4)
+- [Phase 05]: 05-01: agent_seen_rev advances on an agent batch only when the agent was up to date before the batch
+- [Phase 05]: 05-01: journal gap rule is count < JOURNAL_KEEP or oldest_rev <= agent_seen_rev
+- [Phase 05]: 05-01: nudge.py deleted; NUDGE_LINE and its tests stay until the own-plan gate result is known
+- [Phase 05]: 05-01: an uncovered journal gap gives the pointer line even with no visible Theo row
 
 ### Pending Todos
 
@@ -181,6 +186,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-11-02T11:46:11.754Z
-Stopped at: Phase 5 context gathered
-Resume file: .planning/phases/05-agent-sees-theo-s-edits/05-CONTEXT.md
+Last session: 2026-11-02T13:06:00.382Z
+Stopped at: Completed 05-01-PLAN.md
+Resume file: None

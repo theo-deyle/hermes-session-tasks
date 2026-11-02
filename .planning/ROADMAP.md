@@ -179,10 +179,10 @@ Plans:
   2. A turn with no change since the agent last saw the board gets no injected text.
   3. The injected note stays near 600 to 1200 characters at most. A token count at turn 30 is compared with a session that has no plugin. The difference equals the size of the notes.
   4. When Hermes deletes a session, the plugin removes that session's board. A session that Hermes archives keeps its board.
-**Plans**: 7 plans in 6 waves
+**Plans**: 1/7 plans executed in 6 waves
 Plans:
 **Wave 1**
-- [ ] 05-01-PLAN.md - First end to end test (Theo's pane edit to the agent's next turn), note rules, seen rules, old turn-text contracts (wave 1)
+- [x] 05-01-PLAN.md - First end to end test (Theo's pane edit to the agent's next turn), note rules, seen rules, old turn-text contracts (wave 1)
 
 **Wave 2** *(blocked on Wave 1 completion)*
 - [ ] 05-02-PLAN.md - Live test tools: scripted Theo edit, session rows, the two 30-run token arms (wave 2)
@@ -237,6 +237,6 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 | 2. Agent tools and skill | 7/7 | Complete    | 2026-10-31 |
 | 3. REST router and client install spike | 9/12 | In Progress | - |
 | 4. Pane | 9/9 | Complete    | 2026-11-01 |
-| 5. Agent sees Theo's edits | 0/7 | Planned | - |
+| 5. Agent sees Theo's edits | 1/7 | In Progress | - |
 | 6. Cross-session boards | 0/TBD | Not started | - |
 | 7. Deploy and hardening | 0/TBD | Not started | - |
