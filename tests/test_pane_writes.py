@@ -4,9 +4,12 @@ from __future__ import annotations
 
 import shutil
 from pathlib import Path
+from typing import Any
 
 import pytest
-from pane_rig import Rig, posts, seed_call_john
+from pane_rig import EVENT_TYPE, Rig, board_gets, posts, seed_call_john, stale_body
+from session_tasks.board_json import board_dict
+from session_tasks.model import AddItem, Board, RemoveItem
 
 pytestmark = pytest.mark.skipif(shutil.which("node") is None, reason="node is not installed")
 
@@ -20,6 +23,25 @@ OUTSIDE_TEXT = {
     }
 }
 CHECK_OP = [{"op": "set_checked", "item_id": 1, "checked": True}]
+BOARD_EVENT = {"event": {"type": EVENT_TYPE}}
+GET_BOARD = "/board?session_id=s1"
+EDIT = "/board/edit"
+
+
+def board_body(board: Board, sid: str) -> dict[str, Any]:
+    """A board GET reply in the shape the route builds."""
+    return {
+        "ok": True,
+        "session_id": sid,
+        "root_id": board.root_id,
+        "rev": board.rev,
+        "board": board_dict(board),
+    }
+
+
+def seed_two(rig: Rig) -> None:
+    seed_call_john(rig.store)
+    rig.store.apply("s1", [AddItem("Email Ann")], actor="agent", base_rev=1)
 
 
 def test_stale_check_retries_once_on_the_new_rev(rig: Rig, tmp_path: Path) -> None:
@@ -40,3 +62,96 @@ def test_stale_check_retries_once_on_the_new_rev(rig: Rig, tmp_path: Path) -> No
     assert "0 of 1 open" in result["lines"]
     assert STALE_NOTICE in result["lines"]
     assert NOTICE_MS in result["timeouts"]
+
+
+def test_check_shows_before_the_reply(rig: Rig, tmp_path: Path) -> None:
+    seed_call_john(rig.store)
+
+    result = rig.run(tmp_path, steps=[CHECK_ROW_1])
+
+    at_write = [box for box in result["atWrite"][0]["checkboxes"] if box["row"] == "1"]
+    assert [box["checked"] for box in at_write] == [True]
+
+
+def test_second_stale_reply_is_not_retried(rig: Rig, tmp_path: Path) -> None:
+    seed_call_john(rig.store)
+    stale = stale_body(rig.store.get_board("s1"), "s1")
+
+    result = rig.run(tmp_path, restSequences={EDIT: [stale, stale]}, steps=[CHECK_ROW_1])
+
+    sent = posts(result)
+    assert [call["body"]["base_rev"] for call in sent] == [1, 1]
+    assert STALE_NOTICE in result["lines"]
+
+
+def test_stale_without_the_item_is_not_retried(rig: Rig, tmp_path: Path) -> None:
+    seed_two(rig)
+    before = board_body(rig.store.get_board("s1"), "s1")
+    rig.store.apply("s1", [RemoveItem(1)], actor="agent", base_rev=2)
+    stale = stale_body(rig.store.get_board("s1"), "s1")
+
+    result = rig.run(
+        tmp_path,
+        restSequences={GET_BOARD: [before], EDIT: [stale]},
+        steps=[CHECK_ROW_1],
+    )
+
+    assert len(posts(result)) == 1
+    assert "Email Ann" in result["lines"]
+    assert "Call John" not in result["lines"]
+    assert STALE_NOTICE in result["lines"]
+
+
+def test_writes_run_one_at_a_time(rig: Rig, tmp_path: Path) -> None:
+    seed_two(rig)
+
+    result = rig.run(
+        tmp_path,
+        duringWrite=[{"check": {"row": "2", "value": True}}],
+        steps=[CHECK_ROW_1],
+    )
+
+    sent = posts(result)
+    assert [(call["body"]["ops"][0]["item_id"], call["body"]["base_rev"]) for call in sent] == [
+        (1, 2),
+        (2, 3),
+    ]
+    at_write = {box["row"]: box["checked"] for box in result["atWrite"][0]["checkboxes"]}
+    assert at_write == {"1": True, "2": True}
+    board = rig.store.get_board("s1")
+    assert board.rev == 4
+    assert [item.checked for item in board.items] == [True, True]
+
+
+def test_reload_reply_during_a_write_is_ignored(rig: Rig, tmp_path: Path) -> None:
+    seed_call_john(rig.store)
+    injected = board_body(rig.store.get_board("s1"), "s1")
+    injected["rev"] = 5
+    injected["board"]["items"][0]["text"] = "Injected"
+
+    result = rig.run(
+        tmp_path,
+        restSequences={GET_BOARD: ["__relay__", injected]},
+        duringWrite=[BOARD_EVENT],
+        steps=[CHECK_ROW_1],
+    )
+
+    assert len(board_gets(result)) == 2
+    assert "Injected" not in result["atWrite"][0]["lines"]
+    assert "Call John" in result["atWrite"][0]["lines"]
+    row_1 = [box for box in result["atWrite"][0]["checkboxes"] if box["row"] == "1"]
+    assert [box["checked"] for box in row_1] == [True]
+
+
+def test_older_reload_reply_is_ignored(rig: Rig, tmp_path: Path) -> None:
+    seed_call_john(rig.store)
+    older = board_body(rig.store.get_board("empty"), "s1")
+
+    result = rig.run(
+        tmp_path,
+        restSequences={GET_BOARD: ["__relay__", older]},
+        steps=[BOARD_EVENT],
+    )
+
+    assert len(board_gets(result)) == 2
+    assert "Call John" in result["lines"]
