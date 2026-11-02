@@ -122,6 +122,14 @@ function Test-DevpcHost {
   return ($Name -match '^[A-Za-z0-9._@-]+\z')
 }
 
+function Test-RemotePath {
+  param([string]$Path)
+  # The legacy scp protocol (-O) hands the remote path to a shell on devpc.
+  if ([string]::IsNullOrEmpty($Path)) { return $false }
+  if (-not $Path.StartsWith('/')) { return $false }
+  return ($Path -match '^/[A-Za-z0-9._/-]+\z')
+}
+
 function Copy-RemoteFile {
   param([string]$Source, [string]$Target)
   # Tailscale SSH has no SFTP subsystem, so the SFTP transfer of OpenSSH 9 can end with
@@ -177,6 +185,10 @@ function Install-PanePlugin {
 function Invoke-Main {
   if (-not (Test-DevpcHost -Name $DevpcHost)) {
     Write-Problem "refusing DevpcHost '$DevpcHost': use only letters, digits, '.', '_', '@', '-', and no leading '-'"
+    return 1
+  }
+  if (-not (Test-RemotePath -Path $RemotePath)) {
+    Write-Problem "refusing RemotePath '$RemotePath': use a full devpc path of letters, digits, '.', '_', '-' and '/'"
     return 1
   }
   $desktopHome = Get-DesktopHome

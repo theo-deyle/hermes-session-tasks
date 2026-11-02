@@ -8,6 +8,8 @@ The Python half runs on devpc. A symlink in `~/.hermes/plugins/` delivers it.
 
 The Desktop half is one file, `plugin/desktop/plugin.js`. Each Desktop machine needs its own copy on its own disk. The script `scripts/install-desktop.ps1` copies the file from devpc over SSH.
 
+`-RemotePath <path on devpc>` installs another file, for example a frozen test build.
+
 ## Install the pane on the Mac
 
 Use PowerShell 7 (`pwsh`).
