@@ -291,3 +291,69 @@ def test_unknown_step_fails(rig: Rig, tmp_path: Path) -> None:
     stderr = rig.error(tmp_path, plugin=PROBE_JS, steps=[{"dance": True}])
 
     assert "unknown step" in stderr
+
+
+# The menu steps, the host.request stub and the `calls` key, run against the real pane.
+
+
+def test_open_menu_and_pick_steps(rig: Rig, tmp_path: Path) -> None:
+    seed_call_john(rig.store)
+    rig.store.apply("s2", [AddItem("Email Ann")], actor="agent", base_rev=0)
+    session_list = [{"id": "s2", "title": "Other", "preview": "", "_lineage_root_id": None}]
+
+    none = rig.error(tmp_path, plugin=PROBE_JS, steps=[{"openMenu": True}])
+    assert "0 menus are rendered" in none
+
+    picked = rig.run(
+        tmp_path, sessionList=session_list, steps=[{"openMenu": True}, {"pick": "Other"}]
+    )
+    assert "Email Ann" in picked["lines"]
+
+    missing = rig.error(tmp_path, steps=[{"openMenu": True}, {"pick": "No such board"}])
+    assert "no menu item named" in missing
+
+    alone = rig.error(
+        tmp_path,
+        steps=[{"openMenu": True}, {"pick": "No other session has a board."}],
+        restSequences={"/boards": [{"ok": True, "boards": []}]},
+    )
+    assert "is disabled" in alone
+
+
+def test_host_request_stub_records_and_rejects(rig: Rig, tmp_path: Path) -> None:
+    seed_call_john(rig.store)
+    rows = [{"id": "s1", "title": "Mine", "preview": "", "_lineage_root_id": None}]
+
+    listed = rig.run(tmp_path, sessionList=rows)
+
+    assert listed["requestCalls"] == [{"method": "session.list", "params": {"limit": 200}}]
+    assert "Mine" in listed["lines"]
+
+    rejected = rig.run(tmp_path, sessionList="__error__")
+
+    assert len(rejected["requestCalls"]) == 1
+    assert "Call John" in rejected["lines"]
+
+
+def test_calls_config_records_results(rig: Rig, tmp_path: Path) -> None:
+    result = rig.run(
+        tmp_path,
+        calls=[
+            {"fn": "headerText", "args": [{"open": 1, "total": 2}]},
+            {"fn": "shortId", "args": ["20261102_133806_e5cc98"]},
+        ],
+    )
+
+    assert result["callResults"] == ["1 of 2 open", "e5cc98"]
+
+    stderr = rig.error(tmp_path, calls=[{"fn": "noSuchExport", "args": []}])
+
+    assert "no export named noSuchExport" in stderr
+
+
+def test_interval_step_runs_the_poll(rig: Rig, tmp_path: Path) -> None:
+    seed_call_john(rig.store)
+
+    ticked = rig.run(tmp_path, steps=[{"interval": True}, {"interval": True}])
+
+    assert len(board_gets(ticked)) == 3

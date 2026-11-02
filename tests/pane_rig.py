@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -39,6 +40,8 @@ def _run_node(
             str(config_path),
         ],
         cwd=ROOT,
+        # UTC, so the time labels read the same on every machine.
+        env={**os.environ, "TZ": "UTC"},
         check=False,
         capture_output=True,
         text=True,

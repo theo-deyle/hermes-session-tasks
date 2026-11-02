@@ -21,6 +21,7 @@
 //   timeoutThrows  when true, every ctx.setTimeout call throws, as after a plugin dispose
 //   sessionList    the rows host.request('session.list') resolves as {sessions: [...]}, or "__error__"
 //                  to reject with an Error
+//   nowMs          when set, Date.now() inside the plugin returns this value
 //   calls          list of {fn, args}. After the module loads, each named export is called with the
 //                  args and its result lands in callResults
 //   steps          the step list below
@@ -40,6 +41,7 @@
 //   {"outside": {"session_id": "s1", "ops": [...], "base_rev": 1}}
 //                  a POST to baseUrl + /board/edit that the pane does not see
 //   {"timers": true}                      runs every pending ctx.setTimeout callback not cancelled
+//   {"interval": true}                    runs every ctx.setInterval callback that is not cancelled, once
 //   {"openMenu": true}                    calls onOpenChange(true) of the one DropdownMenu; zero or two fail the run
 //   {"pick": "<name>"}                    calls onSelect of the one enabled menu item whose first text is
 //                                         the name; zero, two or a disabled match fail the run
@@ -93,6 +95,7 @@ const intervals = []
 const eventTypes = []
 const timeouts = []
 const timerQueue = []
+const intervalQueue = []
 const outsideCalls = []
 const atWrite = []
 const listeners = []
@@ -235,6 +238,7 @@ const element = (type, props, key) => ({ type, props: props ?? {}, key })
 const runtimeValues = { Fragment, jsx: element, jsxs: element }
 
 const context = vm.createContext({ URL, URLSearchParams, console })
+if (config.nowMs !== undefined) vm.runInContext(`Date.now = () => ${Number(config.nowMs)}`, context)
 
 function synthetic(identifier, values) {
   const names = Object.keys(values)
@@ -321,7 +325,11 @@ const ctx = {
   },
   setInterval: (fn, ms) => {
     intervals.push(ms)
-    return () => {}
+    const entry = { fn, cancelled: false }
+    intervalQueue.push(entry)
+    return () => {
+      entry.cancelled = true
+    }
   },
   setTimeout: (fn, ms) => {
     if (config.timeoutThrows === true) throw new Error('the plugin is disposed')
@@ -458,7 +466,7 @@ function walk(node, out, here) {
   }
   if (type === DropdownMenuItem) {
     out.menuItems.push({
-      texts: hostTexts(props.children),
+      texts: hostTexts({ type: 'span', props: { children: props.children } }),
       disabled: props.disabled === true,
       current: props['aria-current'] === true,
       check: hasType(props.children, icons.Check),
@@ -715,6 +723,10 @@ async function runStep(step) {
     const text = await response.text()
     if (!response.ok) throw new Error(`outside write failed ${response.status}: ${text}`)
     outsideCalls.push({ body, reply: JSON.parse(text) })
+  } else if (step.interval !== undefined) {
+    for (const entry of [...intervalQueue]) {
+      if (!entry.cancelled) await entry.fn()
+    }
   } else if (step.openMenu !== undefined) {
     if (menus.length !== 1) throw new Error(`${menus.length} menus are rendered, expected one`)
     await menus[0](true)
