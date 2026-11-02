@@ -94,8 +94,9 @@ def posts(result: dict[str, Any]) -> list[dict[str, Any]]:
 
 
 def board_gets(result: dict[str, Any]) -> list[dict[str, Any]]:
+    """The GET calls of one board. `/boards` and `/board/copy` also start with `/board`, so they do not count."""
     return [
-        c for c in result["restCalls"] if c["method"] == "GET" and c["path"].startswith("/board")
+        c for c in result["restCalls"] if c["method"] == "GET" and c["path"].startswith("/board?")
     ]
 
 
