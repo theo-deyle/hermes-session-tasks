@@ -5,7 +5,17 @@
  * Only Pane calls React hooks. Every other component is a plain function of its props.
  */
 
-import { Button, Checkbox, CopyButton, ScrollArea, Tip, host, icons, useValue } from '@hermes/plugin-sdk'
+import {
+  Button,
+  Checkbox,
+  CopyButton,
+  EmptyState,
+  ScrollArea,
+  Tip,
+  host,
+  icons,
+  useValue
+} from '@hermes/plugin-sdk'
 import { useEffect, useRef, useState } from 'react'
 import { jsx, jsxs } from 'react/jsx-runtime'
 
@@ -19,6 +29,10 @@ const MISMATCH_LINE = 'Version mismatch: update the desktop plugin on this machi
 const STALE_NOTICE = 'Board changed, showing the latest'
 const WRITE_FAILED_NOTICE = 'Could not save that change. Try again.'
 const LOAD_FAILED_NOTICE = 'Could not load the board. Retrying.'
+const EMPTY_TITLE = 'The agent adds items here.'
+const EMPTY_HINT = 'Add one below.'
+const NO_CHAT_TITLE = 'Open a chat to see its items.'
+const PANE_CLASS = 'flex h-full flex-col text-xs'
 const HEADER_CLASS = 'text-sm font-medium text-(--ui-text-secondary)'
 const HEADER_ROW_CLASS =
   'flex items-center justify-between gap-2 border-b border-(--ui-stroke-secondary) p-2'
@@ -366,8 +380,18 @@ function Pane({ ctx }) {
   const focusedOps = pending.filter(entry => entry.sid === focused).map(entry => entry.op)
   const board = shown === null ? null : viewBoard(shown.board, focusedOps)
   const items = boardItems(board)
+  if (focused === null) {
+    return jsxs('div', {
+      className: PANE_CLASS,
+      children: [
+        jsx(Notice, { text: noticeText({ meta, notice, loadFailed }) }),
+        jsx(EmptyState, { title: NO_CHAT_TITLE })
+      ]
+    })
+  }
+  const isEmpty = shown !== null && items.length === 0
   return jsxs('div', {
-    className: 'flex h-full flex-col text-xs',
+    className: PANE_CLASS,
     children: [
       jsx(Header, { counts: openCounts(items), items }),
       jsx(Notice, { text: noticeText({ meta, notice, loadFailed }) }),
@@ -375,9 +399,15 @@ function Pane({ ctx }) {
         className: LIST_CLASS,
         children: jsx('div', {
           className: LIST_BODY_CLASS,
-          children: buildTree(items).map(group =>
-            jsx(ItemBlock, { group, collapsed: collapsed[group.item.id] === true, onToggle, onCheck }, group.item.id)
-          )
+          children: isEmpty
+            ? jsx(EmptyState, { title: EMPTY_TITLE, description: EMPTY_HINT })
+            : buildTree(items).map(group =>
+                jsx(
+                  ItemBlock,
+                  { group, collapsed: collapsed[group.item.id] === true, onToggle, onCheck },
+                  group.item.id
+                )
+              )
         })
       })
     ]
