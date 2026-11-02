@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
+from collections.abc import Sequence
 from typing import Any
 
 import pytest
@@ -13,7 +14,13 @@ from session_tasks import copy_args
 from session_tasks.board_tools import BoardTools
 from session_tasks.db import ConnFactory
 from session_tasks.model import NO_SOURCE_BOARD, SAME_BOARD, AddItem, RemoveItem, SetChecked
-from session_tasks.results import DELEGATE_COPY, NO_SESSION, OTHER_BOARD_NOTE
+from session_tasks.results import (
+    DELEGATE_COPY,
+    NO_SESSION,
+    NO_SESSIONS_NOTE,
+    OTHER_BOARD_NOTE,
+    SESSIONS_SHOWN,
+)
 from session_tasks.store import BoardStore
 from session_tasks.titles import UNTITLED, TitleLookup
 
@@ -442,3 +449,173 @@ def test_the_title_falls_back_to_untitled(store: BoardStore, resolver_for: Resol
     result = call(tools, "board_read", "s1", {"session_id": "s2"})
 
     assert result["title"] == UNTITLED
+
+
+def stamps(store: BoardStore) -> dict[str, str]:
+    return {summary.root_id: summary.updated_at for summary in store.list_boards()}
+
+
+def lines_of(result: Any) -> Sequence[str]:
+    assert result["ok"] is True
+    return result["sessions"]
+
+
+def test_board_sessions_lists_boards_newest_first_with_titles(
+    store: BoardStore, resolver_for: ResolverFor
+) -> None:
+    specs = {
+        "s1": SessionSpec(title="Lease renewal"),
+        "s2": SessionSpec(messages=(("user", "Reply to the customer about 4910"),)),
+        "s3": SessionSpec(),
+    }
+    tools, _, _ = cross_tools(store, resolver_for, specs)
+    store.apply("s3", [AddItem("Three")], actor="agent", base_rev=0)
+    store.apply("s1", [AddItem("A"), AddItem("B"), AddItem("C")], actor="agent", base_rev=0)
+    store.apply("s1", [SetChecked(2, True)], actor="agent", base_rev=1)
+    store.apply("s2", [AddItem("Reply")], actor="agent", base_rev=0)
+    at = stamps(store)
+
+    result = call(tools, "board_sessions", "s1", {})
+
+    assert result == {
+        "ok": True,
+        "sessions": [
+            f"- Reply to the customer about 4910 | s2 | 1 of 1 open | updated {at['s2']}",
+            f"- Lease renewal | s1 | 2 of 3 open | updated {at['s1']} (this session)",
+            f"- Untitled session | s3 | 1 of 1 open | updated {at['s3']}",
+        ],
+        "more": 0,
+    }
+
+
+def test_equal_update_times_sort_by_root_id(
+    connect: ConnFactory, resolver_for: ResolverFor
+) -> None:
+    same = BoardStore(connect, lambda: "2026-10-30T12:00:00.000000Z")
+    tools, _, _ = cross_tools(same, resolver_for, {})
+    for root in ("b", "c", "a"):
+        same.apply(root, [AddItem("Item")], actor="agent", base_rev=0)
+
+    result = call(tools, "board_sessions", None, {})
+
+    ids = [line.split(" | ")[1] for line in lines_of(result)]
+    assert ids == ["a", "b", "c"]
+
+
+def test_equal_titles_are_both_listed(store: BoardStore, resolver_for: ResolverFor) -> None:
+    specs = {"s1": SessionSpec(title="Same"), "s2": SessionSpec(title="Same")}
+    tools, _, _ = cross_tools(store, resolver_for, specs)
+    store.apply("s1", [AddItem("One")], actor="agent", base_rev=0)
+    store.apply("s2", [AddItem("Two")], actor="agent", base_rev=0)
+
+    result = call(tools, "board_sessions", None, {})
+
+    assert [line.split(" | ")[:2] for line in lines_of(result)] == [
+        ["- Same", "s2"],
+        ["- Same", "s1"],
+    ]
+
+
+def test_no_board_gives_an_empty_list_and_the_note(
+    store: BoardStore, resolver_for: ResolverFor, connect: ConnFactory
+) -> None:
+    tools, _, _ = cross_tools(store, resolver_for, {})
+
+    result = call(tools, "board_sessions", "s1", {})
+
+    assert result == {"ok": True, "sessions": [], "more": 0, "note": NO_SESSIONS_NOTE}
+    assert count_rows(connect, "boards") == 0
+
+
+def test_a_caller_with_no_board_gets_no_own_marker(
+    store: BoardStore, resolver_for: ResolverFor
+) -> None:
+    tools, _, _ = cross_tools(store, resolver_for, {})
+    store.apply("s2", [AddItem("Theirs")], actor="agent", base_rev=0)
+
+    result = call(tools, "board_sessions", "s1", {})
+
+    assert len(lines_of(result)) == 1
+    assert "(this session)" not in lines_of(result)[0]
+
+
+def test_more_than_50_boards_lists_50_and_counts_the_rest(
+    store: BoardStore, resolver_for: ResolverFor
+) -> None:
+    tools, _, _ = cross_tools(store, resolver_for, {})
+    for number in range(SESSIONS_SHOWN + 3):
+        store.apply(f"s{number:02d}", [AddItem("Item")], actor="agent", base_rev=0)
+
+    result = call(tools, "board_sessions", None, {})
+
+    assert len(lines_of(result)) == SESSIONS_SHOWN
+    assert result["more"] == 3
+    assert "s52" in lines_of(result)[0]
+
+
+def test_board_sessions_writes_nothing_and_is_repeatable(
+    store: BoardStore, resolver_for: ResolverFor, connect: ConnFactory
+) -> None:
+    tools, calls, _ = cross_tools(store, resolver_for, {})
+    store.apply("s1", [AddItem("Mine")], actor="agent", base_rev=0)
+    store.apply("s2", [AddItem("Theirs")], actor="agent", base_rev=0)
+    before = (
+        count_rows(connect, "boards"),
+        count_rows(connect, "changes"),
+        seen(connect, "s1"),
+        seen(connect, "s2"),
+    )
+
+    first = call(tools, "board_sessions", "s1", {})
+    second = call(tools, "board_sessions", "s1", {})
+
+    assert first == second
+    after = (
+        count_rows(connect, "boards"),
+        count_rows(connect, "changes"),
+        seen(connect, "s1"),
+        seen(connect, "s2"),
+    )
+    assert after == before
+    assert calls == []
+
+
+@pytest.mark.parametrize("blank", [None, ""])
+def test_blank_keyword_still_lists_without_a_marker(
+    store: BoardStore, resolver_for: ResolverFor, blank: str | None
+) -> None:
+    tools, _, _ = cross_tools(store, resolver_for, {})
+    store.apply("s1", [AddItem("Mine")], actor="agent", base_rev=0)
+
+    result = call(tools, "board_sessions", blank, {})
+
+    assert len(lines_of(result)) == 1
+    assert "(this session)" not in lines_of(result)[0]
+
+
+def test_a_delegate_caller_marks_the_delegator_board(
+    store: BoardStore, resolver_for: ResolverFor
+) -> None:
+    tools, _, _ = cross_tools(store, resolver_for, SEVEN_ROW_FIXTURE)
+    store.apply("root", [AddItem("Parent item")], actor="agent", base_rev=0)
+    store.apply("plain", [AddItem("Other item")], actor="agent", base_rev=0)
+
+    result = call(tools, "board_sessions", "dg", {})
+
+    marked = [line for line in lines_of(result) if line.endswith("(this session)")]
+    assert len(marked) == 1
+    assert " | root | " in marked[0]
+
+
+def test_one_reader_serves_every_title(store: BoardStore, resolver_for: ResolverFor) -> None:
+    resolver, _ = resolver_for({})
+    title_factory = FakeReaderFactory({"s1": SessionSpec(title="One")})
+    tools = BoardTools(store, resolver, titles=TitleLookup(title_factory))
+    for root in ("s1", "s2", "s3"):
+        store.apply(root, [AddItem("Item")], actor="agent", base_rev=0)
+
+    result = call(tools, "board_sessions", "s1", {})
+
+    assert len(lines_of(result)) == 3
+    assert title_factory.opens == 1
+    assert title_factory.all_closed
