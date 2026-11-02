@@ -3,16 +3,16 @@ gsd_state_version: "1.0"
 current_phase: 05
 current_phase_name: Agent sees Theo's edits
 status: executing
-stopped_at: Completed 05-05-PLAN.md
-last_updated: "2026-11-02T16:01:39.346Z"
+stopped_at: Completed 05-06-PLAN.md
+last_updated: "2026-11-02T16:11:08.307Z"
 last_activity: 2026-11-02
 last_activity_desc: Phase 05 execution started
-state_head: 015b264c3ed49cb95eaf8e52aff19ceed848eff3
+state_head: 517140951bc0d8466f99285c806df42a185dc7f1
 progress:
   total_phases: 7
   completed_phases: 3
   total_plans: 41
-  completed_plans: 36
+  completed_plans: 37
   percent: 43
 ---
 
@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-10-30)
 ## Current Position
 
 Phase: 05 (Agent sees Theo's edits) — EXECUTING
-Plan: 6 of 7
+Plan: 7 of 7
 Status: Ready to execute
 Last activity: 2026-11-02 — Phase 05 execution started
 
@@ -92,6 +92,7 @@ Progress: [████░░░░░░] 43%
 | Phase 05 P03 | 25 min | 3 tasks | 6 files |
 | Phase 05 P04 | 15 min | 3 tasks | 10 files |
 | Phase 05 P05 | 20min | 3 tasks | 0 files |
+| Phase 05 P06 | 8min | 3 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -165,6 +166,7 @@ Recent decisions affecting current work:
 - [Phase 05]: 05-04: a missing or non-string reason on on_session_delete removes nothing; alias rows go by session id or root id, a board only by exact root id
 - [Phase 05]: 05-04: the contract snippet deletes a chain with include_compression_chain=True (the dashboard and Desktop path); plain delete_session removes only the tip row
 - [Phase 05]: Own-plan gate passed 3 of 3 with the prompt section alone (RESEARCH A1 predicted a fail); plan 05-06 decides on NUDGE_LINE
+- [Phase 05]: 05-06: own-plan test passed 3 of 3 without the one-line reminder; reminder text and its two tests removed, hooks.py unchanged, no second restart needed
 
 ### Pending Todos
 
@@ -196,6 +198,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-11-02T16:01:38.964Z
-Stopped at: Completed 05-05-PLAN.md
+Last session: 2026-11-02T16:11:07.888Z
+Stopped at: Completed 05-06-PLAN.md
 Resume file: None
