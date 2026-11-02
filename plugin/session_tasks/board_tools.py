@@ -4,22 +4,26 @@ from __future__ import annotations
 
 import logging
 from collections.abc import Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
-from . import edit_args
+from . import copy_args, edit_args
 from .events import WriteListener
 from .lineage import SessionResolver
-from .model import BoardError, InvalidSession, Stale
+from .model import NO_SOURCE_BOARD, SAME_BOARD, BoardError, InvalidSession, Stale
 from .results import (
+    DELEGATE_COPY,
     DELEGATE_EDIT,
     NO_SESSION,
     applied_result,
+    copy_result,
     describe,
     error_result,
     read_result,
+    source_missing_text,
     stale_result,
 )
 from .store import BoardStore
+from .titles import TitleLookup, no_titles
 
 log = logging.getLogger(__name__)
 
@@ -33,6 +37,7 @@ class BoardTools:
     store: BoardStore
     resolver: SessionResolver
     after_write: WriteListener = _no_listener
+    titles: TitleLookup = field(default_factory=no_titles)
 
     def board_read(
         self, args: Mapping[str, object], session_id: str | None = None, **kwargs: object
@@ -95,3 +100,43 @@ class BoardTools:
             except Exception:
                 log.warning("board after_write listener failed", exc_info=True)
         return applied_result(result)
+
+    def board_copy(
+        self, args: Mapping[str, object], session_id: str | None = None, **kwargs: object
+    ) -> str:
+        """Copy items from another session's board onto the board of the calling session.
+
+        The target is always the caller, from the keyword only. `from_session_id` names the
+        source. A copy is an add, so the D-18 guard does not apply and no hook guards it (D-40).
+        """
+        if not isinstance(session_id, str) or not session_id.strip():
+            return error_result(NO_SESSION)
+        try:
+            caller = self.resolver.resolve(session_id)
+        except InvalidSession:
+            return error_result(NO_SESSION)
+        if caller.kind == "delegate":
+            return error_result(DELEGATE_COPY)
+        try:
+            parsed = copy_args.parse(args)
+            try:
+                source = self.resolver.resolve(parsed.from_session_id)
+            except InvalidSession:
+                return error_result(NO_SOURCE_BOARD)
+            if source.root_id == caller.root_id:
+                return error_result(SAME_BOARD)
+            result = self.store.copy_items(
+                caller.root_id, source.root_id, parsed.item_ids, actor="agent"
+            )
+        except BoardError as exc:
+            return error_result(describe(exc))
+        if isinstance(result, Stale):
+            return error_result(source_missing_text(result.item_id or 0))
+        if result.applied.changed_ids:
+            # The copy is committed already. A listener fault must not turn it into an
+            # error result, or the agent would repeat the copy.
+            try:
+                self.after_write(caller.root_id, session_id, result.applied.rev)
+            except Exception:
+                log.warning("board after_write listener failed", exc_info=True)
+        return copy_result(result, self.titles.title_of(caller.root_id))

@@ -8,9 +8,11 @@ from dataclasses import replace
 
 from .markdown import render
 from .model import (
+    MAX_ITEMS,
     Applied,
     Board,
     BoardError,
+    CopyApplied,
     Stale,
 )
 
@@ -19,6 +21,10 @@ EMPTY_NOTE = "empty board"
 DELEGATE_EDIT = (
     "board_edit does not work in a subagent session. "
     "Report the items to the session that started you; it adds them to the board."
+)
+DELEGATE_COPY = (
+    "board_copy does not work in a subagent session. "
+    "Report the items to the session that started you; it copies them."
 )
 
 
@@ -117,3 +123,27 @@ def stale_result(stale: Stale, base_rev: int) -> str:
         "board": render(stale.board, include_ids=True),
     }
     return json.dumps(result, ensure_ascii=False)
+
+
+def copy_summary(copied: int, skipped: int, overflow: int, title: str) -> str:
+    """Return the D-42 sentence. The cap clause follows only when the cap cut items (D-41)."""
+    text = f"Copied {copied} to {title}. {skipped} skipped, already on the board."
+    if overflow:
+        text += f" {overflow} not copied, the board holds {MAX_ITEMS} items."
+    return text
+
+
+def copy_result(result: CopyApplied, title: str) -> str:
+    """Return the new rev, the D-42 sentence and one agent-view line per copied item."""
+    applied = result.applied
+    payload: dict[str, object] = {
+        "ok": True,
+        "rev": applied.rev,
+        "summary": copy_summary(result.copied, result.skipped, result.overflow, title),
+        "changed": [_changed_line(applied.board, item_id) for item_id in applied.changed_ids],
+    }
+    return json.dumps(payload, ensure_ascii=False)
+
+
+def source_missing_text(item_id: int) -> str:
+    return f"not found: #{item_id} is not on that session's board. Nothing was copied."
