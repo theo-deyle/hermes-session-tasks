@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import re
 from pathlib import Path
 from typing import Any
@@ -59,8 +60,12 @@ def test_board_read_first_sentence_fits_the_catalog_limit() -> None:
     assert sentence == "Read Theo's task board with item ids and the revision."
 
 
-def test_board_read_schema_declares_no_session_id_property() -> None:
-    assert "session_id" not in property_names(tool_text.BOARD_READ_SCHEMA)
+def test_board_read_schema_declares_an_optional_session_id() -> None:
+    parameters = tool_text.BOARD_READ_SCHEMA["parameters"]
+
+    assert parameters["properties"]["session_id"]["type"] == "string"
+    assert set(parameters["properties"]) == {"session_id"}
+    assert "required" not in parameters
 
 
 def test_first_sentence_helper_stops_at_the_first_period_and_space() -> None:
@@ -86,6 +91,17 @@ ITEM_FIELD_TYPES = {
     "parent_id": "integer",
     "parent_ref": "integer",
 }
+
+
+ALL_SCHEMAS = (
+    tool_text.BOARD_READ_SCHEMA,
+    tool_text.BOARD_EDIT_SCHEMA,
+    tool_text.BOARD_SESSIONS_SCHEMA,
+    tool_text.BOARD_COPY_SCHEMA,
+)
+PROMPT_SECTION_SHA256 = "456f930fa7275b3bda19c25315af5f626701bfbca1ed9b25f9bd28c59448c853"
+SESSIONS_FIRST_SENTENCE = "List the sessions that have a task board."
+COPY_FIRST_SENTENCE = "Copy items from another session's board."
 
 
 def todo_check_passes(description: str) -> bool:
@@ -149,7 +165,7 @@ def test_base_rev_and_confirmed_types() -> None:
 
 
 def test_no_schema_holds_a_combinator_or_a_type_array() -> None:
-    for schema in (tool_text.BOARD_READ_SCHEMA, tool_text.BOARD_EDIT_SCHEMA):
+    for schema in ALL_SCHEMAS:
         for node in schema_nodes(schema):
             assert not COMBINATOR_KEYS & set(node)
             if "type" in node:
@@ -158,6 +174,69 @@ def test_no_schema_holds_a_combinator_or_a_type_array() -> None:
 
 def test_no_schema_declares_session_id() -> None:
     assert "session_id" not in property_names(tool_text.BOARD_EDIT_SCHEMA)
+    assert "session_id" not in property_names(tool_text.BOARD_COPY_SCHEMA)
+
+
+def test_board_copy_schema_shape() -> None:
+    parameters = tool_text.BOARD_COPY_SCHEMA["parameters"]
+    item_ids = parameters["properties"]["item_ids"]
+
+    assert tool_text.BOARD_COPY_SCHEMA["name"] == tool_text.BOARD_COPY == "board_copy"
+    assert set(parameters["properties"]) == {"from_session_id", "item_ids"}
+    assert parameters["properties"]["from_session_id"]["type"] == "string"
+    assert parameters["required"] == ["from_session_id"]
+    assert item_ids["type"] == "array"
+    assert item_ids["items"] == {"type": "integer"}
+    assert item_ids["maxItems"] == 100
+
+
+def test_board_sessions_schema_has_no_property() -> None:
+    parameters = tool_text.BOARD_SESSIONS_SCHEMA["parameters"]
+
+    assert tool_text.BOARD_SESSIONS_SCHEMA["name"] == tool_text.BOARD_SESSIONS == "board_sessions"
+    assert parameters == {"type": "object", "properties": {}}
+
+
+def test_new_first_sentences_fit_the_catalog_limit() -> None:
+    sessions = first_sentence(tool_text.BOARD_SESSIONS_SCHEMA["description"])
+    copy = first_sentence(tool_text.BOARD_COPY_SCHEMA["description"])
+
+    assert (sessions, copy) == (SESSIONS_FIRST_SENTENCE, COPY_FIRST_SENTENCE)
+    assert sentence_fits(sessions)
+    assert sentence_fits(copy)
+
+
+def test_copy_is_only_on_theo_request() -> None:
+    assert "Use it only when Theo asks you to copy" in tool_text.BOARD_COPY_DESCRIPTION
+    assert "only when Theo asks" in skill_parts()[1]
+
+
+def test_board_read_names_the_other_board_rule() -> None:
+    description = tool_text.BOARD_READ_DESCRIPTION
+
+    assert "read only" in description
+    assert "not a base_rev" in description
+
+
+def test_prompt_section_is_unchanged() -> None:
+    digest = hashlib.sha256(tool_text.PROMPT_SECTION_TEXT.encode()).hexdigest()
+
+    assert digest == PROMPT_SECTION_SHA256
+
+
+def test_skill_names_the_four_tools() -> None:
+    body = skill_parts()[1]
+
+    for name in ("board_sessions", "board_copy", "board_read", "board_edit"):
+        assert name in body
+    assert "## Other sessions' boards" in body
+
+
+def test_tool_texts_hold_no_count_session_id_or_date() -> None:
+    for schema in ALL_SCHEMAS:
+        text = str(schema)
+        assert not re.search(r"\d{4}-\d{2}-\d{2}", text)
+        assert not re.search(r"\bs\d\b", text)
 
 
 def test_no_whole_board_property_exists() -> None:
@@ -165,20 +244,23 @@ def test_no_whole_board_property_exists() -> None:
 
 
 def test_tool_names_start_with_board_and_hold_no_todo() -> None:
-    for name in (tool_text.BOARD_READ, tool_text.BOARD_EDIT):
+    names = (
+        tool_text.BOARD_READ,
+        tool_text.BOARD_EDIT,
+        tool_text.BOARD_SESSIONS,
+        tool_text.BOARD_COPY,
+    )
+    for name in names:
         assert name.startswith("board_")
         assert "todo" not in name.lower()
 
 
 def tool_description(tool: str) -> str:
-    schemas = {
-        tool_text.BOARD_READ: tool_text.BOARD_READ_SCHEMA,
-        tool_text.BOARD_EDIT: tool_text.BOARD_EDIT_SCHEMA,
-    }
-    return schemas[tool]["description"]
+    schemas = {schema["name"]: schema for schema in ALL_SCHEMAS}
+    return str(schemas[tool]["description"])
 
 
-@pytest.mark.parametrize("tool", ["board_read", "board_edit"])
+@pytest.mark.parametrize("tool", ["board_read", "board_edit", "board_sessions", "board_copy"])
 def test_each_description_names_todo_list_once_and_holds_no_other_todo(tool: str) -> None:
     description = tool_description(tool)
 

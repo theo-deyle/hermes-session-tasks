@@ -70,7 +70,7 @@ def test_board_read_registration_fields(connect: ConnFactory) -> None:
     assert entry["toolset"] == "task-board"
     assert entry["emoji"] == "\U0001f4cb"
     assert entry["schema"]["name"] == "board_read"
-    assert entry["schema"]["parameters"]["properties"] == {}
+    assert set(entry["schema"]["parameters"]["properties"]) == {"session_id"}
 
 
 def test_manifest_provides_exactly_the_registered_tools_and_hooks(connect: ConnFactory) -> None:
