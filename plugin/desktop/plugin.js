@@ -47,7 +47,6 @@ const HEADER_ROW_CLASS =
 const NOTICE_CLASS = 'px-2 pt-2 text-xs text-(--ui-text-secondary)'
 const ROW_CLASS = 'group flex min-h-8 items-start gap-1 py-1'
 const SUBTASK_ROW_CLASS = 'group flex min-h-8 items-start gap-1 py-1 pl-6'
-const CHEVRON_COL_CLASS = 'flex size-6 shrink-0 items-center justify-center'
 const COUNT_CLASS = 'shrink-0 py-1 text-xs text-(--ui-text-secondary)'
 const LIST_CLASS = 'min-h-0 flex-1'
 const LIST_BODY_CLASS = 'flex flex-col p-2'
@@ -57,6 +56,7 @@ const SUBTASK_LINE_CLASS = 'mt-2 pl-6'
 const REVEAL_CLASS = 'opacity-0 group-hover:opacity-100 group-focus-within:opacity-100'
 const ROW_BUTTON_CLASS = `${REVEAL_CLASS} shrink-0`
 const ESCAPED_HASH = /^\\*#[0-9]+(?:\s|$)/
+// The hit box of the checkbox and of the chevron: one square column.
 const HIT_CLASS = 'flex size-6 shrink-0 items-center justify-center'
 // The SDK box border fades into the dark theme; the tertiary text colour keeps it visible.
 const CHECK_CLASS = 'border-(--ui-text-tertiary)'
@@ -236,7 +236,7 @@ function Chevron({ hasChildren, collapsed, onToggle }) {
   const label = collapsed ? 'Expand subtasks' : 'Collapse subtasks'
   const Icon = collapsed ? icons.ChevronRight : icons.ChevronDown
   return jsx('span', {
-    className: CHEVRON_COL_CLASS,
+    className: HIT_CLASS,
     children: jsx(Tip, {
       label,
       children: jsx(Button, {
@@ -618,9 +618,7 @@ function Pane({ ctx }) {
   }
 
   function closeSubLine(parentId) {
-    setSubLines(prev =>
-      Object.fromEntries(Object.entries(prev).filter(([key]) => key !== String(parentId)))
-    )
+    setSubLines(({ [parentId]: closed, ...rest }) => rest)
   }
 
   // The plus click: lines without text close, this parent gets an empty line and shows its subtasks.
@@ -710,25 +708,17 @@ function Pane({ ctx }) {
     sendOp({ op: 'remove', item_id: confirm.id })
   }
 
-  function onCheck(item, value) {
-    sendOp({ op: 'set_checked', item_id: item.id, checked: value === true })
-  }
-
-  function onToggle(itemId) {
-    setCollapsed(prev => ({ ...prev, [itemId]: !prev[itemId] }))
-  }
-
+  const onCheck = (item, value) => sendOp({ op: 'set_checked', item_id: item.id, checked: value === true })
+  const onToggle = itemId => setCollapsed(prev => ({ ...prev, [itemId]: !prev[itemId] }))
   const actions = { edit, onCheck, onAddSubtask: openSubLine, onEdit: startEdit, onDelete, ...editHandlers }
   const focusedEntries = pending.filter(entry => entry.sid === focused)
   const board = shown === null ? null : viewBoard(shown.board, focusedEntries)
   const items = boardItems(board)
+  const noticeLine = jsx(Notice, { text: noticeText({ meta, notice, loadFailed }) })
   if (focused === null) {
     return jsxs('div', {
       className: PANE_CLASS,
-      children: [
-        jsx(Notice, { text: noticeText({ meta, notice, loadFailed }) }),
-        jsx(EmptyState, { title: NO_CHAT_TITLE })
-      ]
+      children: [noticeLine, jsx(EmptyState, { title: NO_CHAT_TITLE })]
     })
   }
   const isEmpty = shown !== null && items.length === 0
@@ -736,7 +726,7 @@ function Pane({ ctx }) {
     className: PANE_CLASS,
     children: [
       jsx(Header, { counts: openCounts(items), items }),
-      jsx(Notice, { text: noticeText({ meta, notice, loadFailed }) }),
+      noticeLine,
       jsx(ScrollArea, {
         className: LIST_CLASS,
         children: jsx('div', {
