@@ -6,7 +6,8 @@
 // pane through a small hook runtime, and prints one JSON line.
 //
 // SDK stubs: Button, Checkbox, ConfirmDialog, CopyButton, EmptyState, Input, ScrollArea, Tip,
-// icons (Trash2, Plus, ChevronRight, ChevronDown), host, useValue, cn.
+// DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator,
+// icons (Trash2, Plus, ChevronRight, ChevronDown, Check, Copy), host (state, request), useValue, cn.
 //
 // Config keys:
 //   baseUrl        relay URL; ctx.rest forwards to baseUrl + path with fetch
@@ -18,6 +19,10 @@
 //   duringWrite    list of steps. They run once, inside the first POST, before it is forwarded.
 //                  The harness then waits until only the held POST is pending.
 //   timeoutThrows  when true, every ctx.setTimeout call throws, as after a plugin dispose
+//   sessionList    the rows host.request('session.list') resolves as {sessions: [...]}, or "__error__"
+//                  to reject with an Error
+//   calls          list of {fn, args}. After the module loads, each named export is called with the
+//                  args and its result lands in callResults
 //   steps          the step list below
 //
 // Step kinds:
@@ -35,6 +40,9 @@
 //   {"outside": {"session_id": "s1", "ops": [...], "base_rev": 1}}
 //                  a POST to baseUrl + /board/edit that the pane does not see
 //   {"timers": true}                      runs every pending ctx.setTimeout callback not cancelled
+//   {"openMenu": true}                    calls onOpenChange(true) of the one DropdownMenu; zero or two fail the run
+//   {"pick": "<name>"}                    calls onSelect of the one enabled menu item whose first text is
+//                                         the name; zero, two or a disabled match fail the run
 //   {"render": true}                      one full render with its effects, and no waiting
 //   {"peek": true}                        one render with no effects: the render phase without the commit
 //   {"burst": [<step>, ...]}              the inner steps with no render and no waiting between them
@@ -48,7 +56,13 @@
 //   confirm     null, or the last ConfirmDialog {open, title, description, confirmLabel, cancelLabel, destructive}
 //   copy        null, or the last CopyButton {text, disabled, label, appearance}
 //   tips        Tip labels in render order
-//   nodes       {text, className, style, row, scroll} per host element with direct string children
+//   nodes       {text, className, style, row, scroll, button} per host element with direct string children;
+//               button is true inside a Button
+//   menuItems   in render order: {texts, disabled, current, check} per DropdownMenuItem, {separator: true}
+//               per DropdownMenuSeparator; texts are the direct strings of the host descendants in order
+//   menuContent null, or the last DropdownMenuContent {style, align}
+//   requestCalls  {method, params} per host.request call
+//   callResults   the JSON result of each `calls` entry, in order
 //   timeouts    ms of every ctx.setTimeout call
 //   outsideCalls  {body, reply} per outside step
 //   atWrite     one {lines, checkboxes, inputs} per POST, taken before the POST is forwarded
@@ -165,8 +179,35 @@ function CopyButton() {}
 function EmptyState() {}
 function ScrollArea() {}
 function Tip() {}
+function DropdownMenu() {}
+function DropdownMenuTrigger() {}
+function DropdownMenuContent() {}
+function DropdownMenuItem() {}
+function DropdownMenuSeparator() {}
 function IconStub() {}
-const icons = { Trash2: IconStub, Plus: IconStub, ChevronRight: IconStub, ChevronDown: IconStub }
+function CheckStub() {}
+const icons = {
+  Trash2: IconStub,
+  Plus: IconStub,
+  ChevronRight: IconStub,
+  ChevronDown: IconStub,
+  Copy: IconStub,
+  Check: CheckStub
+}
+const requestCalls = []
+
+// host.request resolves the configured session rows and records each call.
+async function request(method, params) {
+  requestCalls.push({ method, params })
+  activity = true
+  pending += 1
+  try {
+    if (config.sessionList === '__error__') throw new Error('Hermes gateway unavailable')
+    return { sessions: config.sessionList ?? [] }
+  } finally {
+    pending -= 1
+  }
+}
 let focused = config.focused ?? null
 const focusedAtom = { get: () => focused }
 const sdkValues = {
@@ -178,8 +219,13 @@ const sdkValues = {
   Input,
   ScrollArea,
   Tip,
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
   cn: (...values) => values.filter(Boolean).join(' '),
-  host: { state: { focusedStoredSessionId: focusedAtom } },
+  host: { state: { focusedStoredSessionId: focusedAtom }, request },
   icons,
   useValue: atom => atom.get()
 }
@@ -289,6 +335,14 @@ const ctx = {
   onDispose: () => {}
 }
 
+// Named exports of the plugin called with the config args: the pure helpers get direct tests.
+const callResults = []
+for (const { fn, args } of config.calls ?? []) {
+  if (typeof module.namespace[fn] !== 'function') throw new Error(`no export named ${fn}`)
+  const result = module.namespace[fn](...(args ?? []))
+  callResults.push(result === undefined ? null : JSON.parse(JSON.stringify(result)))
+}
+
 const plugin = module.namespace.default
 if (!plugin || typeof plugin.register !== 'function') {
   throw new Error('the plugin must default-export an object with register(ctx)')
@@ -317,6 +371,8 @@ function walk(node, out, here) {
       className: props.className ?? null,
       onClick: props.onClick
     })
+    // The children show in nodes and lines, marked as inside a button.
+    walk(props.children, out, { ...here, button: true })
     return
   }
   if (type === Checkbox) {
@@ -382,8 +438,37 @@ function walk(node, out, here) {
     for (const text of [props.title, props.description]) {
       if (typeof text !== 'string') continue
       out.lines.push(text)
-      out.nodes.push({ text, className: null, style: null, row: here.row, scroll: here.scroll })
+      out.nodes.push({ text, className: null, style: null, row: here.row, scroll: here.scroll, button: false })
     }
+    return
+  }
+  if (type === DropdownMenu) {
+    out.menus.push(props.onOpenChange)
+    walk(props.children, out, here)
+    return
+  }
+  if (type === DropdownMenuTrigger) {
+    walk(props.children, out, here)
+    return
+  }
+  if (type === DropdownMenuContent) {
+    out.menuContent = { style: props.style ?? null, align: props.align ?? null }
+    walk(props.children, out, here)
+    return
+  }
+  if (type === DropdownMenuItem) {
+    out.menuItems.push({
+      texts: hostTexts(props.children),
+      disabled: props.disabled === true,
+      current: props['aria-current'] === true,
+      check: hasType(props.children, icons.Check),
+      onSelect: props.onSelect
+    })
+    walk(props.children, out, here)
+    return
+  }
+  if (type === DropdownMenuSeparator) {
+    out.menuItems.push({ separator: true })
     return
   }
   if (Object.values(icons).includes(type)) return
@@ -420,16 +505,57 @@ function walk(node, out, here) {
       className: props.className ?? null,
       style: props.style ?? null,
       row: next.row,
-      scroll: next.scroll
+      scroll: next.scroll,
+      button: next.button === true
     })
     if (typeof props.onClick === 'function') out.clickables.push({ text: joined, onClick: props.onClick })
   }
   walk(list, out, next)
 }
 
+// The direct strings of every host element under `children`, in document order.
+function hostTexts(children) {
+  const texts = []
+  const visit = node => {
+    if (Array.isArray(node)) return node.forEach(visit)
+    if (node === null || typeof node !== 'object' || typeof node.type !== 'string') return
+    const list = Array.isArray(node.props.children) ? node.props.children : [node.props.children]
+    const own = list.filter(child => typeof child === 'string' || typeof child === 'number')
+    if (own.length > 0) texts.push(own.join(''))
+    visit(list)
+  }
+  visit(children)
+  return texts
+}
+
+function hasType(children, wanted) {
+  if (Array.isArray(children)) return children.some(child => hasType(child, wanted))
+  if (children === null || typeof children !== 'object') return false
+  return children.type === wanted || hasType(children.props.children, wanted)
+}
+
 function textOf(children) {
   const list = Array.isArray(children) ? children : [children]
   return list.filter(child => typeof child === 'string').join('')
+}
+
+const START = { row: null, scroll: false, guard: false, button: false }
+
+function newOut() {
+  return {
+    lines: [],
+    buttons: [],
+    boxes: [],
+    inputs: [],
+    nodes: [],
+    tips: [],
+    clickables: [],
+    menus: [],
+    menuItems: [],
+    menuContent: null,
+    confirm: null,
+    copy: null
+  }
 }
 
 let lines = []
@@ -441,22 +567,15 @@ let tips = []
 let confirmRecord = null
 let copyRecord = null
 let clickables = []
+let menus = []
+let menuItems = []
+let menuContentRecord = null
 
 function renderOnce() {
   slotIndex = 0
   queuedEffects = []
-  const out = {
-    lines: [],
-    buttons: [],
-    boxes: [],
-    inputs: [],
-    nodes: [],
-    tips: [],
-    clickables: [],
-    confirm: null,
-    copy: null
-  }
-  walk(contribution.render(), out, { row: null, scroll: false, guard: false })
+  const out = newOut()
+  walk(contribution.render(), out, START)
   const effects = queuedEffects
   queuedEffects = []
   for (const run of effects) run()
@@ -468,6 +587,9 @@ function renderOnce() {
   nodes = out.nodes
   tips = out.tips
   clickables = out.clickables
+  menus = out.menus
+  menuItems = out.menuItems
+  menuContentRecord = out.menuContent
   confirmRecord = out.confirm
   copyRecord = out.copy
   return changed
@@ -478,18 +600,8 @@ function peek() {
   peeking = true
   slotIndex = 0
   try {
-    const out = {
-      lines: [],
-      buttons: [],
-      boxes: [],
-      inputs: [],
-      nodes: [],
-      tips: [],
-      clickables: [],
-      confirm: null,
-      copy: null
-    }
-    walk(contribution.render(), out, { row: null, scroll: false, guard: false })
+    const out = newOut()
+    walk(contribution.render(), out, START)
     return {
       lines: out.lines,
       checkboxes: out.boxes.map(({ onCheckedChange, ...rest }) => rest),
@@ -603,6 +715,15 @@ async function runStep(step) {
     const text = await response.text()
     if (!response.ok) throw new Error(`outside write failed ${response.status}: ${text}`)
     outsideCalls.push({ body, reply: JSON.parse(text) })
+  } else if (step.openMenu !== undefined) {
+    if (menus.length !== 1) throw new Error(`${menus.length} menus are rendered, expected one`)
+    await menus[0](true)
+  } else if (step.pick !== undefined) {
+    const matches = menuItems.filter(entry => !entry.separator && entry.texts[0] === step.pick)
+    if (matches.length === 0) throw new Error(`no menu item named ${JSON.stringify(step.pick)}`)
+    if (matches.length > 1) throw new Error(`${matches.length} menu items named ${JSON.stringify(step.pick)}`)
+    if (matches[0].disabled) throw new Error(`menu item ${JSON.stringify(step.pick)} is disabled`)
+    await matches[0].onSelect()
   } else if (step.render !== undefined) {
     renderOnce()
   } else if (step.peek !== undefined) {
@@ -650,6 +771,10 @@ const output = {
   copy: copyRecord,
   tips,
   nodes,
+  menuItems: menuItems.map(({ onSelect, ...rest }) => rest),
+  menuContent: menuContentRecord,
+  requestCalls,
+  callResults,
   timeouts,
   outsideCalls,
   atWrite

@@ -196,10 +196,17 @@ def test_long_text_wraps_and_is_never_cut(rig: Rig, tmp_path: Path) -> None:
 def test_header_sits_outside_the_scroll_area(rig: Rig, tmp_path: Path) -> None:
     seed_call_john(rig.store)
 
-    result = rig.run(tmp_path)
+    result = rig.run(
+        tmp_path,
+        sessionList=[
+            {"id": "s1", "title": "Lease renewal", "preview": "", "_lineage_root_id": None}
+        ],
+    )
 
-    header = node(result, "1 of 1 open")
-    assert header["scroll"] is False
-    assert "text-sm" in header["className"]
-    assert "font-medium" in header["className"]
+    title = node(result, "Lease renewal")
+    count = node(result, "1 of 1 open")
+    assert title["scroll"] is False
+    assert "text-sm" in title["className"]
+    assert "font-medium" in title["className"]
+    assert count["scroll"] is False
     assert node(result, "Call John")["scroll"] is True
