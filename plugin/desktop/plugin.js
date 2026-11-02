@@ -375,8 +375,8 @@ function MenuRow({ rootId, counts, updatedAt, view, onSelect }) {
         className: MENU_RIGHT_CLASS,
         style: NOWRAP_STYLE,
         children: [
-          counts.total === 0 ? null : jsx('span', { children: headerText(counts) }),
-          time === null ? null : jsx('span', { children: time })
+          counts.total === 0 ? null : jsx('span', { style: NOWRAP_STYLE, children: headerText(counts) }),
+          time === null ? null : jsx('span', { style: NOWRAP_STYLE, children: time })
         ]
       }),
       jsx('span', { className: CARET_CLASS, children: current ? jsx(icons.Check, {}) : null })
@@ -465,7 +465,7 @@ function PickerRow({ view, counts, boards, failed, focusedCounts, onOpenChange, 
 }
 
 function ReadOnlyBanner() {
-  return jsx('div', { className: BANNER_CLASS, children: jsx('span', { children: READ_ONLY_BANNER }) })
+  return jsx('div', { className: BANNER_CLASS, children: READ_ONLY_BANNER })
 }
 
 function Chevron({ hasChildren, collapsed, onToggle }) {
