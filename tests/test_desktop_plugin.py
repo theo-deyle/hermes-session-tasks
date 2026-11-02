@@ -352,3 +352,56 @@ def test_every_plugin_class_ships_in_desktop(plugin_source: str) -> None:
     assert tokens
     missing = unshipped_classes(tokens, DESKTOP_SRC)
     assert missing == [], f"classes that Desktop does not compile: {missing}"
+
+
+PALETTE_RE = re.compile(
+    r"-(red|green|blue|zinc|gray|neutral|slate|amber|emerald|rose|sky|white|black)\b"
+)
+STYLE_COLOUR_RE = re.compile(r"(color|background|backgroundColor|borderColor):\s*'(?!var\(--ui-)")
+TEMPLATE_CLASS_RE = re.compile(r"className:\s*\x60")
+MAX_PLUGIN_LINES = 800
+
+
+def over_line_ceiling(source: str) -> bool:
+    return len(source.splitlines()) > MAX_PLUGIN_LINES
+
+
+def test_class_names_carry_no_palette_colour(plugin_source: str) -> None:
+    offenders = [t for t in class_tokens(plugin_source) if PALETTE_RE.search(t)]
+
+    assert offenders == []
+
+
+def test_palette_scan_catches_colour_classes() -> None:
+    assert PALETTE_RE.search("text-red-500") is not None
+    assert PALETTE_RE.search("bg-zinc-800") is not None
+    assert PALETTE_RE.search("text-(--ui-text-secondary)") is None
+    assert PALETTE_RE.search("border-b") is None
+
+
+def test_styles_use_theme_colour_vars_only(plugin_source: str) -> None:
+    assert STYLE_COLOUR_RE.search(plugin_source) is None
+
+
+def test_style_colour_scan_catches_named_colours() -> None:
+    assert STYLE_COLOUR_RE.search("color: 'red'") is not None
+    assert STYLE_COLOUR_RE.search("backgroundColor: 'white'") is not None
+    assert STYLE_COLOUR_RE.search("color: 'var(--ui-text-secondary)'") is None
+
+
+def test_class_names_are_plain_literals(plugin_source: str) -> None:
+    assert TEMPLATE_CLASS_RE.search(plugin_source) is None
+
+
+def test_literal_scan_catches_a_template_class() -> None:
+    assert TEMPLATE_CLASS_RE.search("{ className: `a ${b}` }") is not None
+    assert TEMPLATE_CLASS_RE.search("{ className: 'a b' }") is None
+
+
+def test_plugin_stays_under_the_line_ceiling(plugin_source: str) -> None:
+    assert not over_line_ceiling(plugin_source)
+
+
+def test_line_ceiling_catches_a_long_file() -> None:
+    assert over_line_ceiling("x\n" * (MAX_PLUGIN_LINES + 1))
+    assert not over_line_ceiling("x\n" * MAX_PLUGIN_LINES)
