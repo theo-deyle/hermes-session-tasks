@@ -338,3 +338,33 @@ def test_load_failed_notice_does_not_follow_a_focus_change(rig: Rig, tmp_path: P
     )
 
     assert LOAD_FAILED_NOTICE not in result["lines"]
+
+
+# Review 04-REVIEW WR-03: the rev of a session only grows, so coming back to it keeps the rev.
+
+
+def test_returning_to_a_session_keeps_its_rev_for_the_next_write(rig: Rig, tmp_path: Path) -> None:
+    seed_call_john(rig.store)
+
+    result = rig.run(
+        tmp_path,
+        restSequences={GET_BOARD: ["__relay__", "__error__"]},
+        steps=[{"focus": "s2"}, {"focus": "s1"}, add_text("New"), ADD_ENTER],
+    )
+
+    sent = posts(result)
+    assert [call["body"]["base_rev"] for call in sent] == [1]
+    assert [item.text for item in rig.store.get_board("s1").items] == ["Call John", "New"]
+    assert STALE_NOTICE not in result["lines"]
+
+
+def test_a_render_that_never_commits_does_not_move_the_write_session(
+    rig: Rig, tmp_path: Path
+) -> None:
+    seed_call_john(rig.store)
+    uncommitted = {"burst": [{"focus": "s2"}, {"peek": True}, CHECK_ROW_1]}
+
+    result = rig.run(tmp_path, steps=[uncommitted])
+
+    assert [call["body"]["session_id"] for call in posts(result)] == ["s1"]
+    assert rig.store.get_board("s1").items[0].checked is True
