@@ -9,11 +9,13 @@ from __future__ import annotations
 import importlib.util
 import json
 import os
+import sqlite3
 import subprocess
 import sys
 from dataclasses import replace
 from pathlib import Path
 from types import ModuleType
+from typing import Any
 
 import pytest
 from conftest import HERMES_AGENT_REPO
@@ -121,7 +123,7 @@ RUNS = 30
 
 def arm_pair(
     ratio: float = 0.3, notes: dict[int, str] | None = None
-) -> tuple[list[object], list[object]]:
+) -> tuple[list[Any], list[Any]]:
     """Return (edits, quiet) arms that satisfy every check, for the given token ratio."""
     live = load_live("delta_live", DELTA_LIVE)
     chosen = NOTES if notes is None else notes
@@ -148,7 +150,7 @@ def arm_pair(
     return edits, quiet
 
 
-def compare_pair(edits: list[object], quiet: list[object]) -> dict[str, object]:
+def compare_pair(edits: list[Any], quiet: list[Any]) -> dict[str, object]:
     live = load_live("delta_live", DELTA_LIVE)
     return live.compare(edits, quiet, live.EDIT_RUNS)
 
@@ -225,37 +227,37 @@ def test_compare_passes_with_the_same_reminder_on_every_run_of_both_arms() -> No
     edits, quiet = arm_pair()
 
     report = compare_pair(
-        [replace(run, reminder=True) for run in edits],  # pyright: ignore[reportArgumentType]
-        [replace(run, reminder=True) for run in quiet],  # pyright: ignore[reportArgumentType]
+        [replace(run, reminder=True) for run in edits],
+        [replace(run, reminder=True) for run in quiet],
     )
 
     assert report["pass"] is True
 
 
-def failing_cases() -> dict[str, tuple[str, list[object], list[object]]]:
-    cases: dict[str, tuple[str, list[object], list[object]]] = {}
+def failing_cases() -> dict[str, tuple[str, list[Any], list[Any]]]:
+    cases: dict[str, tuple[str, list[Any], list[Any]]] = {}
 
     edits, quiet = arm_pair()
-    quiet[2] = replace(quiet[2], reminder=True)  # pyright: ignore[reportArgumentType]
+    quiet[2] = replace(quiet[2], reminder=True)
     cases["reminder on one arm only"] = ("reminder_runs_match", edits, quiet)
 
     edits, quiet = arm_pair()
-    quiet[7] = replace(quiet[7], note="x")  # pyright: ignore[reportArgumentType]
+    quiet[7] = replace(quiet[7], note="x")
     cases["note on a quiet run"] = ("notes_only_on_edit_runs", edits, quiet)
 
     edits, quiet = arm_pair()
-    edits[9] = replace(edits[9], note=None)  # pyright: ignore[reportArgumentType]
+    edits[9] = replace(edits[9], note=None)
     cases["missing note on an edit run"] = ("notes_only_on_edit_runs", edits, quiet)
 
     edits, quiet = arm_pair()
-    edits[11] = replace(edits[11], note="x")  # pyright: ignore[reportArgumentType]
+    edits[11] = replace(edits[11], note="x")
     cases["note on a non-edit run"] = ("notes_only_on_edit_runs", edits, quiet)
 
     edits, quiet = arm_pair(notes={**NOTES, 5: "z" * 1001})
     cases["note of 1001 characters"] = ("every_note_within_cap", edits, quiet)
 
     edits, quiet = arm_pair()
-    edits[-1] = replace(edits[-1], user_chars=edits[-1].user_chars + 1)  # pyright: ignore[reportAttributeAccessIssue]
+    edits[-1] = replace(edits[-1], user_chars=edits[-1].user_chars + 1)
     cases["user character difference off by one"] = ("user_char_diff_equals_notes", edits, quiet)
 
     edits, quiet = arm_pair(ratio=0.1)
@@ -274,3 +276,49 @@ def test_compare_names_the_failed_check(name: str) -> None:
 
     assert report["pass"] is False
     assert report[key] is False
+
+
+def seed_state_db(path: Path) -> None:
+    conn = sqlite3.connect(path)
+    conn.execute(
+        "CREATE TABLE messages (id INTEGER PRIMARY KEY, session_id TEXT, role TEXT,"
+        " content TEXT, api_content TEXT, active INTEGER)"
+    )
+    rows = [
+        (1, "s1", "user", "ok", None, 1),
+        (2, "s1", "assistant", "ok", None, 1),
+        (3, "s1", "user", "ok", "ok\n\nNOTE", 1),
+        (4, "s1", "assistant", "ok!", None, 1),
+        (5, "s1", "user", "ok", "ok\n\nGONE", 0),
+        (6, "other", "user", "secret words", None, 1),
+    ]
+    conn.executemany("INSERT INTO messages VALUES (?, ?, ?, ?, ?, ?)", rows)
+    conn.commit()
+    conn.close()
+
+
+def test_rows_report_reads_only_the_given_session_read_only(tmp_path: Path) -> None:
+    live = load_live("delta_live", DELTA_LIVE)
+    state = tmp_path / "state.db"
+    seed_state_db(state)
+
+    report = live.session_report(state, tmp_path / "missing.db", "s1", "")
+
+    assert [row["note"] for row in report["user_rows"]] == [None, "NOTE"]
+    assert [row["chars"] for row in report["assistant_rows"]] == [2, 3]
+    assert report["board"] is None
+    assert "secret words" not in json.dumps(report)
+    with pytest.raises(sqlite3.OperationalError):
+        live.open_ro(state).execute("INSERT INTO messages (id) VALUES (99)")
+
+
+def test_build_runs_counts_cumulative_characters(tmp_path: Path) -> None:
+    live = load_live("delta_live", DELTA_LIVE)
+    state = tmp_path / "state.db"
+    seed_state_db(state)
+
+    runs = live.build_runs(live.read_rows(state, "s1"), [100, 130], "")
+
+    assert [(r.run, r.input_tokens, r.note) for r in runs] == [(1, 100, None), (2, 130, "NOTE")]
+    assert [r.user_chars for r in runs] == [2, 2 + len("ok\n\nNOTE")]
+    assert [r.assistant_chars for r in runs] == [2, 5]
