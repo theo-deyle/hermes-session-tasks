@@ -457,8 +457,10 @@ function Pane({ ctx }) {
     })
   }
 
+  // Escape clears the line, except while its write is in flight: a failed write puts the text back.
   function onAddKeyDown(event) {
     if (isEnter(event)) submitAdd()
+    else if (event.key === 'Escape' && !current.current.addBusy) setAddText('')
   }
 
   function onCheck(item, value) {
