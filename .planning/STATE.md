@@ -3,16 +3,16 @@ gsd_state_version: "1.0"
 current_phase: 4
 current_phase_name: Pane
 status: executing
-stopped_at: Completed 04-03-PLAN.md
-last_updated: "2026-11-02T01:12:59.602Z"
+stopped_at: Completed 04-04-PLAN.md
+last_updated: "2026-11-02T01:33:01.505Z"
 last_activity: 2026-11-01
 last_activity_desc: Phase 02 complete, transitioned to Phase 3
-state_head: 504b827542ea591b8706b546ed6595133536d736
+state_head: 06a2e16ce6ee02a5904dd0aafd34809c8b33f338
 progress:
   total_phases: 7
   completed_phases: 2
   total_plans: 34
-  completed_plans: 26
+  completed_plans: 27
   percent: 29
 ---
 
@@ -82,6 +82,7 @@ Progress: [███░░░░░░░] 29%
 | Phase 04 P09 | 6 min | 2 tasks | 3 files |
 | Phase 04 P02 | 24 min | 3 tasks | 4 files |
 | Phase 04 P03 | 12 min | 2 tasks | 1 files |
+| Phase 04 P04-04 | 20 min | 3 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -138,6 +139,7 @@ Recent decisions affecting current work:
 - [Phase 04]: The probe plugin lives in tests/fixtures and never reaches a Desktop machine; the install script copies only plugin/desktop/plugin.js.
 - [Phase 04]: The harness takes a peek capture for every POST, so later pane tests read the pane at write time through atWrite.
 - [Phase 04]: Guards read class names only from className string literals and *_CLASS constants; a class in a template literal needs a *_CLASS constant to be scanned
+- [Phase 04]: Pane keeps the newest accepted rev per session (revs map), so a queued write for an unfocused session sends its own base_rev
 
 ### Pending Todos
 
@@ -169,6 +171,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-11-02T01:12:52.440Z
-Stopped at: Completed 04-03-PLAN.md
+Last session: 2026-11-02T01:33:01.202Z
+Stopped at: Completed 04-04-PLAN.md
 Resume file: None
