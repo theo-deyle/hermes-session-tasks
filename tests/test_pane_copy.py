@@ -293,3 +293,159 @@ def test_cap_clause_shows_only_when_items_were_cut(rig: Rig, tmp_path: Path) -> 
         "Copied 1 to Lease renewal. 0 skipped, already on the board."
         " 1 not copied, the board holds 100 items."
     )
+
+
+def notice_of(result: dict[str, Any]) -> dict[str, Any]:
+    """The one titled element of the copied notice."""
+    found = [entry for entry in result["titled"] if entry["title"].startswith("Copied ")]
+    assert len(found) == 1, f"{len(found)} copied notices"
+    return found[0]
+
+
+def copied_args(copied: int, skipped: int, overflow: int) -> dict[str, Any]:
+    return {"copied": copied, "skipped": skipped, "overflow": overflow, "label": "Lease renewal"}
+
+
+@pytest.mark.parametrize(
+    ("args", "tail"),
+    [
+        (copied_args(0, 0, 0), ". 0 skipped, already on the board."),
+        (copied_args(1, 0, 0), ". 0 skipped, already on the board."),
+        (copied_args(3, 2, 0), ". 2 skipped, already on the board."),
+        (
+            copied_args(2, 0, 1),
+            ". 0 skipped, already on the board. 1 not copied, the board holds 100 items.",
+        ),
+    ],
+)
+def test_copy_notice_text(rig: Rig, tmp_path: Path, args: dict[str, Any], tail: str) -> None:
+    result = rig.run(tmp_path, calls=[{"fn": "copyNoticeText", "args": [args]}])
+
+    (pieces,) = result["callResults"]
+    assert pieces == {
+        "head": f"Copied {args['copied']} to ",
+        "title": "Lease renewal",
+        "tail": tail,
+        "full": f"Copied {args['copied']} to Lease renewal{tail}",
+    }
+
+
+def test_copied_notice_is_three_pieces_on_one_line(rig: Rig, tmp_path: Path) -> None:
+    seed(rig)
+
+    result = rig.run(tmp_path, sessionList=SESSION_LIST, steps=[*PICK_S2, {"click": ROW_COPY}])
+
+    notice = notice_of(result)
+    assert notice["title"] == "Copied 1 to Lease renewal. 0 skipped, already on the board."
+    assert notice["style"] == {
+        "whiteSpace": "nowrap",
+        "overflow": "hidden",
+        "textOverflow": "ellipsis",
+        "display": "flex",
+    }
+    assert {"text-xs", "text-(--ui-text-secondary)"} <= set(notice["className"].split())
+    head, title, tail = notice["pieces"]
+    assert [p["text"] for p in (head, title, tail)] == notice["texts"]
+    assert "shrink-0" in head["className"].split()
+    assert "shrink-0" in tail["className"].split()
+    assert title["style"] == {
+        "overflow": "hidden",
+        "textOverflow": "ellipsis",
+        "whiteSpace": "nowrap",
+        "minWidth": 0,
+    }
+    assert head["style"] is None
+    assert tail["style"] is None
+
+
+def test_a_long_title_truncates_only_in_the_title_piece(rig: Rig, tmp_path: Path) -> None:
+    seed(rig)
+    long_title = "Renewal of the lease for the north shop " + "x" * 20
+    assert len(long_title) == 60
+    session_list = [{**SESSION_LIST[0], "title": long_title}, SESSION_LIST[1]]
+    row = {"label": f"Copy item to {long_title}", "row": "1"}
+
+    result = rig.run(tmp_path, sessionList=session_list, steps=[*PICK_S2, {"click": row}])
+
+    notice = notice_of(result)
+    assert notice["texts"] == [
+        "Copied 1 to ",
+        long_title,
+        ". 0 skipped, already on the board.",
+    ]
+    assert notice["title"] == "".join(notice["texts"])
+    assert notice["pieces"][1]["style"]["textOverflow"] == "ellipsis"
+    assert notice["pieces"][0]["style"] is None
+
+
+def test_copied_notice_clears_after_4000_ms(rig: Rig, tmp_path: Path) -> None:
+    seed(rig)
+    steps = [*PICK_S2, {"click": ROW_COPY}]
+
+    shown = rig.run(tmp_path, sessionList=SESSION_LIST, steps=steps)
+    cleared = rig.run(tmp_path, sessionList=SESSION_LIST, steps=[*steps, {"timers": True}])
+
+    assert 4000 in shown["timeouts"]
+    assert any(t["title"].startswith("Copied ") for t in shown["titled"])
+    assert not any(t["title"].startswith("Copied ") for t in cleared["titled"])
+
+
+def test_notice_priority_mismatch_beats_copied(rig: Rig, tmp_path: Path) -> None:
+    seed(rig)
+    mismatch = "Version mismatch: update the desktop plugin on this machine"
+    meta = {"ok": True, "plugin_id": "x", "backend_version": "9.9.9", "api_version": 1}
+
+    result = rig.run(
+        tmp_path,
+        sessionList=SESSION_LIST,
+        restOverrides={"/meta": meta},
+        steps=[*PICK_S2, {"click": ROW_COPY}],
+    )
+
+    assert mismatch in result["lines"]
+    assert result["titled"] == []
+
+
+def test_a_later_stale_notice_replaces_the_copied_one(rig: Rig, tmp_path: Path) -> None:
+    seed(rig)
+    stale = stale_body(rig.store.get_board("s1"), "s1")
+
+    result = rig.run(
+        tmp_path,
+        sessionList=SESSION_LIST,
+        restSequences={"/board/copy": ["__relay__", stale]},
+        steps=[*PICK_S2, {"click": ROW_COPY}, {"click": ROW_COPY}],
+    )
+
+    assert STALE in result["lines"]
+    assert result["titled"] == []
+
+
+def test_copy_all_open_label_truncates(rig: Rig, tmp_path: Path) -> None:
+    seed(rig)
+
+    result = rig.run(tmp_path, sessionList=SESSION_LIST, steps=PICK_S2)
+
+    copy_all = button(result, COPY_ALL)
+    assert copy_all["variant"] == "outline"
+    assert copy_all["size"] == "sm"
+    assert "min-w-0" in copy_all["className"].split()
+    assert COPY_ALL in result["tips"]
+    spans = [n for n in result["nodes"] if n["text"] == COPY_ALL and n["button"]]
+    assert len(spans) == 1
+    assert spans[0]["style"]["textOverflow"] == "ellipsis"
+    assert spans[0]["style"]["minWidth"] == 0
+
+
+def test_row_copy_keeps_its_space(rig: Rig, tmp_path: Path) -> None:
+    seed(rig)
+
+    result = rig.run(tmp_path, sessionList=SESSION_LIST, steps=PICK_S2)
+
+    row_copy = button(result, ROW_ARIA, row="1")
+    assert row_copy["variant"] == "ghost"
+    assert row_copy["size"] == "sm"
+    classes = row_copy["className"].split()
+    for wanted in ("opacity-0", "group-hover:opacity-100", "group-focus-within:opacity-100"):
+        assert wanted in classes
+    assert row_copy["text"] == "Copy"

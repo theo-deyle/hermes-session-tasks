@@ -53,7 +53,7 @@
 // Output keys:
 //   name, lines, restCalls, contribution, intervals, eventTypes,
 //   inputs      {placeholder, row, value, readOnly, disabled, maxLength, size, autoFocus}
-//   buttons     {label, row, disabled, className, variant, size}
+//   buttons     {label, row, disabled, className, variant, size, text}; text is the direct string children
 //   checkboxes  {row, label, checked, disabled, guarded}; guarded means an ancestor onMouseDown prevents the default
 //   confirm     null, or the last ConfirmDialog {open, title, description, confirmLabel, cancelLabel, destructive}
 //   copy        null, or the last CopyButton {text, disabled, label, appearance}
@@ -61,7 +61,8 @@
 //   nodes       {text, className, style, row, scroll, button} per host element with direct string children;
 //               button is true inside a Button
 //   titled      {title, className, style, texts} per host element with a string `title` prop; texts are the
-//               direct strings of the element and its host descendants in order
+//               direct strings of the element and its host descendants in order; pieces are its direct host
+//               children as {text, className, style}
 //   menuItems   in render order: {texts, disabled, current, check} per DropdownMenuItem, {separator: true}
 //               per DropdownMenuSeparator; texts are the direct strings of the host descendants in order
 //   menuContent null, or the last DropdownMenuContent {style, align}
@@ -379,6 +380,7 @@ function walk(node, out, here) {
       row: here.row,
       disabled: props.disabled === true,
       className: props.className ?? null,
+      text: textOf(props.children),
       variant: props.variant ?? null,
       size: props.size ?? null,
       onClick: props.onClick
@@ -527,7 +529,8 @@ function walk(node, out, here) {
       title: props.title,
       className: props.className ?? null,
       style: props.style ?? null,
-      texts: hostTexts({ type: 'span', props: { children: props.children } })
+      texts: hostTexts({ type: 'span', props: { children: props.children } }),
+      pieces: childPieces(props.children)
     })
   }
   walk(list, out, next)
@@ -546,6 +549,18 @@ function hostTexts(children) {
   }
   visit(children)
   return texts
+}
+
+// The direct host-element children that hold text: {text, className, style}, in order.
+function childPieces(children) {
+  const list = Array.isArray(children) ? children : [children]
+  return list
+    .filter(child => child !== null && typeof child === 'object' && typeof child.type === 'string')
+    .map(child => ({
+      text: textOf(child.props.children),
+      className: child.props.className ?? null,
+      style: child.props.style ?? null
+    }))
 }
 
 function hasType(children, wanted) {
