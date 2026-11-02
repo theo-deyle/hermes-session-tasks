@@ -262,8 +262,8 @@ def test_stop_refuses_a_pid_file_that_names_another_home(
 
 
 PROMPTS = ("list", "read", "copy", "mention")
-EM_DASH = "—"
-EN_DASH = "–"
+EM_DASH = chr(0x2014)
+EN_DASH = chr(0x2013)
 
 
 def prompt_text(name: str) -> str:
