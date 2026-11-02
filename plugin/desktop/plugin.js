@@ -5,7 +5,7 @@
  * Only Pane calls React hooks. Every other component is a plain function of its props.
  */
 
-import { Checkbox, host, useValue } from '@hermes/plugin-sdk'
+import { Button, Checkbox, CopyButton, ScrollArea, Tip, host, icons, useValue } from '@hermes/plugin-sdk'
 import { useEffect, useRef, useState } from 'react'
 import { jsx, jsxs } from 'react/jsx-runtime'
 
@@ -20,8 +20,16 @@ const STALE_NOTICE = 'Board changed, showing the latest'
 const WRITE_FAILED_NOTICE = 'Could not save that change. Try again.'
 const LOAD_FAILED_NOTICE = 'Could not load the board. Retrying.'
 const HEADER_CLASS = 'text-sm font-medium text-(--ui-text-secondary)'
-const NOTICE_CLASS = 'text-xs text-(--ui-text-secondary)'
+const HEADER_ROW_CLASS =
+  'flex items-center justify-between gap-2 border-b border-(--ui-stroke-secondary) p-2'
+const NOTICE_CLASS = 'px-2 pt-2 text-xs text-(--ui-text-secondary)'
 const ROW_CLASS = 'flex min-h-8 items-start gap-1 py-1'
+const SUBTASK_ROW_CLASS = 'flex min-h-8 items-start gap-1 py-1 pl-6'
+const CHEVRON_COL_CLASS = 'flex size-6 shrink-0 items-center justify-center'
+const COUNT_CLASS = 'shrink-0 py-1 text-xs text-(--ui-text-secondary)'
+const LIST_CLASS = 'min-h-0 flex-1'
+const LIST_BODY_CLASS = 'flex flex-col p-2'
+const ESCAPED_HASH = /^\\*#[0-9]+(?:\s|$)/
 const HIT_CLASS = 'flex size-6 shrink-0 items-center justify-center'
 const TEXT_CLASS = 'min-w-0 flex-1 py-1 text-xs'
 const DONE_CLASS = 'text-(--ui-text-secondary)'
@@ -44,6 +52,42 @@ function openCounts(items) {
 
 function headerText(counts) {
   return `${counts.open} of ${counts.total} open`
+}
+
+// Groups the board items by parent. Items arrive in board order, each subtask after its parent.
+// A subtask whose parent is missing stays visible as a top-level entry.
+function buildTree(items) {
+  const groups = []
+  const byId = new Map()
+  for (const item of items) {
+    const parent = isTopLevel(item) ? undefined : byId.get(item.parent_id)
+    if (parent) {
+      parent.children.push(item)
+    } else {
+      const group = { item, children: [] }
+      groups.push(group)
+      byId.set(item.id, group)
+    }
+  }
+  return groups
+}
+
+function subtaskCountText(children) {
+  const done = children.filter(child => child.checked).length
+  return `${done}/${children.length}`
+}
+
+// The copy text: one checklist line per item in board order, the same form as the core renderer
+// with ids off. A text that would read back as an id token gets one leading backslash.
+function boardMarkdown(items) {
+  return items
+    .map(item => {
+      const indent = isTopLevel(item) ? '' : '  '
+      const box = item.checked ? '[x]' : '[ ]'
+      const text = ESCAPED_HASH.test(item.text) ? `\\${item.text}` : item.text
+      return `${indent}- ${box} ${text}\n`
+    })
+    .join('')
 }
 
 // Returns a new board. Never mutates its input. An op it does not know leaves the board as it is.
@@ -98,17 +142,48 @@ function Notice({ text }) {
   return jsx('div', { className: NOTICE_CLASS, style: NOTICE_STYLE, children: text })
 }
 
-function Header({ counts }) {
-  if (counts.total === 0) return null
-  return jsx('div', { className: HEADER_CLASS, children: headerText(counts) })
+function Header({ counts, items }) {
+  return jsxs('div', {
+    className: HEADER_ROW_CLASS,
+    children: [
+      jsx('span', { className: HEADER_CLASS, children: counts.total === 0 ? null : headerText(counts) }),
+      jsx(CopyButton, {
+        appearance: 'icon',
+        label: 'Copy as markdown',
+        text: () => boardMarkdown(items),
+        disabled: items.length === 0
+      })
+    ]
+  })
 }
 
-function ItemRow({ item, onCheck }) {
+function Chevron({ hasChildren, collapsed, onToggle }) {
+  if (!hasChildren) return jsx('span', { className: CHEVRON_COL_CLASS })
+  const label = collapsed ? 'Expand subtasks' : 'Collapse subtasks'
+  const Icon = collapsed ? icons.ChevronRight : icons.ChevronDown
+  return jsx('span', {
+    className: CHEVRON_COL_CLASS,
+    children: jsx(Tip, {
+      label,
+      children: jsx(Button, {
+        variant: 'ghost',
+        size: 'icon-xs',
+        'aria-label': label,
+        onClick: onToggle,
+        children: jsx(Icon, {})
+      })
+    })
+  })
+}
+
+function ItemRow({ item, subtasks, collapsed, onToggle, onCheck }) {
   const textClass = item.checked ? `${TEXT_CLASS} ${DONE_CLASS}` : TEXT_CLASS
+  const top = isTopLevel(item)
   return jsxs('div', {
-    className: isTopLevel(item) ? ROW_CLASS : `${ROW_CLASS} pl-6`,
+    className: top ? ROW_CLASS : SUBTASK_ROW_CLASS,
     'data-item-id': String(item.id),
     children: [
+      top ? jsx(Chevron, { hasChildren: subtasks.length > 0, collapsed, onToggle }) : null,
       jsx('span', {
         className: HIT_CLASS,
         children: jsx(Checkbox, {
@@ -121,7 +196,22 @@ function ItemRow({ item, onCheck }) {
         className: textClass,
         style: item.checked ? DONE_STYLE : TEXT_STYLE,
         children: item.text
-      })
+      }),
+      top && subtasks.length > 0
+        ? jsx('span', { className: COUNT_CLASS, children: subtaskCountText(subtasks) })
+        : null
+    ]
+  })
+}
+
+// One top-level item: its row, then one row per subtask. Plan 04-06 adds the subtask add line here.
+function ItemBlock({ group, collapsed, onToggle, onCheck }) {
+  const { item, children } = group
+  return jsxs('div', {
+    'data-item-id': String(item.id),
+    children: [
+      jsx(ItemRow, { item, subtasks: children, collapsed, onToggle: () => onToggle(item.id), onCheck }),
+      ...children.map(child => jsx(ItemRow, { item: child, subtasks: [], onCheck }, child.id))
     ]
   })
 }
@@ -268,13 +358,18 @@ function Pane({ ctx }) {
   const board = shown === null ? null : viewBoard(shown.board, focusedOps)
   const items = boardItems(board)
   return jsxs('div', {
-    className: 'flex h-full flex-col gap-2 p-2 text-xs',
+    className: 'flex h-full flex-col text-xs',
     children: [
-      jsx(Header, { counts: openCounts(items) }),
+      jsx(Header, { counts: openCounts(items), items }),
       jsx(Notice, { text: noticeText({ meta, notice, loadFailed }) }),
-      jsx('div', {
-        className: 'flex flex-col',
-        children: items.map(item => jsx(ItemRow, { item, onCheck }, item.id))
+      jsx(ScrollArea, {
+        className: LIST_CLASS,
+        children: jsx('div', {
+          className: LIST_BODY_CLASS,
+          children: buildTree(items).map(group =>
+            jsx(ItemBlock, { group, collapsed: false, onToggle: () => {}, onCheck }, group.item.id)
+          )
+        })
       })
     ]
   })
@@ -306,12 +401,15 @@ export {
   WRITE_FAILED_NOTICE,
   applyOp,
   boardItems,
+  boardMarkdown,
   boardPath,
+  buildTree,
   headerText,
   isMismatch,
   isTopLevel,
   noticeText,
   openCounts,
+  subtaskCountText,
   viewBoard,
   writeOutcome
 }
