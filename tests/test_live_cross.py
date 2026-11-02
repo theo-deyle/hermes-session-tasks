@@ -259,3 +259,25 @@ def test_stop_refuses_a_pid_file_that_names_another_home(
 
     assert code == 1
     assert "refused" in capsys.readouterr().out
+
+
+PROMPTS = ("list", "read", "copy", "mention")
+EM_DASH = "—"
+EN_DASH = "–"
+
+
+def prompt_text(name: str) -> str:
+    return (LIVE_DIR / f"{name}.txt").read_text(encoding="utf-8")
+
+
+def test_prompt_files_name_the_source_session_and_ask_no_change() -> None:
+    for name in PROMPTS:
+        text = prompt_text(name)
+        assert text.strip(), name
+        assert EM_DASH not in text, name
+        assert EN_DASH not in text, name
+        if name != "list":
+            assert SOURCE in text, name
+    assert "change" in prompt_text("read")
+    assert "change" in prompt_text("mention")
+    assert [name for name in PROMPTS if "Copy" in prompt_text(name)] == ["copy"]
