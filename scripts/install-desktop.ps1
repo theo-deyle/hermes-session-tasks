@@ -15,6 +15,9 @@ A full path to the Hermes home of this machine. The default is the home that Des
 .PARAMETER DevpcHost
 The SSH name of devpc on this machine. The default is devpc.
 
+.PARAMETER RemotePath
+The full path of the file to install, on devpc. The default is plugin/desktop/plugin.js in the devpc checkout.
+
 .PARAMETER DryRun
 Print the home, the slot and the source, and write nothing.
 
@@ -32,6 +35,7 @@ Show the plan on the Windows PC and write nothing.
 param(
   [string]$HermesHome = '',
   [string]$DevpcHost = 'devpc',
+  [string]$RemotePath = '/home/theo/local_repo/hermes-session-tasks/plugin/desktop/plugin.js',
   [switch]$DryRun
 )
 
@@ -39,7 +43,6 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
 $PluginId = 'hermes-session-tasks'
-$RemotePath = '/home/theo/local_repo/hermes-session-tasks/plugin/desktop/plugin.js'
 $TempName = '.plugin.js.new'
 
 function Write-Problem {
