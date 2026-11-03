@@ -56,14 +56,15 @@ created: "2026-11-03"
 | 7-06-01 | 06 | 3 | DEV-06 | T-07-12 | History holds no token, key or customer data | script | `python3 -I scripts/history_scan.py . --word customer` | yes after 7-03-03 | pending |
 | 7-06-02 | 06 | 3 | DEV-06 | T-07-12, T-07-15 | Theo decides what goes public | decision checkpoint | manual only | n/a | pending |
 | 7-06-03 | 06 | 3 | DEV-06 | T-07-13, T-07-14 | Public head equals main; first CI run passes | integration | `gh run list --repo theo-deyle/hermes-session-tasks --branch main --limit 1 --json conclusion --jq '.[0].conclusion'` | n/a | pending |
-| 7-07-01 | 07 | 4 | DEV-04 | T-07-16, T-07-17 | Scratch home only; the real home is unchanged | integration | `HERMES_HOME=<scratch> hermes plugins install 'theo-deyle/hermes-session-tasks#plugin' --enable` | n/a | pending |
-| 7-07-02 | 07 | 4 | DEV-06 | T-07-17 | The pushed head passes the plugin checks | tool | `timeout 120 hermes plugins validate plugin --install-deps` | yes | pending |
+| 7-07-01 | 07 | 4 | DEV-04 | T-07-16, T-07-17, T-07-26 | Scratch home only; the real home is unchanged; the host probe is read only and records no IP address | integration | `HERMES_HOME=<scratch> hermes plugins install 'theo-deyle/hermes-session-tasks#plugin' --enable` | n/a | pending |
+| 7-07-02 | 07 | 4 | DEV-04 | T-07-25 | Theo names the second host or keeps the devpc result before any other host changes | decision checkpoint | manual only | n/a | pending |
+| 7-07-03 | 07 | 4 | DEV-04, DEV-06 | T-07-17, T-07-25 | Install on the named host only, stop on a taken slot; the pushed head passes the plugin checks | integration and tool | `grep -q "Proof host: devpc fresh home" 07-07-SUMMARY.md \|\| grep -q "Host update: .*already up to date" 07-07-SUMMARY.md` and `timeout 120 hermes plugins validate plugin --install-deps` | yes | pending |
 | 7-08-01 | 08 | 5 | DEV-04 | T-07-21 | The test home touches no real data | live headless | `grep -cE` for the `ask rule` verdict line in 07-08-SUMMARY.md | n/a | pending |
 | 7-08-02 | 08 | 5 | DEV-04 | T-07-18 | Theo's go before the restart | go checkpoint | manual only | n/a | pending |
 | 7-08-03 | 08 | 5 | DEV-04 | T-07-18, T-07-19, T-07-20 | Owner-checked SIGTERM, no token printed, cleanup of own chats only | live | `grep -cE` for the `own-plan` verdict line in 07-08-SUMMARY.md | n/a | pending |
 | 7-09-01 | 09 | 6 | DEV-04 | T-07-22 | The devpc dev link is unchanged | integration | `test "$(readlink -f ~/.hermes/plugins/hermes-session-tasks)" = "$(pwd)/plugin"` | n/a | pending |
 | 7-09-02 | 09 | 6 | DEV-04 | T-07-22, T-07-23 | Delete of the Mac test chat after Theo's answer only | manual | manual only (Mac) | n/a | pending |
-| 7-09-03 | 09 | 6 | DEV-04 | T-07-22, T-07-23 | Delete of the Windows test chat after Theo's answer only | manual | manual only (Windows PC) | n/a | pending |
+| 7-09-03 | 09 | 6 | DEV-04 | T-07-22, T-07-23, T-07-27 | Delete of the Windows test chat after Theo's answer only; the final public push after the scan and Theo's go only | manual | manual only (Windows PC, then the go question) | n/a | pending |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
@@ -88,6 +89,8 @@ The planner fills Task ID, Plan and Wave from the PLAN.md files.
 | Full loop on the Mac and on a Windows PC through Install from Git | DEV-04 | Needs the physical machines and the Desktop dialog | Four steps per machine, one request per turn, result recorded word for word (D-57) |
 | Desktop backends stopped on devpc | DEV-04 | Stops live Desktop connections; needs Theo's go | List lock files, match pid and command line, stop matched pids after the go (D-55) |
 | Public push of the full history | DEV-06 | One-way action | `checkpoint:decision` before the push task (D-50) |
+| Install on a second Hermes host | DEV-04 | Changes another machine of Theo's and restarts its gateway | Plan 07-07 Task 2: Theo names the host or keeps the devpc result; Claude runs the install there only after that answer |
+| Final public push of the phase record | DEV-06 | One-way action | Plan 07-09 Task 3, sixth turn: one go question that names what the push publishes, before the push |
 
 ---
 

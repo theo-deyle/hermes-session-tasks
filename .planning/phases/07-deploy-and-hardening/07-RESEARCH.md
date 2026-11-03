@@ -192,7 +192,7 @@ Consequences for the live pass on the Mac and the Windows PC (both connect to de
 - If `install-desktop.ps1` ran on that machine earlier, a marker-less `desktop-plugins/hermes-session-tasks/plugin.js` exists. Install from Git then says `Desktop plugin 'hermes-session-tasks' already exists. Enable force reinstall to replace it.` Tick Force reinstall (Advanced) on the Mac and the Windows PC, or delete that folder first. [VERIFIED: desktop-plugin-install.ts:443-452; script path from scripts/install-desktop.ps1 `$PluginId`]
 - Desktop needs `git` on PATH on each machine. [ASSUMED: present on the Mac and Windows PC; the code runs `git --version` first, desktop-plugin-install.ts:493-498]
 
-A real second Hermes host does not exist in this setup (the Mac and Windows PC attach to devpc). Prove criterion 1 by a scratch-home install from the public GitHub URL on devpc after the push (same command, `HERMES_HOME=<scratch>`). Say so in the plan; a true second host is Theo's call.
+A real second Hermes host does not exist in this setup (the Mac and Windows PC attach to devpc). Prove criterion 1 by a scratch-home install from the public GitHub URL on devpc after the push (same command, `HERMES_HOME=<scratch>`). Say so in the plan; a true second host is Theo's call. Update 2026-11-03: Theo has Hermes on other hosts. Plan 07-07 keeps the scratch-home run as the pre-check, then asks him to name a second host or to keep the devpc result.
 
 ### Pattern 3: Catalog entry (draft, passes both validators)
 
@@ -514,16 +514,21 @@ ok = "--isolated" in argv and re.search(r"\bserve\b", argv) and lock_dir in argv
 | A7 | The Mac and Windows Desktop builds behave like the 2026-10-22 source (no Desktop checkbox; same parser) | Corrections 1-2 | Medium: record what each dialog shows |
 | A8 | Version `0.2.0` for the first public release | Restart | Low: any new value works |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Does `check.sh` pass in a clean clone with no Hermes checkout?**
    - Answered: yes, both versions (see CI). The plan still reruns it in a fresh clone of the final head before the push.
+   - Resolved: answered here; plan 07-06 Task 1 step 2 reruns the fresh-clone gate on the final head.
 2. **Pyright `venv .venv subdirectory not found` warning in a clean clone.**
    - Known: it is a message, not an error (`0 errors`). `pyproject.toml` sets `venvPath = "."`, `venv = ".venv"`, but check.sh passes `--pythonpath`.
    - Recommendation: leave it; or drop `venv`/`venvPath` from `[tool.pyright]` if the message is noise in CI.
+   - Resolved: leave `[tool.pyright]` as it is. The line is a message with `0 errors`, so check.sh and CI pass with it. No plan task changes it.
 3. **License.** No `LICENSE` file exists. Hermes is MIT (Nous Research); the memory-ui precedent ships a `LICENSE`. [VERIFIED: `~/.hermes/hermes-agent/LICENSE`, `~/.hermes/plugins/hermes-memory-ui/LICENSE` exist] A public repo with no license grants no rights. Recommendation: MIT, copyright holder Theo's choice (a personal name or the company). This is Theo's decision; the plan carries one checkpoint line for it.
+   - Resolved: plan 07-06 Task 2 asks Theo (point 3, MIT recommended), and plan 07-06 Task 3 step 1 writes the license he chose.
 4. **Where does a user find the pane after install on a remote backend?** Whether the desktop half arrives enabled when the agent half fails with "already installed" is untested on the Mac. The live pass records it.
+   - Resolved: plan 07-09 Task 2, turn 1 (the Mac install), records whether the pane arrived on or off; plan 07-09 Task 3, turn 1, records the same on the Windows PC.
 5. **Commit identity on the public repo.** All 426 commits carry the work email. Keep (matches the PROJECT.md constraint) unless Theo says otherwise at the checkpoint.
+   - Resolved: plan 07-06 Task 2 shows Theo the work email on every commit (point 2) before the push; his reply there settles it.
 
 ## Environment Availability
 
