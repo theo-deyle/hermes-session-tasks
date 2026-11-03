@@ -24,7 +24,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 3: REST router and client install spike** - The backend routes work, and a stub pane runs on the Mac and the Windows PC. (completed 2026-11-02)
 - [x] **Phase 4: Pane** - Theo sees and edits the focused session's board in a right-side pane that updates live. (completed 2026-11-01)
 - [x] **Phase 5: Agent sees Theo's edits** - The agent learns of Theo's changes on its next turn, and a deleted session loses its board. (completed 2026-11-02)
-- [ ] **Phase 6: Cross-session boards** - The agent and Theo list, read and copy items from other sessions' boards.
+- [x] **Phase 6: Cross-session boards** - The agent and Theo list, read and copy items from other sessions' boards. (completed 2026-11-02)
 - [ ] **Phase 7: Deploy and hardening** - The plugin runs on devpc and on both clients, with the README and the GitHub repo in place.
 
 ## Phase Details
@@ -210,7 +210,7 @@ Plans:
   2. On request, the agent reads another session's board by session id. The agent copies chosen items, or all open items, into the current board.
   3. A session picker in the pane lists boards with title, open count and last update. A picked board shows read-only.
   4. Theo copies one item, or all open items, from the shown board into the focused board.
-**Plans**: 12/12 plans executed in 5 waves
+**Plans**: 12/12 plans complete in 5 waves
 Plans:
 **Wave 1**
 - [x] 06-01-PLAN.md - Copy in the board store: one transaction, the copy rules, the journal of where each copy came from (wave 1)
@@ -260,5 +260,5 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 | 3. REST router and client install spike | 12/12 | Complete    | 2026-11-02 |
 | 4. Pane | 9/9 | Complete    | 2026-11-01 |
 | 5. Agent sees Theo's edits | 7/7 | Complete    | 2026-11-02 |
-| 6. Cross-session boards | 12/12 | In Progress | - |
+| 6. Cross-session boards | 12/12 | Complete    | 2026-11-02 |
 | 7. Deploy and hardening | 0/TBD | Not started | - |
