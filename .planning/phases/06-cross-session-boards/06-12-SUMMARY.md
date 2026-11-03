@@ -12,7 +12,7 @@ provides:
   - live proof of TOOL-03, TOOL-04 and TOOL-05 with the real model in a test Hermes home (Task 1)
   - the restart announcement and the pre-check record (Task 2)
   - the gateway restart record, the own-plan verdict with four tools and the cleanup table (Task 3)
-affects: [06-12 Task 3 Desktop backend stop (waits for Theo's one line), 06-12 Task 4 Mac checks]
+affects: [06-12 Task 4 Mac checks]
 
 requirements-completed: []
 
@@ -20,9 +20,9 @@ duration: in progress
 completed: not yet
 ---
 
-# Phase 6 Plan 12: Live check of the cross-session boards Summary (DRAFT, Tasks 1 to 3; Task 4 pending)
+# Phase 6 Plan 12: Live check of the cross-session boards Summary (DRAFT, Tasks 1 to 3 complete; Task 4 pending)
 
-Task 1 passed: in a test Hermes home the real model listed the boards, read the source board without a seen change, and copied its open items with their subtask on request. Task 2 pre-checks are done and Theo gave his go. Task 3: the gateway restarted on the new code, the own-plan check passed 3 of 3 with the four tools, and the three test chats are deleted; the stop of the two old Desktop backends waits for one script line from Theo. Task 4 (Mac checks) has not run.
+Task 1 passed: in a test Hermes home the real model listed the boards, read the source board without a seen change, and copied its open items with their subtask on request. Task 2 pre-checks are done and Theo gave his go. Task 3: the gateway restarted on the new code, the own-plan check passed 3 of 3 with the four tools, and the three test chats are deleted; Theo's one script line stopped the two old Desktop backends. Task 4 (Mac checks) has not run.
 
 Hot mount versus restart (decision): no hot reload is tried. Phase 3 measured that the Python half refreshes only on a backend restart and the Desktop half only at app start (03-08 SUMMARY). Phase 5 restarted the owner gateway the same way (05-05).
 
@@ -109,7 +109,7 @@ Please finish or pause any Desktop work you want to keep, then tell me to go ahe
 | Plugin check after | `Validation passed.` (`hermes plugins validate plugin/`, plugin host isolation) |
 | Proof the new gateway loaded the plugin | every own-plan run below called `board_edit` through the restarted gateway |
 
-### Desktop backend stop (step 2): owner check done, the kill waits for Theo's one line
+### Desktop backend stop (step 2): owner check, then Theo's one script line
 
 Lock files re-read at 01:05Z, before the restart. Each live pid was matched to its lock: alive, `serve --isolated` in the command line, and the `--ssh-session-token-file` path inside the lock's own folder.
 
@@ -126,7 +126,17 @@ Findings:
 2. Both pre-Phase 6 backends (pid 2231852 and pid 1040717) passed the owner check. The `kill <pid>` from this session was blocked by the auto mode safety check ("Interfere With Workloads"). No signal was sent. Both pids were still alive at 01:11Z.
 3. Per house rule 29 the stop moved into one non-interactive script that prints no secret: `/tmp/claude-1002/-home-theo-local-repo-hermes-session-tasks/232eb971-43c2-4e72-a1b6-67dce37c62cd/scratchpad/stop-desktop-backends.ps1`. It repeats the owner check per pid, sends SIGTERM with `/bin/kill -TERM`, waits up to 30 s, and sends no stronger signal. Theo's one line: `! timeout 90 pwsh -NoProfile -File /tmp/claude-1002/-home-theo-local-repo-hermes-session-tasks/232eb971-43c2-4e72-a1b6-67dce37c62cd/scratchpad/stop-desktop-backends.ps1`. Pass lines: `pid 2231852 : stopped at <time>`, `pid 1040717 : stopped at <time>`, `backend-stop: done`. Fail line: `FAIL: pid <n> still alive after 30 s`.
 
-Result of the stop: pending (recorded by the next executor from the output of that line).
+Result of the stop: Theo ran the line. Output word for word:
+
+```
+pid 2231852 : owner check ok (lock dfda277e4fcadaab5b5106d883d97e19), sending SIGTERM at 01:14:29Z
+pid 2231852 : stopped at 01:14:30Z
+pid 1040717 : owner check ok (lock 4f7a22d87ba7ad12117cd3eb203fc040), sending SIGTERM at 01:14:30Z
+pid 1040717 : stopped at 01:14:31Z
+backend-stop: done
+```
+
+Check from this session, verified at 01:14:58Z: both pids gone (test ! -e /proc/2231852 and test ! -e /proc/1040717 exit 0). Pid 1933828 (the backend that already holds the Phase 6 code) was not touched. Task 3 is complete.
 
 ### Own-plan re-check (step 3)
 
@@ -162,7 +172,7 @@ Cost of the three own-plan chats: 0.8341 USD. With the test home turns (0.185 US
 
 ## Task 4 - Mac checks (pending)
 
-Precondition: the two old Desktop backends are stopped (Theo's one line above), the gateway runs the new code (done), and the devpc hash is on record (done).
+Precondition met: the two old Desktop backends are stopped, the gateway runs the new code, and the devpc hash is on record.
 
 | # | Check | Result |
 |---|-------|--------|
