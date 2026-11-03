@@ -40,16 +40,30 @@ created: "2026-11-03"
 
 | Task ID | Plan | Wave | Requirement | Threat Ref | Secure Behavior | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|------------|-----------------|-----------|-------------------|-------------|--------|
-| TBD | TBD | TBD | DEV-04 | — | N/A | unit | `uv run pytest -q tests/test_version.py tests/test_desktop_plugin.py` | ✅ | ⬜ pending |
-| TBD | TBD | TBD | DEV-04 | — | N/A | unit | `uv run pytest -q tests/test_docs.py` | ❌ W0 | ⬜ pending |
-| TBD | TBD | TBD | DEV-04 | — | N/A | integration | `HERMES_HOME=<scratch> hermes plugins install theo-deyle/hermes-session-tasks#plugin --enable` | ❌ W0 | ⬜ pending |
-| TBD | TBD | TBD | DEV-06 | — | No secret value printed | unit | `uv run pytest -q tests/test_catalog_entry.py` | ❌ W0 | ⬜ pending |
-| TBD | TBD | TBD | DEV-06 | — | N/A | tool | `timeout 120 hermes plugins validate plugin --install-deps` | ✅ | ⬜ pending |
-| TBD | TBD | TBD | DEV-06 | — | No person or host name in public strings | unit | `uv run pytest -q tests/test_neutral_wording.py` | ❌ W0 | ⬜ pending |
-| TBD | TBD | TBD | DEV-06 | — | N/A | unit | `uv run pytest -q tests/test_ci_file.py` | ❌ W0 | ⬜ pending |
-| TBD | TBD | TBD | DEV-06 | — | History holds no token, key or customer data | script | `python3 -I scripts/history_scan.py .` | ❌ W0 | ⬜ pending |
-| TBD | TBD | TBD | DEV-06 | — | N/A | pane harness | `uv run pytest -q tests/test_pane_picker.py tests/test_pane_view.py` | ✅ | ⬜ pending |
-| TBD | TBD | TBD | DEV-06 | — | N/A | unit | `uv run pytest -q tests/test_copy_args.py tests/test_api_copy.py tests/test_layout.py` | ✅ | ⬜ pending |
+| 7-01-01 | 01 | 1 | DEV-06 | T-07-01, T-07-02 | The note of the user's changes names no person | unit | `uv run pytest tests/test_neutral_wording.py -q -rs -k "self_test or scan_finds or delta or hooks or rows"` | no, created in this task | pending |
+| 7-01-02 | 01 | 1 | DEV-06 | T-07-01 | Rule sentences keep their words apart from the name | unit | `uv run pytest tests/test_tool_text.py tests/test_register.py tests/test_board_tools.py -q -rs` | yes | pending |
+| 7-01-03 | 01 | 1 | DEV-06 | T-07-02 | No person or host name in public strings | unit | `uv run pytest tests/test_neutral_wording.py tests/test_guard.py tests/test_hooks.py tests/test_delta.py tests/test_tool_text.py -q -rs` | yes after 7-01-01 | pending |
+| 7-02-01 | 02 | 1 | DEV-04, DEV-06 | T-07-03, T-07-04 | No host name in the user pages; the full Desktop URL form | unit | `uv run pytest tests/test_docs.py tests/test_install_script.py -q -rs` | no, created in this task | pending |
+| 7-02-02 | 02 | 1 | DEV-06 | T-07-03 | CONTRIBUTING names no person | unit | `uv run pytest tests/test_docs.py tests/test_install_script.py -q -rs` | yes after 7-02-01 | pending |
+| 7-03-01 | 03 | 1 | DEV-06 | T-07-07 | Quoted placeholder sha, entry passes the Hermes loader | unit and hermes | `uv run pytest tests/test_catalog_entry.py -q -rs` | no, created in this task | pending |
+| 7-03-02 | 03 | 1 | DEV-06 | T-07-05, T-07-SC | Read-only CI rights, pinned actions, no secrets | unit | `uv run pytest tests/test_ci_file.py -q -rs` | no, created in this task | pending |
+| 7-03-03 | 03 | 1 | DEV-06 | T-07-06 | Counts only, never a matched value | unit and script | `uv run pytest tests/test_history_scan.py -q -rs` | no, created in this task | pending |
+| 7-04-01 | 04 | 1 | DEV-06 | T-07-08, T-07-09 | One session id limit for the route and the parser | unit | `uv run pytest tests/test_api_copy.py tests/test_api.py tests/test_api_load.py tests/test_version.py tests/test_copy_args.py -q -rs` | yes | pending |
+| 7-04-02 | 04 | 1 | DEV-06 | T-07-08 | One literal home of the limit | unit | `uv run pytest tests/test_layout.py -q -rs` | yes | pending |
+| 7-05-01 | 05 | 2 | DEV-06 | T-07-11 | Focus moves only after Back | pane harness | `uv run pytest tests/test_pane_readonly.py -q -rs -k "focus or back"` | yes | pending |
+| 7-05-02 | 05 | 2 | DEV-06 | T-07-02 | Notices reach a screen reader; the whole package scan | pane harness | `uv run pytest tests/test_pane_copy.py tests/test_pane_picker.py tests/test_neutral_wording.py -q -rs` | yes | pending |
+| 7-05-03 | 05 | 2 | DEV-04 | T-07-10, T-07-SC | A stale pane copy shows the version line | unit | `uv lock --check && uv run pytest tests/test_version.py tests/test_desktop_plugin.py tests/test_catalog_entry.py -q -rs` | yes | pending |
+| 7-06-01 | 06 | 3 | DEV-06 | T-07-12 | History holds no token, key or customer data | script | `python3 -I scripts/history_scan.py . --word customer` | yes after 7-03-03 | pending |
+| 7-06-02 | 06 | 3 | DEV-06 | T-07-12, T-07-15 | Theo decides what goes public | decision checkpoint | manual only | n/a | pending |
+| 7-06-03 | 06 | 3 | DEV-06 | T-07-13, T-07-14 | Public head equals main; first CI run passes | integration | `gh run list --repo theo-deyle/hermes-session-tasks --branch main --limit 1 --json conclusion --jq '.[0].conclusion'` | n/a | pending |
+| 7-07-01 | 07 | 4 | DEV-04 | T-07-16, T-07-17 | Scratch home only; the real home is unchanged | integration | `HERMES_HOME=<scratch> hermes plugins install 'theo-deyle/hermes-session-tasks#plugin' --enable` | n/a | pending |
+| 7-07-02 | 07 | 4 | DEV-06 | T-07-17 | The pushed head passes the plugin checks | tool | `timeout 120 hermes plugins validate plugin --install-deps` | yes | pending |
+| 7-08-01 | 08 | 5 | DEV-04 | T-07-21 | The test home touches no real data | live headless | `grep -cE` for the `ask rule` verdict line in 07-08-SUMMARY.md | n/a | pending |
+| 7-08-02 | 08 | 5 | DEV-04 | T-07-18 | Theo's go before the restart | go checkpoint | manual only | n/a | pending |
+| 7-08-03 | 08 | 5 | DEV-04 | T-07-18, T-07-19, T-07-20 | Owner-checked SIGTERM, no token printed, cleanup of own chats only | live | `grep -cE` for the `own-plan` verdict line in 07-08-SUMMARY.md | n/a | pending |
+| 7-09-01 | 09 | 6 | DEV-04 | T-07-22 | The devpc dev link is unchanged | integration | `test "$(readlink -f ~/.hermes/plugins/hermes-session-tasks)" = "$(pwd)/plugin"` | n/a | pending |
+| 7-09-02 | 09 | 6 | DEV-04 | T-07-22, T-07-23 | Delete of the Mac test chat after Theo's answer only | manual | manual only (Mac) | n/a | pending |
+| 7-09-03 | 09 | 6 | DEV-04 | T-07-22, T-07-23 | Delete of the Windows test chat after Theo's answer only | manual | manual only (Windows PC) | n/a | pending |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
@@ -59,11 +73,11 @@ The planner fills Task ID, Plan and Wave from the PLAN.md files.
 
 ## Wave 0 Requirements
 
-- [ ] `tests/test_catalog_entry.py` - the catalog entry matches `plugin.yaml` and passes the Hermes validator
-- [ ] `tests/test_docs.py` - identifier forms, the "closing the only pane disables the plugin" line, no personal or host names
-- [ ] `tests/test_neutral_wording.py` - no `Theo` or `devpc` under `plugin/`, `README.md`, `CONTRIBUTING.md`
-- [ ] `tests/test_ci_file.py` - the workflow calls `./scripts/check.sh` and pins action versions
-- [ ] `scripts/history_scan.py` - counts only, never a value
+- [ ] `tests/test_catalog_entry.py` - the catalog entry matches `plugin.yaml` and passes the Hermes validator (task 7-03-01)
+- [ ] `tests/test_docs.py` - identifier forms, the "closing the only pane disables the plugin" line, no personal or host names (task 7-02-01)
+- [ ] `tests/test_neutral_wording.py` - no `Theo` or `devpc` under `plugin/` (task 7-01-01; the whole package from task 7-05-02); `README.md` and `CONTRIBUTING.md` are checked by `tests/test_docs.py`
+- [ ] `tests/test_ci_file.py` - the workflow calls `./scripts/check.sh` and pins action versions (task 7-03-02)
+- [ ] `scripts/history_scan.py` - counts only, never a value, with `tests/test_history_scan.py` (task 7-03-03)
 
 ---
 
