@@ -66,7 +66,7 @@ Requirements for the first release. Each maps to a roadmap phase.
 - [x] **DEV-03**: The pane file passes `node --check` and an import allowlist test.
 - [ ] **DEV-04**: The plugin installs on any Hermes host with `hermes plugins install theo-deyle/hermes-session-tasks#plugin --enable` and its pane on any Desktop machine from the Plugins page. devpc keeps the symlink as the dev mode. The gateway restart is announced before it happens.
 - [x] **DEV-05**: The Desktop half (`desktop/plugin.js`) is installed on the Mac and the Windows PC by a copy script, the pane shows a banner when its version does not match the backend, and the README gives the steps for each machine.
-- [ ] **DEV-06**: The repo is pushed to the public GitHub repo `theo-deyle/hermes-session-tasks` with a plain-language README, a CONTRIBUTING file, a ready catalog entry file and CI, and `hermes plugins validate` passes.
+- [x] **DEV-06**: The repo is pushed to the public GitHub repo `theo-deyle/hermes-session-tasks` with a plain-language README, a CONTRIBUTING file, a ready catalog entry file and CI, and `hermes plugins validate` passes.
 
 ## v2 Requirements
 
@@ -149,7 +149,7 @@ Each v1 requirement maps to exactly one phase.
 | DEV-03 | Phase 3 | Complete |
 | DEV-04 | Phase 7 | Pending |
 | DEV-05 | Phase 3 | Complete |
-| DEV-06 | Phase 7 | Pending |
+| DEV-06 | Phase 7 | Complete |
 
 **Coverage:**
 - v1 requirements: 43 total
