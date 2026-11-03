@@ -182,3 +182,4 @@ def test_a_path_that_is_not_a_repo_gives_one_error_line(tmp_path: Path) -> None:
     assert result.returncode == USAGE_ERROR
     assert result.stdout == ""
     assert len(result.stderr.strip().splitlines()) == 1
+    assert result.stderr.startswith("history-scan: error:")
