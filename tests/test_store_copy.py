@@ -207,7 +207,8 @@ def test_a_user_copy_shows_as_added_lines_in_the_delta_note(store: BoardStore) -
 def test_a_large_user_copy_keeps_every_add_row_and_the_full_delta_note(
     store: BoardStore, connect: ConnFactory
 ) -> None:
-    seed(store, "s2", *numbered("src", 60))
+    # Short texts: 60 lines must fit the 1000 character cap of the note (Phase 5).
+    seed(store, "s2", *(AddItem(str(index)) for index in range(60)))
     seed(store, "s1", AddItem("Mine"))
     result = store.copy_items("s1", "s2", None, actor="user")
     assert isinstance(result, CopyApplied)

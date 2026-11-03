@@ -205,8 +205,14 @@ def read_user_changes_after(conn: sqlite3.Connection, root_id: str, rev: int) ->
 
 
 def journal_span(conn: sqlite3.Connection, root_id: str) -> tuple[int, int]:
-    """Return `(row count, oldest rev)` of the journal, `(0, 0)` when it is empty."""
-    sql = f"SELECT COUNT(*), COALESCE(MIN(rev), 0) FROM {CHANGES} WHERE root_id = ?"
+    """Return `(row count, oldest rev)` of the rows the note reads, `(0, 0)` when none exist.
+
+    A `copied` row only names a source. It is outside the cap, so it is outside the span.
+    """
+    sql = (
+        f"SELECT COUNT(*), COALESCE(MIN(rev), 0) FROM {CHANGES} "
+        "WHERE root_id = ? AND op != 'copied'"
+    )
     row = conn.execute(sql, (root_id,)).fetchone()
     return int(row[0]), int(row[1])
 
@@ -224,12 +230,22 @@ def advance_seen(conn: sqlite3.Connection, root_id: str, before_rev: int, new_re
 
 
 def prune_changes(conn: sqlite3.Connection, root_id: str, keep: int) -> None:
-    """Delete this board's journal rows that are older than the newest `keep` rows."""
+    """Delete this board's journal rows that are older than the newest `keep` rows.
+
+    The cap counts the rows the note reads, so a `copied` row never evicts an `add` row of
+    its own copy. A `copied` row goes when its rev is below the oldest kept row.
+    """
     sql = (
-        f"DELETE FROM {CHANGES} WHERE root_id = ? AND seq NOT IN "
-        f"(SELECT seq FROM {CHANGES} WHERE root_id = ? ORDER BY seq DESC LIMIT ?)"
+        f"DELETE FROM {CHANGES} WHERE root_id = ? AND op != 'copied' AND seq NOT IN "
+        f"(SELECT seq FROM {CHANGES} WHERE root_id = ? AND op != 'copied' "
+        "ORDER BY seq DESC LIMIT ?)"
     )
     conn.execute(sql, (root_id, root_id, keep))
+    sql = (
+        f"DELETE FROM {CHANGES} WHERE root_id = ? AND op = 'copied' AND rev < "
+        f"(SELECT COALESCE(MIN(rev), 0) FROM {CHANGES} WHERE root_id = ? AND op != 'copied')"
+    )
+    conn.execute(sql, (root_id, root_id))
 
 
 def delete_boards(conn: sqlite3.Connection, root_ids: Sequence[str]) -> int:

@@ -246,7 +246,8 @@ class BoardStore:
         """Return Theo's changes that the agent has not seen, or None when there are none.
 
         One read snapshot. The journal is covered when it still holds every row after
-        `agent_seen_rev`: fewer than `JOURNAL_KEEP` rows, or an oldest rev at or below it.
+        `agent_seen_rev`: fewer than `JOURNAL_KEEP` rows the note reads, or an oldest rev
+        at or below it. The `copied` rows are outside that count.
         """
         check_session_id(root_id)
         with schema.open_db(self.connect) as conn, read_txn(conn):
