@@ -3,16 +3,16 @@ gsd_state_version: "1.0"
 current_phase: 07
 current_phase_name: Deploy and hardening
 status: executing
-stopped_at: Completed 07-02-PLAN.md
-last_updated: "2026-11-03T16:13:45.153Z"
+stopped_at: Completed 07-03-PLAN.md
+last_updated: "2026-11-03T16:23:18.819Z"
 last_activity: 2026-11-03
 last_activity_desc: Phase 07 execution started
-state_head: dd81fc9b8f1dda133f269cbdea30a6aa031d906d
+state_head: 358a0b608b9a5479fd16a876c2452ae825a1a358
 progress:
   total_phases: 7
   completed_phases: 6
   total_plans: 62
-  completed_plans: 55
+  completed_plans: 56
   percent: 86
 ---
 
@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-11-02)
 ## Current Position
 
 Phase: 07 (Deploy and hardening) — EXECUTING
-Plan: 3 of 9
+Plan: 4 of 9
 Status: Ready to execute
 Last activity: 2026-11-03 — Phase 07 execution started
 
@@ -106,6 +106,7 @@ Progress: [█████████░] 86%
 | Phase 06 P11 | 40 min | 3 tasks | 4 files |
 | Phase 07 P01 | 45 min | 3 tasks | 15 files |
 | Phase 07 P02 | 30 min | 2 tasks | 6 files |
+| Phase 07 P03 | 35 min | 3 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -193,6 +194,7 @@ Recent decisions affecting current work:
 - [Phase 06]: 06-11: copyBusy is not reset on a focus change, the copy controls stay off until the outcome
 - [Phase 07]: Neutral wording: the person name becomes the user; pronouns become they, their, them, theirs; rule sentences keep other words
 - [Phase 07]: Fallback script steps moved to CONTRIBUTING.md with their words; the pane line also sits in CONTRIBUTING.md so the moved script test keeps every assertion.
+- [Phase 07]: 07-03: scan counts whole words only; credential hits sum matching diff lines over ten classes; check.sh pytest bound raised to 900 s
 
 ### Pending Todos
 
@@ -224,6 +226,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-11-03T16:13:44.184Z
-Stopped at: Completed 07-02-PLAN.md
+Last session: 2026-11-03T16:23:17.748Z
+Stopped at: Completed 07-03-PLAN.md
 Resume file: None
