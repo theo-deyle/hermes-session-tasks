@@ -8,6 +8,7 @@ Run this script with PowerShell 7 on each Hermes Desktop machine. It copies plug
 with scp into the Desktop plugin folder of this machine. Desktop loads the disk copy within
 seconds. The copy goes to a temp file first. The script moves the temp file over plugin.js only
 when the temp file holds "export default". Run the script again to update.
+This script is the fallback. The main path is Install from Git in Hermes Desktop (see README.md).
 
 .PARAMETER HermesHome
 A full path to the Hermes home of this machine. The default is the home that Desktop uses.

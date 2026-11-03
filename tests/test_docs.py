@@ -109,6 +109,25 @@ def test_doc_has_no_long_dashes(page: Path) -> None:
     assert not any(dash in text for dash in LONG_DASHES)
 
 
+CONTRIBUTING_NEEDLES = (
+    "ln -s",
+    "hermes plugins enable hermes-session-tasks",
+    "hermes gateway restart",
+    "serve --isolated",
+    "backend.lock.json",
+    "uv lock",
+    "install-desktop.ps1",
+)
+
+
+def test_contributing_holds_the_dev_setup_and_names_no_person() -> None:
+    text = read(CONTRIBUTING)
+
+    for needle in CONTRIBUTING_NEEDLES:
+        assert needle in text, f"missing {needle!r}"
+    assert PERSON_NAME.search(text) is None
+
+
 def test_name_and_host_rules_catch_what_they_guard() -> None:
     assert PERSON_NAME.search("Theo wrote this")
     assert PERSON_NAME.search("by Deyle")
