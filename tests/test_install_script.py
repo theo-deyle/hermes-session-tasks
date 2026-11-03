@@ -392,12 +392,12 @@ def test_script_source_has_no_expression_runner_and_no_marker_file() -> None:
     assert ".hermes-package.json" not in text
 
 
-README = Path(__file__).resolve().parent.parent / "README.md"
+CONTRIBUTING = Path(__file__).resolve().parent.parent / "CONTRIBUTING.md"
 LONG_DASHES = (chr(0x2014), chr(0x2013))
 
 
-def readme_text() -> str:
-    return README.read_text(encoding="utf-8")
+def contributing_text() -> str:
+    return CONTRIBUTING.read_text(encoding="utf-8")
 
 
 def section_after_heading(text: str, word: str) -> list[str]:
@@ -414,40 +414,40 @@ def section_after_heading(text: str, word: str) -> list[str]:
 
 
 @pytest.mark.parametrize("word", ["Mac", "Windows PC"])
-def test_readme_has_steps_for_each_machine(word: str) -> None:
-    body = section_after_heading(readme_text(), word)
+def test_contributing_has_steps_for_each_machine(word: str) -> None:
+    body = section_after_heading(contributing_text(), word)
 
     numbered = [line for line in body if re.match(r"\d+\. ", line)]
     assert [line.split(".")[0] for line in numbered][:2] == ["1", "2"]
 
 
-def test_readme_names_the_script_and_its_parameters() -> None:
-    text = readme_text()
+def test_contributing_names_the_script_and_its_parameters() -> None:
+    text = contributing_text()
 
     for needle in ("install-desktop.ps1", "pwsh -NoProfile -File", "-DevpcHost", "-DryRun"):
         assert needle in text
 
 
-def test_readme_names_the_remote_path_option() -> None:
-    assert "-RemotePath <path on devpc>" in readme_text()
+def test_contributing_names_the_remote_path_option() -> None:
+    assert "-RemotePath <path on devpc>" in contributing_text()
 
 
-def test_readme_names_the_windows_home_and_the_reload() -> None:
-    text = readme_text()
+def test_contributing_names_the_windows_home_and_the_reload() -> None:
+    text = contributing_text()
 
     assert "%LOCALAPPDATA%\\hermes" in text
     assert "~/.hermes/desktop-plugins/hermes-session-tasks/plugin.js" in text
     assert "Reload desktop plugins" in text
 
 
-def test_readme_warns_that_closing_the_pane_disables_the_plugin() -> None:
-    text = readme_text()
+def test_contributing_warns_that_closing_the_pane_disables_the_plugin() -> None:
+    text = contributing_text()
 
     assert "closing the only pane" in text.lower()
     assert "Reset layout" in text
 
 
-def test_readme_has_no_long_dashes() -> None:
-    text = readme_text()
+def test_contributing_has_no_long_dashes() -> None:
+    text = contributing_text()
 
     assert not any(dash in text for dash in LONG_DASHES)

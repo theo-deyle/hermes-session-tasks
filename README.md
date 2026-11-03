@@ -1,70 +1,62 @@
-# hermes-session-tasks
+# Session Tasks
 
-A Hermes Desktop plugin that gives each Hermes session a task board in a side pane. The agent writes items to the board when it lists things to do or remember. You add, edit, check off and delete items in the pane.
+The agent adds what you must do, decide or remember to a per-session board. You check, edit and delete the items in a Hermes Desktop side pane.
 
-## How it is installed
+## Install on a Hermes host
 
-The Python half runs on devpc. A symlink in `~/.hermes/plugins/` delivers it.
+1. Run this command on the host:
 
-The Desktop half is one file, `plugin/desktop/plugin.js`. Each Desktop machine needs its own copy on its own disk. The script `scripts/install-desktop.ps1` copies the file from devpc over SSH.
-
-`-RemotePath <path on devpc>` installs another file, for example a frozen test build.
-
-## Install the pane on the Mac
-
-Use PowerShell 7 (`pwsh`).
-
-1. Run `Set-Location ~`.
-2. Fetch the script. The SSH config of the Mac names devpc `devbox`. The `-O` flag comes first because Tailscale SSH can have no SFTP subsystem. The plain `scp` runs when the local `scp` does not know `-O`.
-
-   ```powershell
-   scp -O devbox:/home/theo/local_repo/hermes-session-tasks/scripts/install-desktop.ps1 install-desktop.ps1; if ($LASTEXITCODE) { scp devbox:/home/theo/local_repo/hermes-session-tasks/scripts/install-desktop.ps1 install-desktop.ps1 }
+   ```
+   hermes plugins install theo-deyle/hermes-session-tasks#plugin --enable
    ```
 
-3. Run the script. Use the same SSH name for `-DevpcHost`.
+   In zsh, put the identifier in quotes, because `#` starts a comment there.
 
-   ```powershell
-   pwsh -NoProfile -File ./install-desktop.ps1 -DevpcHost devbox
-   ```
+   The command prints "custom (unreviewed) source". This is normal for an install outside the catalog.
 
-4. Open Hermes Desktop. When the pane is missing, run `Reload desktop plugins` from the command palette. Then open the Session tasks pane on the right.
+2. Announce the gateway restart to the people who use the host. The restart drops live Desktop connections.
+3. Run `hermes gateway restart`.
 
-The script writes `~/.hermes/desktop-plugins/hermes-session-tasks/plugin.js`. It prints that path and the SHA-256 of the file.
+After `--enable`, the hooks are live at once. The board tools reach new chats. The pane routes need the gateway restart. Until the restart, the pane can show `404 Plugin not found`.
 
-## Install the pane on the Windows PC
+## Install the pane in Hermes Desktop
 
-Use PowerShell 7 (`pwsh`).
+1. Open Capabilities, Plugins in Hermes Desktop.
+2. Choose Install from Git.
+3. Paste `https://github.com/theo-deyle/hermes-session-tasks#plugin`. The path form `theo-deyle/hermes-session-tasks/plugin` also works.
+4. Press Install.
+5. When the plugin shows as off, turn it on.
+6. Open the Session tasks pane on the right.
 
-1. Run `Set-Location $HOME`.
-2. Fetch the script. The SSH config of the Windows PC names devpc `devpc-ts`.
+The short form with `#` does not work in this dialog. Desktop turns it into a wrong URL.
 
-   ```powershell
-   scp -O devpc-ts:/home/theo/local_repo/hermes-session-tasks/scripts/install-desktop.ps1 install-desktop.ps1; if ($LASTEXITCODE) { scp devpc-ts:/home/theo/local_repo/hermes-session-tasks/scripts/install-desktop.ps1 install-desktop.ps1 }
-   ```
+When Hermes and Desktop run on the same machine, Desktop copies the pane from the installed package. No Git install is needed.
 
-3. Run the script. Use the same SSH name for `-DevpcHost`.
+When the Hermes half on the host is already installed, the dialog reports it as already installed. The pane half still installs.
 
-   ```powershell
-   pwsh -NoProfile -File .\install-desktop.ps1 -DevpcHost devpc-ts
-   ```
+When an older hand-installed pane copy exists, the dialog says `Desktop plugin 'hermes-session-tasks' already exists. Enable force reinstall to replace it.` Then tick Force reinstall under Advanced.
 
-4. Open Hermes Desktop. When the pane is missing, run `Reload desktop plugins` from the command palette. Then open the Session tasks pane on the right.
-
-The script writes `%LOCALAPPDATA%\hermes\desktop-plugins\hermes-session-tasks\plugin.js`. It finds the home the way Desktop does and prints it on the `home:` line. Check that line when the pane does not appear.
-
-## Check before you install
-
-Add `-DryRun` to the script command. The script prints the home, the slot and the source. It writes nothing.
-
-The script tries `scp -O` first and plain `scp` second. This is the same order as the fetch line in step 2. On the Mac and on the Windows PC, `scp -O` worked on the first try.
+The pane can stay off after the install. Turn it on under Capabilities, Plugins.
 
 ## Update
 
-Run the same script command again. The script replaces `plugin.js` in one move. Then run `Reload desktop plugins` from the command palette. Desktop loads the new file with no backend restart. The pane shows a version banner when its copy differs from the backend.
+1. Run `hermes plugins update hermes-session-tasks` on the host.
+2. Announce the gateway restart. Then run `hermes gateway restart`.
+3. In Hermes Desktop, the pane shows a version line when its copy differs from the host. Then install the pane again from Git with Force reinstall.
 
-## Known behavior
+## Known behaviour
 
 - Closing the only pane disables the plugin. Turn it on again under Capabilities, Plugins. You can also use Reset layout.
-- A change to `plugin/dashboard/plugin_api.py` needs a restart of each Desktop backend on devpc. The restart drops the live Desktop connection, so announce it first.
-- Any Desktop that signs in to devpc can read and write any board by session id. Devpc serves one user.
-- When the pane reports `404 Plugin not found`, Desktop is attached to a backend on another host. Switch Desktop to devpc, then run `Reload desktop plugins`.
+- The pane can show `404 Plugin not found` until the gateway or the Desktop backend restarts.
+- Any Desktop that signs in to the host can read and write any board by session id.
+- The agent sees your edits on its next turn.
+
+## What the plugin stores and reads
+
+- It stores the boards in its own SQLite file. The file sits in the `plugin-data/hermes-session-tasks/` folder of the active profile.
+- It reads the `state.db` file of the active profile read-only, for session titles and lineage.
+- It makes no network calls. It runs no shell commands. It holds no credentials. It sends no telemetry.
+
+## Contributing
+
+The dev setup and the fallback pane install are in `CONTRIBUTING.md`.
