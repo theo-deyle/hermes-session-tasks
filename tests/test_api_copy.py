@@ -12,13 +12,13 @@ from conftest import ResolverFor
 from fakes import SEVEN_ROW_FIXTURE, SessionSpec
 from session_tasks import board_api
 from session_tasks.board_api import BoardApi
+from session_tasks.copy_args import SESSION_ID_MAX
 from session_tasks.db import ConnFactory
 from session_tasks.model import NO_SOURCE_BOARD, SAME_BOARD, AddItem, SetChecked
 from session_tasks.results import DELEGATE_COPY
 from session_tasks.store import BoardStore
 
 Calls = list[tuple[str, str, int]]
-SESSION_ID_MAX = 256
 
 
 @pytest.fixture(autouse=True)

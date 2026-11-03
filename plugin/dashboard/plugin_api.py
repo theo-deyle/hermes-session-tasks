@@ -2,7 +2,8 @@
 
 The Hermes dashboard host loads this file by path with no package. It holds no relative
 import and reaches the core package through `load_core`. Logic stays in core; each
-handler only maps a core reply to a JSON response.
+handler only maps a core reply to a JSON response. The routes take the session id limit from
+the core parser, so the tool and the route share one limit.
 """
 
 from __future__ import annotations
@@ -19,30 +20,8 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, ConfigDict, Field, StrictInt
 
 CORE_KEY = "hermes_session_tasks_core"
-SESSION_ID_MAX = 256
 
 router = APIRouter()
-
-
-class EditBody(BaseModel):
-    """The body of POST /board/edit. An unknown field, such as `confirmed`, is refused (D-24)."""
-
-    model_config = ConfigDict(extra="forbid")
-
-    session_id: str = Field(min_length=1, max_length=SESSION_ID_MAX)
-    ops: list[Any]
-    base_rev: StrictInt | None = None
-
-
-class CopyBody(BaseModel):
-    """The body of POST /board/copy. An unknown field, such as `confirmed`, is refused (D-46)."""
-
-    model_config = ConfigDict(extra="forbid")
-
-    session_id: str = Field(min_length=1, max_length=SESSION_ID_MAX)
-    from_session_id: str = Field(min_length=1, max_length=SESSION_ID_MAX)
-    item_ids: list[Any] | None = None
-    base_rev: StrictInt | None = None
 
 
 def load_core() -> ModuleType:
@@ -69,6 +48,30 @@ def load_core() -> ModuleType:
 def core_module(name: str) -> ModuleType:
     load_core()
     return importlib.import_module(f"{CORE_KEY}.{name}")
+
+
+SESSION_ID_MAX: int = core_module("copy_args").SESSION_ID_MAX
+
+
+class EditBody(BaseModel):
+    """The body of POST /board/edit. An unknown field, such as `confirmed`, is refused (D-24)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    session_id: str = Field(min_length=1, max_length=SESSION_ID_MAX)
+    ops: list[Any]
+    base_rev: StrictInt | None = None
+
+
+class CopyBody(BaseModel):
+    """The body of POST /board/copy. An unknown field, such as `confirmed`, is refused (D-46)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    session_id: str = Field(min_length=1, max_length=SESSION_ID_MAX)
+    from_session_id: str = Field(min_length=1, max_length=SESSION_ID_MAX)
+    item_ids: list[Any] | None = None
+    base_rev: StrictInt | None = None
 
 
 def get_api() -> Any:
