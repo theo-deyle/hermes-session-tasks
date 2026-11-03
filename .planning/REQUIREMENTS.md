@@ -64,9 +64,9 @@ Requirements for the first release. Each maps to a roadmap phase.
 - [x] **DEV-01**: The repo is a uv project with ruff, pyright and pytest, and the tests pass on Python 3.11 and 3.14.
 - [x] **DEV-02**: Tool handlers, hooks, store and routes have tests that run without a gateway, including a two-process concurrent write test.
 - [x] **DEV-03**: The pane file passes `node --check` and an import allowlist test.
-- [ ] **DEV-04**: The package dir is symlinked into `~/.hermes/plugins/`, enabled with the Hermes CLI, and the gateway restart is announced before it happens.
+- [ ] **DEV-04**: The plugin installs on any Hermes host with `hermes plugins install theo-deyle/hermes-session-tasks#plugin --enable` and its pane on any Desktop machine from the Plugins page. devpc keeps the symlink as the dev mode. The gateway restart is announced before it happens.
 - [x] **DEV-05**: The Desktop half (`desktop/plugin.js`) is installed on the Mac and the Windows PC by a copy script, the pane shows a banner when its version does not match the backend, and the README gives the steps for each machine.
-- [ ] **DEV-06**: The repo is pushed to GitHub `Don-Mor-Software-Group/hermes-session-tasks` (private) with a plain-language README.
+- [ ] **DEV-06**: The repo is pushed to the public GitHub repo `theo-deyle/hermes-session-tasks` with a plain-language README, a CONTRIBUTING file, a ready catalog entry file and CI, and `hermes plugins validate` passes.
 
 ## v2 Requirements
 

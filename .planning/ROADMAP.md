@@ -25,7 +25,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 4: Pane** - Theo sees and edits the focused session's board in a right-side pane that updates live. (completed 2026-11-01)
 - [x] **Phase 5: Agent sees Theo's edits** - The agent learns of Theo's changes on its next turn, and a deleted session loses its board. (completed 2026-11-02)
 - [x] **Phase 6: Cross-session boards** - The agent and Theo list, read and copy items from other sessions' boards. (completed 2026-11-02)
-- [ ] **Phase 7: Deploy and hardening** - The plugin runs on devpc and on both clients, with the README and the GitHub repo in place.
+- [ ] **Phase 7: Deploy and hardening** - The plugin installs on any Hermes host and any Desktop machine from a public, catalog-ready GitHub repo.
 
 ## Phase Details
 
@@ -237,16 +237,17 @@ Plans:
 **UI hint**: yes
 
 ### Phase 7: Deploy and hardening
-**Goal**: The plugin runs on devpc and on both clients. The README and the GitHub repo are in place.
+**Goal**: The plugin installs on any Hermes host with one `hermes plugins install` line and its pane installs on any Hermes Desktop machine from the Plugins page. The public GitHub repo holds everything the Hermes plugin catalog asks of a submission. Changed 2026-11-03 by Theo; see 07-CONTEXT.md.
 **Depends on**: Phase 5, Phase 6
 **Requirements**: DEV-04, DEV-06
 **Success Criteria** (what must be TRUE):
-  1. The deploy symlinks the package dir into `~/.hermes/plugins/` and enables it with the Hermes CLI, never by a hand edit of `config.yaml`. The deploy announces the gateway restart before it happens.
-  2. After the restart, every running `hermes serve` process runs the new code and reports the same version from `/meta`.
-  3. A live pass on the Mac and on the Windows PC runs the whole loop in four steps. The agent lists items. The pane shows them live. Theo edits one. The agent sees the edit on its next turn.
-  4. The private GitHub repo `Don-Mor-Software-Group/hermes-session-tasks` holds the finished code and a plain-language README. The README states that closing the only pane disables the plugin.
+  1. `hermes plugins install theo-deyle/hermes-session-tasks#plugin --enable` installs and enables the plugin on a Hermes host other than devpc, never by a hand edit of `config.yaml`. The gateway restart is announced before it happens. devpc keeps the symlink as the dev mode.
+  2. After a restart on devpc, every running `hermes serve` process runs the new code and reports the same version from `/meta`. The Desktop backends are stopped only after a lock file and command line match, after Theo's go.
+  3. A live pass on the Mac and on a Windows PC installs the pane from the Plugins page (Install from Git, Desktop target) and runs the whole loop in four steps. The agent lists items. The pane shows them live. Theo edits one. The agent sees the edit on its next turn.
+  4. The public GitHub repo `theo-deyle/hermes-session-tasks` holds the full history, a plain-language README with no personal or host names, a CONTRIBUTING file with the devpc dev setup, a ready catalog entry file, and a CI run of the test suite. `hermes plugins validate plugin --install-deps` passes. The README states that closing the only pane disables the plugin.
+  5. The three Phase 6 pane review warnings, the stale UI-SPEC line and review note IN-05 are fixed. The user-facing strings name no person and no host.
 **Plans**: TBD
-**Research**: Needed. Topic: a live rollout procedure with Theo (restart announcement, every `serve` process, both clients).
+**Research**: Needed. Topics: the catalog entry schema (`plugin-catalog/README.md`), how the Desktop app installs a plugin from Git against a remote backend, the GitHub history scan before the public push, and the restart procedure for every `serve` process.
 
 ## Progress
 
