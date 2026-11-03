@@ -12,7 +12,8 @@ plugin. It creates the session row, sets its title and applies the ops through t
 home: it refuses an unset HERMES_HOME and the real `~/.hermes` before any Hermes import.
 `board` uses the standard library only and opens the data file read only.
 `calls` lists the tool uses of a stream-json run, with the rules of tests/live/own_job/analyze.py.
-`stop` stops only a test gateway whose environment names the given home, through
+`stop` refuses a blank `--home` and the real `~/.hermes` before any pid file read. It then
+stops only a test gateway whose environment names the given home, through
 `stop_test_gateway` of tests/live/delta/delta_live.py.
 
 Every subcommand prints one JSON line on success.
@@ -44,14 +45,21 @@ NOT_APPLIED = 1
 USAGE_ERROR = 2
 
 
+def refuse_home(named: str, real: Path, source: str, act: str) -> str | None:
+    """Return the reason to refuse `named` as a test home, or None when it is one.
+
+    `source` names where the value came from (HERMES_HOME or --home), `act` the subcommand.
+    """
+    if not named.strip():
+        return f"{source} is unset or blank: {act} needs a test home"
+    if Path(named.strip()).expanduser().resolve() == real.resolve():
+        return f"{source} names the real Hermes home {real}: {act} refuses it"
+    return None
+
+
 def refuse_real_home(env: Mapping[str, str], home: Path) -> str | None:
     """Return the reason to refuse a write, or None when HERMES_HOME names a test home."""
-    named = env.get("HERMES_HOME", "").strip()
-    if not named:
-        return "HERMES_HOME is unset or blank: seed needs a test home"
-    if Path(named).expanduser().resolve() == home.resolve():
-        return f"HERMES_HOME names the real Hermes home {home}: seed refuses it"
-    return None
+    return refuse_home(env.get("HERMES_HOME", ""), home, "HERMES_HOME", "seed")
 
 
 def _fail(message: str) -> int:
@@ -205,6 +213,9 @@ def cmd_calls(args: argparse.Namespace) -> int:
 
 
 def cmd_stop(args: argparse.Namespace) -> int:
+    reason = refuse_home(args.home, Path.home() / ".hermes", "--home", "stop")
+    if reason is not None:
+        return _fail(reason)
     delta = _load("cross_live_delta", DELTA_LIVE)
     home = Path(args.home).expanduser()
     result = delta.stop_test_gateway(home)
