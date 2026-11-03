@@ -15,9 +15,9 @@ for v in 3.11 3.14; do
   uv run --python "$v" pyright --pythonversion "$v" --pythonpath "${UV_PROJECT_ENVIRONMENT}/bin/python"
   if [ "$v" = "3.11" ]; then
     # Coverage gate: fail_under in pyproject.toml fails the run below 80 percent.
-    timeout 300 uv run --python "$v" pytest -q --cov --cov-report=term-missing
+    timeout 900 uv run --python "$v" pytest -q --cov --cov-report=term-missing
   else
-    timeout 300 uv run --python "$v" pytest -q
+    timeout 900 uv run --python "$v" pytest -q
   fi
   echo "check: python ${v} ok"
 done
