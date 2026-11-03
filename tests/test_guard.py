@@ -1,4 +1,4 @@
-"""The guard rule: which `board_edit` ops need Theo's answer first. Pure functions, no I/O."""
+"""The guard rule: which `board_edit` ops need the user's answer first. Pure functions, no I/O."""
 
 from __future__ import annotations
 
@@ -102,10 +102,10 @@ def test_block_message_text_is_exact() -> None:
     message = block_message(("remove of #3", "uncheck of #5"))
 
     assert message == (
-        "board_edit: Theo must answer first for: remove of #3, uncheck of #5. "
-        "If Theo's own message named the change, send the same call again with confirmed true. "
-        "Otherwise ask him one plain question in chat first. "
-        "After he answers, send the same call again with confirmed true."
+        "board_edit: the user must answer first for: remove of #3, uncheck of #5. "
+        "If the user's own message named the change, send the same call again with confirmed true. "
+        "Otherwise ask them one plain question in chat first. "
+        "After they answer, send the same call again with confirmed true."
     )
 
 

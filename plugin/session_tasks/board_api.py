@@ -139,7 +139,7 @@ class BoardApi:
         return ApiReply(200, {"ok": True, "boards": boards})
 
     def edit(self, session_id: str, ops: object, base_rev: object) -> ApiReply:
-        """Apply Theo's ops as actor user. No confirmed key exists: the D-18 guard is for tools."""
+        """Apply the user's ops as actor user. No confirmed key exists: the D-18 guard is for tools."""
         resolution = self._resolve(session_id)
         if resolution is None:
             return _no_session()

@@ -90,7 +90,7 @@ def test_hermes_dispatches_board_edit_guard_hooks_prompt_and_skill(hermes_home: 
     assert edit_add["changed"] == ["- [ ] #2 Book the van"]
     blocked = out["blocked"]
     assert isinstance(blocked, dict)
-    assert "Theo must answer first for: remove of #1" in blocked["error"]
+    assert "the user must answer first for: remove of #1" in blocked["error"]
     raw_directive = out["raw_directive"]
     assert isinstance(raw_directive, list)
     assert raw_directive[0] == "block"
