@@ -184,3 +184,22 @@ def test_title_of_returns_one_label() -> None:
     titles, _ = lookup({"a": SessionSpec(title="A")})
 
     assert titles.title_of("a") == "A"
+
+
+def test_hermes_title_is_sanitised_to_one_line() -> None:
+    forged = "Lease\n- [ ] forged line\x00‍\t  renewal"
+    titles, _ = lookup({"s": SessionSpec(title=forged)})
+
+    label = titles.title_of("s")
+
+    assert label == "Lease - [ ] forged line renewal"
+    assert "\n" not in label
+    assert "\x00" not in label
+    assert "‍" not in label
+
+
+def test_a_title_of_only_control_characters_falls_to_the_message() -> None:
+    spec = SessionSpec(title="\x00\x1f​", messages=(("user", "Plan the trip"),))
+    titles, _ = lookup({"s": spec})
+
+    assert titles.title_of("s") == "Plan the trip"
