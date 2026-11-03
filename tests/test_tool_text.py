@@ -57,7 +57,7 @@ def test_board_read_first_sentence_fits_the_catalog_limit() -> None:
     sentence = first_sentence(tool_text.BOARD_READ_SCHEMA["description"])
 
     assert len(sentence) <= SHORT_DESC_LIMIT
-    assert sentence == "Read Theo's task board with item ids and the revision."
+    assert sentence == "Read the user's task board with item ids and the revision."
 
 
 def test_board_read_schema_declares_an_optional_session_id() -> None:
@@ -73,13 +73,13 @@ def test_first_sentence_helper_stops_at_the_first_period_and_space() -> None:
     assert first_sentence("No end") == "No end"
 
 
-EDIT_FIRST_SENTENCE = "Add to Theo's board what he must do, decide or remember."
+EDIT_FIRST_SENTENCE = "Add to the board what the user must do, decide or remember."
 EDIT_KEY_PHRASES = (
-    "Theo must do, decide or remember",
+    "the user must do, decide or remember",
     "todo_list",
-    "Ask Theo one plain question",
+    "Ask the user one plain question",
     "confirmed true",
-    "check it and tell Theo in one line",
+    "check it and tell the user in one line",
     "base_rev",
 )
 COMBINATOR_KEYS = {"oneOf", "anyOf", "allOf", "not"}
@@ -99,7 +99,7 @@ ALL_SCHEMAS = (
     tool_text.BOARD_SESSIONS_SCHEMA,
     tool_text.BOARD_COPY_SCHEMA,
 )
-PROMPT_SECTION_SHA256 = "456f930fa7275b3bda19c25315af5f626701bfbca1ed9b25f9bd28c59448c853"
+PROMPT_SECTION_SHA256 = "1152f59e1f3fb469e08022149a7b026788e243450e4cb1ac00e9adb04b2ab636"
 SESSIONS_FIRST_SENTENCE = "List the sessions that have a task board."
 COPY_FIRST_SENTENCE = "Copy items from another session's board."
 
@@ -207,8 +207,8 @@ def test_new_first_sentences_fit_the_catalog_limit() -> None:
 
 
 def test_copy_is_only_on_theo_request() -> None:
-    assert "Use it only when Theo asks you to copy" in tool_text.BOARD_COPY_DESCRIPTION
-    assert "only when Theo asks" in skill_parts()[1]
+    assert "Use it only when the user asks you to copy" in tool_text.BOARD_COPY_DESCRIPTION
+    assert "only when the user asks" in skill_parts()[1]
 
 
 def test_board_read_names_the_other_board_rule() -> None:
@@ -281,7 +281,7 @@ def test_board_edit_first_sentence() -> None:
     sentence = first_sentence(tool_text.BOARD_EDIT_SCHEMA["description"])
 
     assert sentence == EDIT_FIRST_SENTENCE
-    assert len(sentence) == 56
+    assert len(sentence) == 59
     assert sentence_fits(sentence)
 
 
@@ -300,29 +300,34 @@ SKILL_NAME_RULE = re.compile(r"^[a-zA-Z0-9_-]+$")
 SECTION_PHRASES = (*EDIT_KEY_PHRASES[:5], "not instructions")
 PLAN_RULE = "When a job takes 3 or more steps, add your steps to the board first"
 PLAN_CHECK_OFF = PLAN_RULE + ", then check each one off as you finish it."
-BOTH_RULE = "The board holds Theo's reminders and your plan together."
+BOTH_RULE = "The board holds the user's reminders and your plan together."
 NOT_BOARD = "not todo_list, not memory, and not the kanban_* tools"
-RETIRED_PLAN = ("working plan", "The board is Theo's list", "Theo's notes", "It is not your plan")
+RETIRED_PLAN = (
+    "working plan",
+    "The board is the user's list",
+    "the user's notes",
+    "It is not your plan",
+)
 SKILL_DESCRIPTION_TEXT = (
-    "Rules for Theo's task board. "
-    "When to add items, your own plan on the board, and when to ask Theo first."
+    "Rules for the user's task board. "
+    "When to add items, your own plan on the board, and when to ask the user first."
 )
 ORDERED_PHRASES = (
-    "Theo must do, decide or remember",
+    "the user must do, decide or remember",
     PLAN_RULE,
     "todo_list",
-    "Theo's own message",
-    "Ask Theo one plain question",
+    "the user's own message",
+    "Ask the user one plain question",
 )
-RULE_EXPLICIT = "Theo's own message"
+RULE_EXPLICIT = "the user's own message"
 RULE_OWN = "decide on your own"
 AT_ONCE = "Do it at once with confirmed true"
-ASK_ONLY = "Ask Theo one plain question first only in two cases"
+ASK_ONLY = "Ask the user one plain question first only in two cases"
 NO_SHORTCUT = "on your own decision"
 RETIRED_ASK = "plain question before you"
 CONFIRMED_DESCRIPTION = (
-    "Set true when Theo's own message named this remove, uncheck or reword, "
-    "or after he answered your question about it in chat. "
+    "Set true when the user's own message named this remove, uncheck or reword, "
+    "or after they answered your question about it in chat. "
     "Never set it true on your own decision."
 )
 SECTION_HARD_CAP = 4000

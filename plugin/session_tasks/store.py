@@ -233,9 +233,9 @@ class BoardStore:
             return rows.list_board_summaries(conn)
 
     def user_touched_ids(self, root_id: str) -> frozenset[int]:
-        """Return the ids of items that Theo ever changed, read from the changes journal.
+        """Return the ids of items that the user ever changed, read from the changes journal.
 
-        `updated_by` only names the last writer. This set keeps Theo's mark after an agent
+        `updated_by` only names the last writer. This set keeps the user's mark after an agent
         change. The journal keeps the newest `JOURNAL_KEEP` rows, so an older touch can drop out.
         """
         check_session_id(root_id)
@@ -243,7 +243,7 @@ class BoardStore:
             return rows.read_user_touched_ids(conn, root_id)
 
     def unseen_changes(self, root_id: str) -> rows.Unseen | None:
-        """Return Theo's changes that the agent has not seen, or None when there are none.
+        """Return the user's changes that the agent has not seen, or None when there are none.
 
         One read snapshot. The journal is covered when it still holds every row after
         `agent_seen_rev`: fewer than `JOURNAL_KEEP` rows the note reads, or an oldest rev
