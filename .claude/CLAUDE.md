@@ -17,8 +17,8 @@ A Hermes Desktop plugin that gives each Hermes session a task board in a Desktop
 - **Secrets**: none needed; if one is ever needed it comes from Infisical - house rule.
 - **Docs**: plain language, no em dash or en dash anywhere, spaced hyphen instead - house rule.
 - **Commit identity**: Theo Deyle <theo.deyle@donmor.ca>.
-- **Repo**: GSD project in this repo, pushed to GitHub `Don-Mor-Software-Group/hermes-session-tasks` (private).
-- **Deploy**: symlink the package dir into `~/.hermes/plugins/`, enable it, restart the gateway. Announce the gateway restart before it happens: it drops live Desktop connections.
+- **Repo**: GSD project in this repo. The public repo `theo-deyle/hermes-session-tasks` (remote `public`, MIT) is the install source for every Hermes host and every Desktop. The org repo `Don-Mor-Software-Group/hermes-session-tasks` (remote `origin`, private) stays as it is.
+- **Deploy**: devpc keeps the symlink of the package dir into `~/.hermes/plugins/` as the dev mode. Every other host runs `hermes plugins install theo-deyle/hermes-session-tasks#plugin --enable`. Then restart the gateway. Announce the gateway restart before it happens: it drops live Desktop connections.
 - **Boundary**: never read, write, wrap or replace `todo_list`.
 
 <!-- GSD:project-end -->
