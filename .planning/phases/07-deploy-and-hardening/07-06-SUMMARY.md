@@ -1,14 +1,71 @@
 ---
 phase: 07-deploy-and-hardening
 plan: 06
-status: in-progress
-requirements: [DEV-06]
+subsystem: infra
+tags: [github, public-repo, license, ci, history-scan]
+requires:
+  - phase: 07-deploy-and-hardening
+    provides: 07-02 catalog page and CONTRIBUTING.md, 07-03 CI workflow and history scan, 07-05 version 0.2.0 head
+provides:
+  - The public repo theo-deyle/hermes-session-tasks with the full history of main, no squash
+  - LICENSE with the MIT text in the name Theo Deyle
+  - The Repo and Deploy lines of .claude/CLAUDE.md name both remotes and the host install line
+  - The first CI run on the public repo passed
+affects: [07-07, 07-08, 07-09]
+actuals:
+  tokens: 2250
+  tasks: 3
+  commits: 4
 plan_head_before: 6079926db9f2da213b5b6807660a18c6670e18da
+plan_head_after: d39efa98f8568cc3c393e7ebecdf5e20e3a2b9e5
+commits: 4
+tech-stack:
+  added: []
+  patterns:
+    - "A public surface step (repo create, push) runs from one non-interactive script that Theo starts with a `!` line; the orchestrator does every step before and after it"
+key-files:
+  created:
+    - LICENSE
+  modified:
+    - .claude/CLAUDE.md
+key-decisions:
+  - "Publish the full history as it is (option publish-as-is), MIT license, holder Theo Deyle. Theo's reply: Go ahead."
+  - "The org repo Don-Mor-Software-Group/hermes-session-tasks and its remote origin stay untouched"
+patterns-established:
+  - "The history scan runs again at the final head before every push"
+requirements-completed: [DEV-06]
+coverage:
+  - id: D1
+    description: "The public repo serves the full history at the head of main"
+    requirement: DEV-06
+    verification:
+      - kind: integration
+        ref: "GIT_TERMINAL_PROMPT=0 git ls-remote https://github.com/theo-deyle/hermes-session-tasks refs/heads/main equals git rev-parse main (d39efa9)"
+        status: pass
+      - kind: integration
+        ref: "gh api repos/theo-deyle/hermes-session-tasks --jq .private prints false"
+        status: pass
+  - id: D2
+    description: "The first CI run on the public repo passed"
+    requirement: DEV-06
+    verification:
+      - kind: e2e
+        ref: "gh run 41689002986 on theo-deyle/hermes-session-tasks, conclusion success"
+        status: pass
+  - id: D3
+    description: "LICENSE holds the MIT text in the name Theo Deyle"
+    requirement: DEV-06
+    verification:
+      - kind: other
+        ref: "head -3 LICENSE prints MIT License and Copyright (c) 2026 Theo Deyle"
+        status: pass
+status: complete
+requirements: [DEV-06]
 ---
 
-# Phase 7 Plan 06: Public push Summary (in progress)
+# Phase 7 Plan 06: Public push Summary
 
-Task 1 passed. Task 2 (Theo's decision on the public push and the license) is open. Task 3 has not started. Nothing is pushed, no GitHub repo exists, and no LICENSE file is written.
+The repo is public at `theo-deyle/hermes-session-tasks` with the full history of `main` (458 commits, no squash), the MIT license in the name Theo Deyle, and a green first CI run. The org repo and its remote `origin` are unchanged.
 
 ## Task 1: pre-push checks (head 6079926)
 
@@ -82,6 +139,23 @@ Chosen option: publish-as-is. License: MIT. Copyright holder: Theo Deyle.
 
 The orchestrator committed `.planning/config.json` and `.planning/state.json` as 89e7fa8 before Task 3, so the tree is clean.
 
-## Task 3
+## Task 3: license, repo lines, final scan, push, CI
 
-Not started.
+The auto mode safety check of Claude Code blocked the executor dispatch for this task (it creates a public surface). The orchestrator ran the steps before and after the push itself, and Theo started one non-interactive script for the repo creation, the remote and the push.
+
+- `LICENSE`: MIT text copied from the Hermes LICENSE with the line `Copyright (c) 2026 Theo Deyle`. Commit a5bde81.
+- `.claude/CLAUDE.md`: Repo line names the public repo (remote `public`, MIT) as the install source and the org repo (remote `origin`, private) as unchanged. Deploy line keeps the devpc symlink as dev mode and gives `hermes plugins install theo-deyle/hermes-session-tasks#plugin --enable` for every other host. Commit 8c74e6c.
+- SUMMARY with the decision: commit d39efa9. `git status --porcelain` printed nothing.
+- Final-head scan at d39efa9: `history-scan: commits 458, diff lines 78199, credential hits 0`. Report counts: customer 49 lines, dealer 15, dealership 10, all sample text and scan words as read in Task 1.
+- Repo: `gh repo view` returned not found, so `gh repo create theo-deyle/hermes-session-tasks --public` created it. Remote `public` added as `git@github.com:theo-deyle/hermes-session-tasks.git`.
+- Push output: `To github.com:theo-deyle/hermes-session-tasks.git` and `* [new branch] main -> main`. No GH007 refusal.
+- Checks: anonymous `git ls-remote` printed `d39efa98f8568cc3c393e7ebecdf5e20e3a2b9e5`, equal to `git rev-parse main`. `gh api ... --jq .private` printed `false`.
+- CI: run 41689002986, event push, head d39efa9, conclusion `success`. Created 17:56:16Z, updated 18:03:07Z, about 7 minutes.
+- `origin/main` before and after: 6a6dbde568495811ee236250161833e5e7aa1d74. No push to origin, no pull request.
+
+## Self-Check: PASSED
+
+- Commits a5bde81, 8c74e6c and d39efa9 are ancestors of HEAD and of `public/main`.
+- `LICENSE` starts with `MIT License`.
+- `.claude/CLAUDE.md` contains `theo-deyle/hermes-session-tasks` and `hermes plugins install theo-deyle/hermes-session-tasks#plugin --enable`.
+- The public head, the private flag and the CI conclusion match the plan's three automated checks.
