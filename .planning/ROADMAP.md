@@ -246,7 +246,7 @@ Plans:
   3. A live pass on the Mac and on a Windows PC installs the pane from the Plugins page (Install from Git, Desktop target) and runs the whole loop in four steps. The agent lists items. The pane shows them live. Theo edits one. The agent sees the edit on its next turn.
   4. The public GitHub repo `theo-deyle/hermes-session-tasks` holds the full history, a plain-language README with no personal or host names, a CONTRIBUTING file with the devpc dev setup, a ready catalog entry file, and a CI run of the test suite. `hermes plugins validate plugin --install-deps` passes. The README states that closing the only pane disables the plugin.
   5. The three Phase 6 pane review warnings, the stale UI-SPEC line and review note IN-05 are fixed. The user-facing strings name no person and no host.
-**Plans**: 6/9 plans executed in 6 waves
+**Plans**: 7/9 plans executed in 6 waves
 Plans:
 **Wave 1**
 - [x] 07-01-PLAN.md - Board text with no personal or host name: the delta note, the tool text, the skill, the guard text, the manifest description, and the name scan of the package (wave 1)
@@ -261,7 +261,7 @@ Plans:
 - [x] 07-06-PLAN.md - Pre-push checks, Theo's decision on what goes public and the license, the public push and the first CI run (wave 3)
 
 **Wave 4** *(blocked on Wave 3 completion)*
-- [ ] 07-07-PLAN.md - Install, enable, doctor and update from the public repo in a fresh Hermes home, then Theo's choice of a second host and the same install there; catalog readiness outputs (wave 4)
+- [x] 07-07-PLAN.md - Install, enable, doctor and update from the public repo in a fresh Hermes home, then Theo's choice of a second host and the same install there; catalog readiness outputs (wave 4)
 
 **Wave 5** *(blocked on Wave 4 completion)*
 - [ ] 07-08-PLAN.md - Ask rule check in a test home, announced restart on devpc, owner-checked backend stop, new-code proof, own-plan check (wave 5)
@@ -283,4 +283,4 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 | 4. Pane | 9/9 | Complete    | 2026-11-01 |
 | 5. Agent sees Theo's edits | 7/7 | Complete    | 2026-11-02 |
 | 6. Cross-session boards | 12/12 | Complete    | 2026-11-02 |
-| 7. Deploy and hardening | 6/9 | In Progress | - |
+| 7. Deploy and hardening | 7/9 | In Progress | - |
