@@ -202,3 +202,24 @@ def test_a_user_copy_shows_as_added_lines_in_the_delta_note(store: BoardStore) -
     assert "added #2 Call John" in note
     assert "added #3 Pay rent" in note
     assert "copied" not in note
+
+
+def test_a_large_user_copy_keeps_every_add_row_and_the_full_delta_note(
+    store: BoardStore, connect: ConnFactory
+) -> None:
+    seed(store, "s2", *numbered("src", 60))
+    seed(store, "s1", AddItem("Mine"))
+    result = store.copy_items("s1", "s2", None, actor="user")
+    assert isinstance(result, CopyApplied)
+    assert result.copied == 60
+
+    adds = [c for c in journal(connect, "s1") if c.op == "add" and c.rev == 2]
+    unseen = store.unseen_changes("s1")
+
+    assert len(adds) == 60
+    assert unseen is not None
+    assert unseen.covered is True
+    note = delta.delta_note(unseen.rev, unseen.changes, unseen.covered)
+    assert note is not None
+    assert note.count("added #") == 60
+    assert "copied" not in note
