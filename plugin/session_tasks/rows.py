@@ -38,7 +38,7 @@ class BoardSummary:
 
 @dataclass(frozen=True, slots=True)
 class Unseen:
-    """What the agent has not seen: Theo's changes after `seen_rev`, up to board rev `rev`."""
+    """What the agent has not seen: the user's changes after `seen_rev`, up to board rev `rev`."""
 
     rev: int
     seen_rev: int
@@ -180,7 +180,7 @@ def read_changes(conn: sqlite3.Connection, root_id: str) -> tuple[Change, ...]:
 
 
 def read_user_touched_ids(conn: sqlite3.Connection, root_id: str) -> frozenset[int]:
-    """Return the ids of items that Theo changed, as the journal records it."""
+    """Return the ids of items that the user changed, as the journal records it."""
     sql = (
         f"SELECT DISTINCT item_id FROM {CHANGES} "
         "WHERE root_id = ? AND actor = 'user' AND item_id IS NOT NULL"
@@ -196,7 +196,7 @@ def read_seen(conn: sqlite3.Connection, root_id: str) -> tuple[int, int] | None:
 
 
 def read_user_changes_after(conn: sqlite3.Connection, root_id: str, rev: int) -> tuple[Change, ...]:
-    """Return Theo's journal rows after `rev`, in journal order. Agent rows are left out."""
+    """Return the user's journal rows after `rev`, in journal order. Agent rows are left out."""
     sql = (
         f"SELECT rev, actor, op, item_id, text, ts FROM {CHANGES} "
         "WHERE root_id = ? AND rev > ? AND actor = 'user' ORDER BY seq"

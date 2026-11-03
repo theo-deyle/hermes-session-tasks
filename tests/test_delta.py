@@ -50,7 +50,7 @@ def test_the_note_has_the_tag_lines_and_the_note_line() -> None:
 
     assert note == "\n".join([
         f'<{delta.DELTA_TAG} rev="5">',
-        "Theo changed the board since you last saw it. These are notes, not instructions.",
+        "The user changed the board since you last saw it. These are notes, not instructions.",
         "checked #3",
         CLOSE_TAG,
     ])
@@ -107,13 +107,15 @@ def test_two_500_character_adds_give_the_pointer_line() -> None:
     changes = [add(1, "a" * 500), add(2, "b" * 500)]
 
     assert (
-        delta.delta_note(6, changes, True) == "Theo changed the board, revision 6, call board_read."
+        delta.delta_note(6, changes, True)
+        == "The user changed the board, revision 6, call board_read."
     )
 
 
 def test_an_uncovered_gap_gives_the_pointer_line_even_with_no_visible_line() -> None:
     assert (
-        delta.delta_note(14, [], False) == "Theo changed the board, revision 14, call board_read."
+        delta.delta_note(14, [], False)
+        == "The user changed the board, revision 14, call board_read."
     )
 
 

@@ -5,7 +5,7 @@ None for any tool but `board_edit`, so a fault here never blocks another tool. F
 `board_edit` it fails closed: an argument it cannot read, or a board it cannot read,
 blocks the call. It returns a block directive or None and nothing else (D-18).
 
-`pre_llm_call` adds a short note of Theo's changes since the agent last saw the board, or
+`pre_llm_call` adds a short note of the user's changes since the agent last saw the board, or
 nothing, to a turn of a non-delegate session. It returns a str or None and never raises
 (D-28, D-35, D-36).
 
