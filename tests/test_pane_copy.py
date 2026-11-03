@@ -214,6 +214,8 @@ def test_source_item_gone_reloads_and_shows_the_stale_notice(rig: Rig, tmp_path:
     )
 
     assert STALE in result["lines"]
+    (stale_notice,) = [n for n in result["nodes"] if n["text"] == STALE]
+    assert stale_notice["role"] == "status"
     assert after_post(result) == ["/board?session_id=s2"]
 
 
@@ -337,6 +339,7 @@ def test_copied_notice_is_three_pieces_on_one_line(rig: Rig, tmp_path: Path) -> 
 
     notice = notice_of(result)
     assert notice["title"] == "Copied 1 to Lease renewal. 0 skipped, already on the board."
+    assert notice["role"] == "status"
     assert notice["style"] == {
         "whiteSpace": "nowrap",
         "overflow": "hidden",

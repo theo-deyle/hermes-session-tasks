@@ -385,6 +385,7 @@ def test_banner_uses_only_the_yellow_border_token(rig: Rig, tmp_path: Path) -> N
     classes = banner["className"].split()
     assert "border-(--ui-yellow)" in classes
     assert "text-(--ui-text-primary)" in classes
+    assert "rounded-md" in classes
     assert [c for c in classes if "(--ui-" in c] == [
         "border-(--ui-yellow)",
         "text-(--ui-text-primary)",

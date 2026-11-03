@@ -1,7 +1,7 @@
 /**
  * Session tasks pane for hermes-session-tasks. Plain ESM, loaded uncompiled: UI is jsx() calls.
  * Only three imports resolve here: the plugin SDK, react and the jsx runtime.
- * It shows the focused session's board as checkbox rows and sends Theo's edits through the plugin routes.
+ * It shows the focused session's board as checkbox rows and sends the user's edits through the plugin routes.
  * Only Pane calls React hooks. Every other component is a plain function of its props.
  */
 
@@ -100,7 +100,7 @@ const MENU_NAME_CLASS = 'text-xs font-medium'
 const MENU_SUB_CLASS = 'text-xs text-(--ui-text-secondary)'
 const MENU_RIGHT_CLASS = 'flex shrink-0 flex-col text-right text-xs text-(--ui-text-secondary)'
 const BANNER_CLASS =
-  'mx-2 mt-2 flex items-center justify-between border border-(--ui-yellow) px-2 py-1 text-xs text-(--ui-text-primary)'
+  'mx-2 mt-2 flex items-center justify-between rounded-md border border-(--ui-yellow) px-2 py-1 text-xs text-(--ui-text-primary)'
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 const MS_PER_MINUTE = 60000
 const MS_PER_HOUR = 3600000
@@ -363,10 +363,11 @@ function copiedNotice({ meta, notice }) {
 // The copied notice is one flex line of three pieces: head and tail never shrink, only the title ends with an ellipsis.
 function Notice({ text, copied }) {
   if (!text) return null
-  if (!copied) return jsx('div', { className: NOTICE_CLASS, style: NOTICE_STYLE, children: text })
+  if (!copied) return jsx('div', { className: NOTICE_CLASS, style: NOTICE_STYLE, role: 'status', children: text })
   return jsxs('div', {
     className: NOTICE_CLASS,
     style: COPIED_NOTICE_STYLE,
+    role: 'status',
     title: copied.full,
     children: [
       jsx('span', { className: 'shrink-0', children: copied.head }),

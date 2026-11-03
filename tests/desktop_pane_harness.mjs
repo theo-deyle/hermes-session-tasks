@@ -58,9 +58,9 @@
 //   confirm     null, or the last ConfirmDialog {open, title, description, confirmLabel, cancelLabel, destructive}
 //   copy        null, or the last CopyButton {text, disabled, label, appearance}
 //   tips        Tip labels in render order
-//   nodes       {text, className, style, row, scroll, button} per host element with direct string children;
+//   nodes       {text, className, style, role, row, scroll, button} per host element with direct string children;
 //               button is true inside a Button
-//   titled      {title, className, style, texts} per host element with a string `title` prop; texts are the
+//   titled      {title, className, style, role, texts} per host element with a string `title` prop; texts are the
 //               direct strings of the element and its host descendants in order; pieces are its direct host
 //               children as {text, className, style}
 //   menuItems   in render order: {texts, disabled, current, check} per DropdownMenuItem, {separator: true}
@@ -525,6 +525,7 @@ function walk(node, out, here) {
       text: joined,
       className: props.className ?? null,
       style: props.style ?? null,
+      role: props.role ?? null,
       row: next.row,
       scroll: next.scroll,
       button: next.button === true
@@ -536,6 +537,7 @@ function walk(node, out, here) {
       title: props.title,
       className: props.className ?? null,
       style: props.style ?? null,
+      role: props.role ?? null,
       texts: hostTexts({ type: 'span', props: { children: props.children } }),
       pieces: childPieces(props.children)
     })

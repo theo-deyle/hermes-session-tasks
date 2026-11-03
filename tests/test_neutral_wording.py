@@ -19,23 +19,18 @@ PLUGIN_DIR = ROOT / "plugin"
 PERSON = re.compile(r"\bTheo\b")
 HOST = re.compile(r"devpc", re.IGNORECASE)
 TEXT_SUFFIXES = (".py", ".yaml", ".yml", ".md", ".js", ".json")
-SCAN_ROOTS = ("plugin.yaml", "__init__.py", "session_tasks", "skills", "dashboard")
-MIN_FILES = 20
+MIN_FILES = 30
 
 
-def text_files(plugin_dir: Path, roots: tuple[str, ...]) -> list[Path]:
-    """Return the sorted text files under each root. Skip every `__pycache__` folder."""
-    found: set[Path] = set()
-    for root in roots:
-        base = plugin_dir / root
-        candidates = [base] if base.is_file() else sorted(base.rglob("*")) if base.is_dir() else []
-        for path in candidates:
-            if not path.is_file() or path.suffix not in TEXT_SUFFIXES:
-                continue
-            if "__pycache__" in path.relative_to(plugin_dir).parts:
-                continue
-            found.add(path)
-    return sorted(found)
+def text_files(plugin_dir: Path) -> list[Path]:
+    """Return the sorted text files under the package folder. Skip every `__pycache__` folder."""
+    return sorted(
+        path
+        for path in plugin_dir.rglob("*")
+        if path.is_file()
+        and path.suffix in TEXT_SUFFIXES
+        and "__pycache__" not in path.relative_to(plugin_dir).parts
+    )
 
 
 def wording_findings(path: Path, base: Path) -> list[str]:
@@ -72,22 +67,22 @@ def test_self_test_skips_pycache(tmp_path: Path) -> None:
     (tmp_path / "session_tasks" / "__pycache__" / "cached.py").write_text("x", encoding="utf-8")
     (tmp_path / "session_tasks" / "real.py").write_text("x", encoding="utf-8")
 
-    found = text_files(tmp_path, ("session_tasks",))
+    found = text_files(tmp_path)
 
     assert [path.name for path in found] == ["real.py"]
 
 
 def test_scan_finds_the_package_files() -> None:
-    found = text_files(PLUGIN_DIR, SCAN_ROOTS)
+    found = text_files(PLUGIN_DIR)
     names = {path.relative_to(PLUGIN_DIR).as_posix() for path in found}
 
     assert len(found) >= MIN_FILES
-    assert "session_tasks/tool_text.py" in names
+    assert {"session_tasks/tool_text.py", "desktop/plugin.js", "README.md"} <= names
 
 
 @pytest.mark.parametrize(
     "path",
-    text_files(PLUGIN_DIR, SCAN_ROOTS),
+    text_files(PLUGIN_DIR),
     ids=lambda path: path.relative_to(PLUGIN_DIR).as_posix(),
 )
 def test_file_names_no_person_or_host(path: Path) -> None:
