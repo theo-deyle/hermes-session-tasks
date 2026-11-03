@@ -1,0 +1,29 @@
+# PLACEHOLDER: replace sha with the pinned commit when the entry is submitted.
+name: hermes-session-tasks
+title: Session Tasks
+repo: https://github.com/theo-deyle/hermes-session-tasks
+sha: "0000000000000000000000000000000000000001"
+subdir: plugin
+version: "0.1.0"
+maintainer: theo-deyle
+tier: community
+category: desktop
+requires_hermes: ">=0.22.5"
+docs_url: https://github.com/theo-deyle/hermes-session-tasks#readme
+platforms: []
+description: "A per-session task board. The agent adds the things you must do, decide or remember; you check, edit and delete them in a Hermes Desktop side pane. Disclosure - stores boards in its own SQLite file under the active profile's plugin-data folder; reads the active profile's state.db read-only for session titles and lineage; no network calls, no shell commands, no credentials, no telemetry."
+known_issues:
+  - "Closing the only pane disables the plugin."
+capabilities:
+  provides_tools:
+    - board_read
+    - board_edit
+    - board_sessions
+    - board_copy
+  provides_hooks:
+    - pre_tool_call
+    - post_compaction
+    - pre_llm_call
+    - on_session_delete
+  provides_middleware: []
+  requires_env: []
