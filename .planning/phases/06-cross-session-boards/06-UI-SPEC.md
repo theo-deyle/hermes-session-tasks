@@ -91,7 +91,7 @@ The notice keeps the Phase 4 position under the header hairline. This differs fr
 
 Read-only row layout, left to right:
 
-1. Top-level row: chevron column 24px (empty when no subtasks), checkbox hit area 24px (disabled `Checkbox`), text (flexible, wraps), subtask count (only with subtasks), Copy button (keeps its space, revealed on hover or keyboard focus).
+1. Top-level row: checkbox hit area 24px (disabled `Checkbox`) first, then the text (flexible, wraps), then the chevron (24px, only when subtasks exist), then the subtask count (only when subtasks exist), then the Copy button (keeps its space, revealed on hover or keyboard focus). This is the order `ItemRow` draws; there is no empty column on the left.
 2. Subtask row: 24px indent, checkbox hit area 24px, text (flexible, wraps). No button. Subtasks copy through their parent only (D-40 says a chosen top-level item brings its open subtasks; the pane never offers a subtask alone).
 3. There is no plus button and no trash button in the read-only view. They are not rendered, not just hidden.
 

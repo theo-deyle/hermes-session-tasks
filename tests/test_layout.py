@@ -48,6 +48,9 @@ FUNCTION_NODES = (ast.FunctionDef, ast.AsyncFunctionDef, ast.Lambda)
 # The one read of `session_id` from the tool arguments that D-38 allows: it only names a
 # board to read. Pairs of (file name, function name).
 SANCTIONED_ARG_READS = frozenset({("copy_args.py", "read_target")})
+# The session id limit has one literal home, so the tool parser and the routes cannot drift (D-56).
+SESSION_ID_LIMIT_NAME = "SESSION_ID_MAX"
+SESSION_ID_LIMIT_HOME = "session_tasks/copy_args.py"
 
 
 def _python_files(directory: Path) -> list[Path]:
@@ -264,6 +267,28 @@ def todo_mention_findings(plugin_dir: Path) -> list[str]:
     return findings
 
 
+def _assigns_limit_literal(node: ast.AST) -> bool:
+    """True for `SESSION_ID_MAX = 256` or `SESSION_ID_MAX: int = 256`, never for a read."""
+    if isinstance(node, ast.Assign):
+        names = [target.id for target in node.targets if isinstance(target, ast.Name)]
+        value = node.value
+    elif isinstance(node, ast.AnnAssign) and isinstance(node.target, ast.Name):
+        names = [node.target.id]
+        value = node.value
+    else:
+        return False
+    return SESSION_ID_LIMIT_NAME in names and isinstance(value, ast.Constant)
+
+
+def session_id_max_findings(plugin_dir: Path) -> list[str]:
+    """Report each file with a module-level literal assignment of the session id limit (D-56)."""
+    return [
+        path.relative_to(plugin_dir).as_posix()
+        for path in _python_files(plugin_dir)
+        if any(_assigns_limit_literal(node) for node in _parse(path).body)
+    ]
+
+
 def _write_module(directory: Path, source: str, name: str = "bad.py") -> None:
     (directory / name).write_text(source, encoding="utf-8")
 
@@ -313,6 +338,10 @@ def test_core_never_reads_session_id_from_the_tool_arguments() -> None:
 
 def test_plugin_python_files_never_mention_todo_outside_tool_text() -> None:
     assert todo_mention_findings(PLUGIN_DIR) == []
+
+
+def test_session_id_max_has_one_literal_home() -> None:
+    assert session_id_max_findings(PLUGIN_DIR) == [SESSION_ID_LIMIT_HOME]
 
 
 # ---- self-tests: each guard reports a bad module ----
@@ -460,6 +489,16 @@ def test_todo_guard_reports_any_letter_case_and_skips_tool_text(tmp_path: Path) 
     _write_module(tmp_path, "z = 1\n", "clean.py")
 
     assert todo_mention_findings(tmp_path) == ["session_tasks/other.py: mentions todo"]
+
+
+def test_session_id_max_guard_reports_each_literal_and_skips_reads(tmp_path: Path) -> None:
+    (tmp_path / "a").mkdir()
+    (tmp_path / "a" / "one.py").write_text("SESSION_ID_MAX = 256\n", encoding="utf-8")
+    (tmp_path / "two.py").write_text("SESSION_ID_MAX: int = 128\n", encoding="utf-8")
+    (tmp_path / "read.py").write_text("SESSION_ID_MAX: int = core().LIMIT\n", encoding="utf-8")
+    (tmp_path / "other.py").write_text("MAX_COPY_IDS = 100\n", encoding="utf-8")
+
+    assert session_id_max_findings(tmp_path) == ["a/one.py", "two.py"]
 
 
 # ---- home guard helpers ----
