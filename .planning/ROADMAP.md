@@ -210,7 +210,7 @@ Plans:
   2. On request, the agent reads another session's board by session id. The agent copies chosen items, or all open items, into the current board.
   3. A session picker in the pane lists boards with title, open count and last update. A picked board shows read-only.
   4. Theo copies one item, or all open items, from the shown board into the focused board.
-**Plans**: 11/12 plans executed in 5 waves
+**Plans**: 12/12 plans executed in 5 waves
 Plans:
 **Wave 1**
 - [x] 06-01-PLAN.md - Copy in the board store: one transaction, the copy rules, the journal of where each copy came from (wave 1)
@@ -232,7 +232,7 @@ Plans:
 - [x] 06-11-PLAN.md - Copy one item or all open items from the pane, with the one-line copy notice (wave 4)
 
 **Wave 5** *(blocked on Wave 4 completion)*
-- [ ] 06-12-PLAN.md - Live check with the real model in a test home, announced restart, own-plan re-check, Mac checks (wave 5)
+- [x] 06-12-PLAN.md - Live check with the real model in a test home, announced restart, own-plan re-check, Mac checks (wave 5)
 **Research**: Not needed. The REST and pane patterns repeat, and the title join uses the documented `session.list`.
 **UI hint**: yes
 
@@ -260,5 +260,5 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 | 3. REST router and client install spike | 12/12 | Complete    | 2026-11-02 |
 | 4. Pane | 9/9 | Complete    | 2026-11-01 |
 | 5. Agent sees Theo's edits | 7/7 | Complete    | 2026-11-02 |
-| 6. Cross-session boards | 11/12 | In Progress | - |
+| 6. Cross-session boards | 12/12 | In Progress | - |
 | 7. Deploy and hardening | 0/TBD | Not started | - |

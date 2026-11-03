@@ -53,7 +53,7 @@ Requirements for the first release. Each maps to a roadmap phase.
 - [x] **PANE-06**: Theo can add a subtask to an item.
 - [x] **PANE-07**: Theo can delete an item; the pane confirms when subtasks go with it.
 - [x] **PANE-08**: The pane updates live when the agent writes, through the broadcast event, and polls as a fallback.
-- [ ] **PANE-09**: A session picker lists sessions that have a board with title, open count and last update, and shows another session's board read-only.
+- [x] **PANE-09**: A session picker lists sessions that have a board with title, open count and last update, and shows another session's board read-only.
 - [x] **PANE-10**: Theo can copy one item or all open items from another session's board into the focused board.
 - [x] **PANE-11**: Theo can copy the board to the clipboard as a plain markdown checklist.
 - [x] **PANE-12**: The pane shows an empty state that says the agent adds items here.
@@ -139,7 +139,7 @@ Each v1 requirement maps to exactly one phase.
 | PANE-06 | Phase 4 | Complete |
 | PANE-07 | Phase 4 | Complete |
 | PANE-08 | Phase 4 | Complete |
-| PANE-09 | Phase 6 | Pending |
+| PANE-09 | Phase 6 | Complete |
 | PANE-10 | Phase 6 | Complete |
 | PANE-11 | Phase 4 | Complete |
 | PANE-12 | Phase 4 | Complete |
