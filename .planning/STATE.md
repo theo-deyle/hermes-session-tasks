@@ -3,17 +3,17 @@ gsd_state_version: "1.0"
 current_phase: 07
 current_phase_name: Deploy and hardening
 status: executing
-stopped_at: Phase 7 context gathered
-last_updated: "2026-11-03T15:26:10.009Z"
-last_activity: 2026-11-02
-last_activity_desc: Phase 6 complete, transitioned to Phase 7
-state_head: 591dd45d6420256e4a9209c2be309b6947ce0f21
+stopped_at: Completed 07-01-PLAN.md
+last_updated: "2026-11-03T16:04:35.963Z"
+last_activity: 2026-11-03
+last_activity_desc: Phase 07 execution started
+state_head: 6fb3417f22dc8b5a1491ce9cfe104e06eaa10e6d
 progress:
   total_phases: 7
   completed_phases: 6
   total_plans: 62
-  completed_plans: 53
-  percent: 85
+  completed_plans: 54
+  percent: 86
 ---
 
 # Project State
@@ -23,16 +23,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-11-02)
 
 **Core value:** Items the agent lists for Theo stay visible and editable in the pane for the whole session, so Theo never scrolls up or asks the agent to repeat itself.
-**Current focus:** Phase 6 — Cross-session boards
+**Current focus:** Phase 07 — Deploy and hardening
 
 ## Current Position
 
-Phase: 07 (Deploy and hardening) — READY TO EXECUTE
-Plan: Not started
+Phase: 07 (Deploy and hardening) — EXECUTING
+Plan: 2 of 9
 Status: Ready to execute
-Last activity: 2026-11-02 — Phase 6 complete, transitioned to Phase 7
+Last activity: 2026-11-03 — Phase 07 execution started
 
-Progress: [█████████░] 85%
+Progress: [█████████░] 86%
 
 ## Performance Metrics
 
@@ -104,6 +104,7 @@ Progress: [█████████░] 85%
 | Phase 06 P02 | 15min | 2 tasks | 4 files |
 | Phase 06 P07 | 25 min | 3 tasks | 6 files |
 | Phase 06 P11 | 40 min | 3 tasks | 4 files |
+| Phase 07 P01 | 45 min | 3 tasks | 15 files |
 
 ## Accumulated Context
 
@@ -189,6 +190,7 @@ Recent decisions affecting current work:
 - [Phase 06]: 06-02: TOOL-06 guard allows one sanctioned read, copy_args.read_target; strict elsewhere
 - [Phase 06]: 06-11: copied notice shows only while the asked session is still focused; stale and failed notices show regardless
 - [Phase 06]: 06-11: copyBusy is not reset on a focus change, the copy controls stay off until the outcome
+- [Phase 07]: Neutral wording: the person name becomes the user; pronouns become they, their, them, theirs; rule sentences keep other words
 
 ### Pending Todos
 
@@ -220,6 +222,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-11-03T13:58:31.611Z
-Stopped at: Phase 7 context gathered
-Resume file: .planning/phases/07-deploy-and-hardening/07-CONTEXT.md
+Last session: 2026-11-03T16:04:34.665Z
+Stopped at: Completed 07-01-PLAN.md
+Resume file: None
