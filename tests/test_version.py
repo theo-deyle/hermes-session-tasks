@@ -42,7 +42,7 @@ def test_meta_route_returns_both_versions() -> None:
     assert reply.json() == {
         "ok": True,
         "plugin_id": "hermes-session-tasks",
-        "backend_version": "0.1.0",
+        "backend_version": "0.2.0",
         "api_version": 1,
     }
 

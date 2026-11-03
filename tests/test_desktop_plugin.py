@@ -117,7 +117,7 @@ MISMATCH_LINE = "Version mismatch: update the desktop plugin on this machine"
     ("override", "shown"),
     [
         ({"backend_version": "9.9.9", "api_version": 1}, True),
-        ({"backend_version": "0.1.0", "api_version": 2}, True),
+        ({"backend_version": "0.2.0", "api_version": 2}, True),
         (None, False),
     ],
     ids=["backend-version", "api-version", "match"],

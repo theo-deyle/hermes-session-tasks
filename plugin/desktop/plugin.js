@@ -27,7 +27,7 @@ import { useEffect, useRef, useState } from 'react'
 import { jsx, jsxs } from 'react/jsx-runtime'
 
 const PLUGIN_ID = 'hermes-session-tasks'
-const PLUGIN_VERSION = '0.1.0'
+const PLUGIN_VERSION = '0.2.0'
 const API_VERSION = 1
 const POLL_MS = 6000
 const NOTICE_MS = 4000
