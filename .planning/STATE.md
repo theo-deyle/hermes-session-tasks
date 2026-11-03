@@ -3,16 +3,16 @@ gsd_state_version: "1.0"
 current_phase: 07
 current_phase_name: Deploy and hardening
 status: executing
-stopped_at: Completed 07-03-PLAN.md
-last_updated: "2026-11-03T16:23:18.819Z"
+stopped_at: Completed 07-04-PLAN.md
+last_updated: "2026-11-03T16:48:29.801Z"
 last_activity: 2026-11-03
 last_activity_desc: Phase 07 execution started
-state_head: 358a0b608b9a5479fd16a876c2452ae825a1a358
+state_head: a936575759eefab36e1f92fd562a86d396e51857
 progress:
   total_phases: 7
   completed_phases: 6
   total_plans: 62
-  completed_plans: 56
+  completed_plans: 57
   percent: 86
 ---
 
@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-11-02)
 ## Current Position
 
 Phase: 07 (Deploy and hardening) — EXECUTING
-Plan: 4 of 9
+Plan: 5 of 9
 Status: Ready to execute
 Last activity: 2026-11-03 — Phase 07 execution started
 
@@ -107,6 +107,7 @@ Progress: [█████████░] 86%
 | Phase 07 P01 | 45 min | 3 tasks | 15 files |
 | Phase 07 P02 | 30 min | 2 tasks | 6 files |
 | Phase 07 P03 | 35 min | 3 tasks | 7 files |
+| Phase 07 P04 | 30 min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -195,6 +196,7 @@ Recent decisions affecting current work:
 - [Phase 07]: Neutral wording: the person name becomes the user; pronouns become they, their, them, theirs; rule sentences keep other words
 - [Phase 07]: Fallback script steps moved to CONTRIBUTING.md with their words; the pane line also sits in CONTRIBUTING.md so the moved script test keeps every assertion.
 - [Phase 07]: 07-03: scan counts whole words only; credential hits sum matching diff lines over ten classes; check.sh pytest bound raised to 900 s
+- [Phase 07]: 07-04: SESSION_ID_MAX has one literal home in copy_args.py; plugin_api.py reads it through core_module at import, and a layout test fails on a second literal
 
 ### Pending Todos
 
@@ -226,6 +228,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-11-03T16:23:17.748Z
-Stopped at: Completed 07-03-PLAN.md
+Last session: 2026-11-03T16:48:28.198Z
+Stopped at: Completed 07-04-PLAN.md
 Resume file: None
