@@ -3,16 +3,16 @@ gsd_state_version: "1.0"
 current_phase: 07
 current_phase_name: Deploy and hardening
 status: executing
-stopped_at: Completed 07-01-PLAN.md
-last_updated: "2026-11-03T16:04:35.963Z"
+stopped_at: Completed 07-02-PLAN.md
+last_updated: "2026-11-03T16:13:45.153Z"
 last_activity: 2026-11-03
 last_activity_desc: Phase 07 execution started
-state_head: 6fb3417f22dc8b5a1491ce9cfe104e06eaa10e6d
+state_head: dd81fc9b8f1dda133f269cbdea30a6aa031d906d
 progress:
   total_phases: 7
   completed_phases: 6
   total_plans: 62
-  completed_plans: 54
+  completed_plans: 55
   percent: 86
 ---
 
@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-11-02)
 ## Current Position
 
 Phase: 07 (Deploy and hardening) — EXECUTING
-Plan: 2 of 9
+Plan: 3 of 9
 Status: Ready to execute
 Last activity: 2026-11-03 — Phase 07 execution started
 
@@ -105,6 +105,7 @@ Progress: [█████████░] 86%
 | Phase 06 P07 | 25 min | 3 tasks | 6 files |
 | Phase 06 P11 | 40 min | 3 tasks | 4 files |
 | Phase 07 P01 | 45 min | 3 tasks | 15 files |
+| Phase 07 P02 | 30 min | 2 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -191,6 +192,7 @@ Recent decisions affecting current work:
 - [Phase 06]: 06-11: copied notice shows only while the asked session is still focused; stale and failed notices show regardless
 - [Phase 06]: 06-11: copyBusy is not reset on a focus change, the copy controls stay off until the outcome
 - [Phase 07]: Neutral wording: the person name becomes the user; pronouns become they, their, them, theirs; rule sentences keep other words
+- [Phase 07]: Fallback script steps moved to CONTRIBUTING.md with their words; the pane line also sits in CONTRIBUTING.md so the moved script test keeps every assertion.
 
 ### Pending Todos
 
@@ -222,6 +224,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-11-03T16:04:34.665Z
-Stopped at: Completed 07-01-PLAN.md
+Last session: 2026-11-03T16:13:44.184Z
+Stopped at: Completed 07-02-PLAN.md
 Resume file: None
