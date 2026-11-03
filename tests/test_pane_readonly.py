@@ -50,6 +50,31 @@ def test_back_returns_to_the_focused_board_and_keeps_the_add_line(rig: Rig, tmp_
     assert posts(result) == []
 
 
+def test_back_returns_keyboard_focus_to_the_picker_trigger(rig: Rig, tmp_path: Path) -> None:
+    seed_two_boards(rig)
+    steps = [*PICK_S2, {"click": f"Back to {S1_TITLE}"}]
+
+    result = rig.run(tmp_path, sessionList=SESSION_LIST, steps=steps)
+
+    assert len(result["focusCalls"]) == 1
+    assert result["focusCalls"][0].startswith(f"Session: {S1_TITLE}")
+
+
+@pytest.mark.parametrize(
+    "steps",
+    [[], PICK_S2, [*PICK_S2, {"focus": "s3"}]],
+    ids=["load", "pick", "focus-change"],
+)
+def test_load_pick_and_focus_change_move_no_focus(
+    rig: Rig, tmp_path: Path, steps: list[dict[str, Any]]
+) -> None:
+    seed_two_boards(rig)
+
+    result = rig.run(tmp_path, sessionList=SESSION_LIST, steps=steps)
+
+    assert result["focusCalls"] == []
+
+
 def board_paths(result: dict[str, Any]) -> list[str]:
     return [c["path"] for c in board_gets(result)]
 

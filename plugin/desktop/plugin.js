@@ -486,7 +486,7 @@ function PickerMenu({ view, boards, failed, focusedCounts, onPick }) {
 }
 
 // The first element of the pane: the shown board and its count, and the menu of every board.
-function PickerRow({ view, counts, boards, failed, focusedCounts, onOpenChange, onPick }) {
+function PickerRow({ view, counts, boards, failed, focusedCounts, triggerRef, onOpenChange, onPick }) {
   const label = boardLabel(view.shownRoot, view.titles)
   return jsx('div', {
     className: PICKER_ROW_CLASS,
@@ -498,6 +498,7 @@ function PickerRow({ view, counts, boards, failed, focusedCounts, onOpenChange, 
           children: jsx(DropdownMenuTrigger, {
             asChild: true,
             children: jsxs(Button, {
+              ref: triggerRef,
               variant: 'outline',
               size: 'sm',
               className: PICKER_BUTTON_CLASS,
@@ -748,6 +749,9 @@ function Pane({ ctx }) {
   const [addText, setAddText] = useState('')
   const [addBusy, setAddBusy] = useState(false)
   const addRef = useRef(null)
+  // The picker trigger element, and a flag set by Back: the one case where the pane moves keyboard focus.
+  const triggerRef = useRef(null)
+  const focusAfterBack = useRef(false)
   // The open subtask add lines, keyed by parent id: { text, busy }.
   const [subLines, setSubLines] = useState({})
   // The one item under edit: { id, text, original }, or null. The ref copy lives in `current`.
@@ -1032,6 +1036,15 @@ function Pane({ ctx }) {
     return ctx.setInterval(reloadShown, POLL_MS)
   }, [sid])
 
+  // After Back the picker trigger takes focus, so a keyboard user stays where the view change began.
+  // The flag is set only by Back, so a first render, a pick or a focus change never moves focus.
+  useEffect(() => {
+    if (picked !== null || !focusAfterBack.current) return
+    focusAfterBack.current = false
+    const trigger = triggerRef.current
+    if (trigger && typeof trigger.focus === 'function') trigger.focus()
+  }, [picked])
+
   // An event for another board changes nothing here. A missing payload or root reloads the shown board.
   useEffect(
     () =>
@@ -1186,6 +1199,7 @@ function Pane({ ctx }) {
 
   // Leaves the board under view and reloads the focused one at once. The focused board's lines and pending writes stay in state.
   function back() {
+    focusAfterBack.current = current.current.picked !== null
     current.current.picked = null
     setPicked(null)
     setPickedServer(null)
@@ -1259,6 +1273,7 @@ function Pane({ ctx }) {
         boards,
         failed: boardsFailed,
         focusedCounts: openCounts(items),
+        triggerRef,
         onOpenChange: onMenuOpenChange,
         onPick: rootId => pick(rootId, focusedRoot)
       }),

@@ -71,6 +71,7 @@
 //   timeouts    ms of every ctx.setTimeout call
 //   outsideCalls  {body, reply} per outside step
 //   atWrite     one {lines, buttons, checkboxes, inputs} per POST, taken before the POST is forwarded
+//   focusCalls  the label of each Button whose ref element received focus(), in call order
 //
 // `row` is the data-item-id of the nearest ancestor host element, or null.
 
@@ -101,6 +102,7 @@ const timerQueue = []
 const intervalQueue = []
 const outsideCalls = []
 const atWrite = []
+const focusCalls = []
 const listeners = []
 let contribution = null
 let activity = false
@@ -375,6 +377,11 @@ function walk(node, out, here) {
   if (typeof node !== 'object') return
   const { type, props } = node
   if (type === Button) {
+    // A ref object receives a stand-in element whose focus() is recorded under the button label.
+    if (props.ref && typeof props.ref === 'object' && 'current' in props.ref) {
+      const label = props['aria-label'] ?? textOf(props.children)
+      props.ref.current = { focus: () => focusCalls.push(label) }
+    }
     out.buttons.push({
       label: props['aria-label'] ?? textOf(props.children),
       row: here.row,
@@ -821,6 +828,7 @@ const output = {
   callResults,
   timeouts,
   outsideCalls,
-  atWrite
+  atWrite,
+  focusCalls
 }
 process.stdout.write(`${JSON.stringify(output)}\n`, () => process.exit(0))
