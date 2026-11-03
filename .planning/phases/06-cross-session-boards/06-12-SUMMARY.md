@@ -3,7 +3,7 @@ phase: 06-cross-session-boards
 plan: 12
 subsystem: live-check
 tags: [live-check, cross-session, gateway-restart, own-plan]
-status: in_progress
+status: complete
 
 requires:
   - phase: 06-cross-session-boards
@@ -12,17 +12,24 @@ provides:
   - live proof of TOOL-03, TOOL-04 and TOOL-05 with the real model in a test Hermes home (Task 1)
   - the restart announcement and the pre-check record (Task 2)
   - the gateway restart record, the own-plan verdict with four tools and the cleanup table (Task 3)
-affects: [06-12 Task 4 Mac checks]
+  - Theo's five Mac checks of the picker, the read-only view and one copy in the real pane (Task 4)
+affects: [07 rollout, Phase 6 verification]
 
-requirements-completed: []
+requirements-completed: [TOOL-03, TOOL-04, TOOL-05, PANE-09, PANE-10]
 
-duration: in progress
-completed: not yet
+duration: about 3h across three executor sessions (Task 1 and 2 in the first, Task 3 in the second, Task 4 in the third)
+completed: 2026-11-03
+actuals:
+  tokens: 9000
+  tasks: 4
+  commits: 3
+plan_head_before: 1bfe33dcbca2b562bdb9fb05fcaf51c9779aaef8
+plan_head_after: 71f93ae (last task commit; the closing docs commit is the third)
 ---
 
-# Phase 6 Plan 12: Live check of the cross-session boards Summary (DRAFT, Tasks 1 to 3 complete; Task 4 pending)
+# Phase 6 Plan 12: Live check of the cross-session boards Summary
 
-Task 1 passed: in a test Hermes home the real model listed the boards, read the source board without a seen change, and copied its open items with their subtask on request. Task 2 pre-checks are done and Theo gave his go. Task 3: the gateway restarted on the new code, the own-plan check passed 3 of 3 with the four tools, and the three test chats are deleted; Theo's one script line stopped the two old Desktop backends. Task 4 (Mac checks) has not run.
+Task 1 passed: in a test Hermes home the real model listed the boards, read the source board without a seen change, and copied its open items with their subtask on request. Task 2 pre-checks are done and Theo gave his go. Task 3: the gateway restarted on the new code, the own-plan check passed 3 of 3 with the four tools, and the three test chats are deleted; Theo's one script line stopped the two old Desktop backends. Task 4: Theo passed all five Mac checks in the real pane, and the Mac test chat is deleted.
 
 Hot mount versus restart (decision): no hot reload is tried. Phase 3 measured that the Python half refreshes only on a backend restart and the Desktop half only at app start (03-08 SUMMARY). Phase 5 restarted the owner gateway the same way (05-05).
 
@@ -170,20 +177,85 @@ Cost of the three own-plan chats: 0.8341 USD. With the test home turns (0.185 US
 - `timeout 30 hermes gateway status`: `Gateway is running (PID: 1942229)`.
 - `sha256sum plugin/desktop/plugin.js`: `719920126b0e930eba50bfef2d119fe8b4ddb4eade58a5ce46ec6cb17afa4cae` (the devpc hash for the Mac install check).
 
-## Task 4 - Mac checks (pending)
+## Task 4 - Mac checks
 
-Precondition met: the two old Desktop backends are stopped, the gateway runs the new code, and the devpc hash is on record.
+Precondition met: the two old Desktop backends were stopped, the gateway runs the new code, and the devpc hash was on record. Theo ran the five checks on his Mac, one per turn. His words are quoted as given.
 
-| # | Check | Result |
-|---|-------|--------|
-| 1 | Install line on the Mac prints a sha256 equal to `719920126b0e930eba50bfef2d119fe8b4ddb4eade58a5ce46ec6cb17afa4cae` | pending |
-| 2 | Quit and reopen Hermes Desktop, new chat, send "hi": the Session tasks pane shows this chat with the picker row at the top | pending |
-| 3 | Open the chat picker: this chat first as "this session", then the other chats with a board, real titles, "N of M open" and a time, all inside the pane | pending |
-| 4 | Pick another chat with items: yellow "Read only. Viewing another session." notice with Back, greyed boxes, no add line, Copy on hover, "Copy all open to" in the header | pending |
-| 5 | Copy one item, then Back: "Copied 1 to (this chat). 0 skipped, already on the board.", the item on this chat's board unchecked, the other board unchanged | pending |
+| # | Check | Theo's result |
+|---|-------|---------------|
+| 1 | Install line in PowerShell 7 on the Mac; sha256 equal to `719920126b0e930eba50bfef2d119fe8b4ddb4eade58a5ce46ec6cb17afa4cae` | "Worked." (install line ran, hash matched) |
+| 2 | Quit and reopen Hermes Desktop, new chat, send "hi": the Session tasks pane shows this chat with the picker row at the top | "pass" |
+| 3 | Open the chat picker: this chat first as "this session", then the other chats with a board, real titles, "N of M open" and a time, all inside the pane | "pass" |
+| 4 | Pick another chat with items: yellow "Read only. Viewing another session." notice with Back, greyed boxes, no add line, Copy on hover, "Copy all open to" in the header | "pass" |
+| 5 | Copy one item, then Back: "Copied 1 to (this chat). 0 skipped, already on the board.", the item on this chat's board unchecked, the other board unchanged | "passed" |
 
-The Mac test chat and its board are deleted only after Theo answers one plain question.
+Check 2 also proves the flagged assumption: the reopened Desktop started a fresh backend on the new code after the old pid was dead. Check 3 proves RESEARCH Q2: `session.list` returned real titles to the plugin pane.
 
-## Self-Check
+### Delete of the Mac test chat
 
-(pending, written when the plan completes)
+Delete question answer, word for word: "yes, delete it".
+
+Read-only identification in `~/.hermes/state.db` and the data file before the delete: exactly one session started after the restart (T0 01:06:03Z) from the Desktop source with first user message "hi" and a board with one item.
+
+| Field | Value |
+|-------|-------|
+| Session id | `20261102_205640_ef45bf` |
+| Source | desktop |
+| Title | `hi` |
+| Started | 2026-11-03T01:56:43Z |
+| Messages | 2 |
+| Board | rev 1, 1 item: `#1 test item added by the pane` (unchecked, updated_by user) |
+| Journal | `add` row and `copied` row `20261031_191523_093c62#2` (the copy source) |
+
+Copy source board `20261031_191523_093c62`: 2 items, rev 4 before the delete; 2 items, rev 4 after the delete. Untouched.
+
+`timeout 60 hermes sessions delete 20261102_205640_ef45bf --yes` printed `Deleted session '20261102_205640_ef45bf'.` After the delete (read only): board rows 0, alias rows 0, item rows 0, journal rows 0, session row 0. Board count 19 before, 18 after; alias count 19 before, 18 after.
+
+## Sessions this plan created and deleted
+
+| Session id | Made by | Deleted |
+|------------|---------|---------|
+| `local-1eb762702c8efbc8...`, `local-3f1b8da755035851...`, `local-d58f569c64d30191...` | Task 1, test home | removed with the test home |
+| `local-dc8182cb395896e7...` | Task 3, own6-1 | yes |
+| `local-de8c87d98fdda40d...` | Task 3, own6-2 | yes |
+| `local-31eb95b81f8ae3b4...` | Task 3, own6-3 | yes |
+| `20261102_205640_ef45bf` | Task 4, Mac test chat | yes, after Theo's answer |
+
+No other session or board was changed or deleted. No Hermes setting changed. No repo source file changed.
+
+## Deviations from Plan
+
+### Handled in place
+
+**1. [Rule 3 - Blocking] The Desktop backend stop ran through Theo's one script line**
+- **Found during:** Task 3 step 2
+- **Issue:** the `kill <pid>` from the executor session was denied by the auto mode safety check ("Interfere With Workloads").
+- **Fix:** per house rule 29, one non-interactive PowerShell script in the scratchpad repeated the owner check, sent SIGTERM and waited; Theo ran it with one `!` line. Same act and same signal as the plan.
+- **Files modified:** none
+- **Commit:** 71f93ae (record)
+
+**2. Two backends stopped, not one.** Task 2 found two live pre-Phase 6 backends (pid 2231852 and pid 1040717); the orchestrator decided to stop both after the lock re-read. A third backend (pid 1933828) started after the last code commit and was left alone.
+
+## Issues Encountered
+
+None beyond the deviations above. The gateway restart, the own-plan runs and every delete ran as written.
+
+## Known Stubs
+
+None. No repo file changed.
+
+## Threat Flags
+
+None. T-6-38 to T-6-41 held: announced restart with Theo's recorded go, owner check before each SIGTERM, test home with no secret file and a port check, every delete after a read-only source and time check, no secret in any line to Theo.
+
+## Next Phase Readiness
+
+TOOL-03, TOOL-04, TOOL-05, PANE-09 and PANE-10 are proven live on devpc and in the real pane on the Mac. The gateway (PID 1942229) and the Mac's Desktop backend run the Phase 6 code. Phase 6 is ready for its verification.
+
+## Self-Check: PASSED
+
+SUMMARY file found at `.planning/phases/06-cross-session-boards/06-12-SUMMARY.md`. Commits c53daef and 71f93ae are ancestors of HEAD. `test ! -e $HOME/.cache/hermes-session-tasks/cross-live/home` exits 0. The SUMMARY holds exactly one `own-plan passed 3 of 3` line and one `unasked copies: 0 of 2` line. `hermes plugins validate plugin/` printed `Validation passed.` after the restart. Read-only queries show no board for any session this plan created.
+
+---
+*Phase: 06-cross-session-boards*
+*Completed: 2026-11-03*
