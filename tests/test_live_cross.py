@@ -246,6 +246,41 @@ def test_stop_reports_not_running_without_a_pid_file(
     assert "not running" in capsys.readouterr().out
 
 
+def test_stop_refuses_the_real_home_before_any_pid_file_read(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    cross = load_live("cross_live_stop_real", CROSS_LIVE)
+    monkeypatch.setenv("HOME", str(tmp_path))
+    real = tmp_path / ".hermes"
+    real.mkdir()
+    (real / "gateway.pid").write_text("not json", encoding="utf-8")
+
+    def no_load(name: str, path: Path) -> ModuleType:
+        raise AssertionError("stop loaded delta_live before the refusal")
+
+    monkeypatch.setattr(cross, "_load", no_load)
+
+    code = cross.main(["stop", "--home", "~/.hermes"])
+
+    assert code == 2
+    assert "real Hermes home" in capsys.readouterr().err
+
+
+def test_stop_refuses_a_blank_home(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    cross = load_live("cross_live_stop_blank", CROSS_LIVE)
+
+    def no_load(name: str, path: Path) -> ModuleType:
+        raise AssertionError("stop loaded delta_live before the refusal")
+
+    monkeypatch.setattr(cross, "_load", no_load)
+
+    assert cross.main(["stop", "--home", ""]) == 2
+    assert "test home" in capsys.readouterr().err
+    assert cross.main(["stop", "--home", "  "]) == 2
+
+
 def test_stop_refuses_a_pid_file_that_names_another_home(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
