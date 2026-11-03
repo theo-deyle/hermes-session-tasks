@@ -74,7 +74,13 @@ The "other email" lines are code decorators such as `@pytest.fixture`, `noreply@
 
 ## Task 2: decision
 
-Open. Theo's reply goes here word for word.
+Theo saw the three points (what goes public with the full history, the work email on every commit, the MIT license recommended in his name) and the one recommendation. Before the reply he asked how the pane finds its gateway on other machines and whether a homelab Hermes host works; the answer was that the pane calls `ctx.rest` and follows the active Desktop connection, and that any host installs from the public repo.
+
+Theo's reply, word for word: "Go ahead."
+
+Chosen option: publish-as-is. License: MIT. Copyright holder: Theo Deyle.
+
+The orchestrator committed `.planning/config.json` and `.planning/state.json` as 89e7fa8 before Task 3, so the tree is clean.
 
 ## Task 3
 
