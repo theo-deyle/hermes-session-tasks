@@ -40,8 +40,8 @@ def hermes_checkout(monkeypatch: pytest.MonkeyPatch) -> Iterator[Path]:
             del sys.modules[name]
 
 
-def pragma_values(conn: sqlite3.Connection) -> dict[str, Any]:
-    return {name: conn.execute(f"PRAGMA {name}").fetchone()[0] for name in PRAGMAS}
+def pragma_values(conn: sqlite3.Connection, names: tuple[str, ...] = PRAGMAS) -> dict[str, Any]:
+    return {name: conn.execute(f"PRAGMA {name}").fetchone()[0] for name in names}
 
 
 def project(row: dict[str, Any] | None) -> dict[str, Any] | None:
@@ -80,7 +80,12 @@ def test_plugin_db_lands_under_hermes_home_with_the_expected_pragmas(
 
     expected = hermes_home / "plugin-data" / "hermes-session-tasks" / "data.db"
     assert Path(location).resolve() == expected.resolve()
-    assert values == {"journal_mode": "wal", "foreign_keys": 1, "busy_timeout": 5000}
+    # `plugin_db()` passes the journal mode to `apply_wal_with_fallback()`, which leaves a new
+    # database in DELETE on a WAL-reset-vulnerable SQLite build and on a cross-VM filesystem, and
+    # never live-downgrades a database that is already WAL. The twin reaches the same mode through
+    # `paths.is_wal_reset_vulnerable()`; the parity assertion below holds both sides to it.
+    assert values["foreign_keys"] == 1
+    assert values["busy_timeout"] == 5000
     assert not (hermes_home / "state.db").exists()
 
 

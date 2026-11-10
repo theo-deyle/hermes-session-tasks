@@ -12,7 +12,7 @@ from typing import Any
 
 from race_worker import add_items, add_one, check_one, edit_own_items
 from session_tasks.model import AddItem, Applied
-from session_tasks.paths import connect_path
+from session_tasks.paths import connect_path, is_wal_reset_vulnerable
 from session_tasks.store import BoardStore
 
 ROOT = "root-1"
@@ -61,7 +61,10 @@ def test_four_processes_fill_a_fresh_file_to_the_cap_with_no_lost_write(db_path:
     assert query(db_path, "PRAGMA user_version") == [(1,)]
     assert query(db_path, "SELECT COUNT(*) FROM boards") == [(1,)]
     assert query(db_path, "SELECT COUNT(*) FROM aliases") == [(1,)]
-    assert query(db_path, "PRAGMA journal_mode") == [("wal",)]
+    # Same gate as the store's own file: WAL unless the linked SQLite has the WAL-reset bug.
+    assert query(db_path, "PRAGMA journal_mode") == [
+        ("delete",) if is_wal_reset_vulnerable() else ("wal",)
+    ]
 
 
 def test_four_processes_edit_their_own_items_with_no_lost_update(db_path: Path) -> None:

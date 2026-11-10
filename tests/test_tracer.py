@@ -11,7 +11,7 @@ from typing import Any
 import pytest
 from conftest import ResolverFor
 from fakes import SessionSpec
-from session_tasks import schema
+from session_tasks import paths, schema
 from session_tasks.db import ConnFactory
 from session_tasks.markdown import render
 from session_tasks.model import AddItem, Applied, Board, EmptyText, InvalidSession, utc_now
@@ -127,7 +127,10 @@ def test_utc_now_ends_in_z_and_parses() -> None:
 def test_data_file_runs_in_wal_mode(store: BoardStore, db_path: Path) -> None:
     store.apply("s1", [AddItem("Call John")], actor="agent", base_rev=0)
 
-    assert query(db_path, "PRAGMA journal_mode") == [("wal",)]
+    # The store opens the file through `paths.connect_path()`, which mirrors Hermes: WAL unless the
+    # linked SQLite carries the WAL-reset bug, where `apply_wal_with_fallback()` keeps DELETE.
+    expected = ("delete",) if paths.is_wal_reset_vulnerable() else ("wal",)
+    assert query(db_path, "PRAGMA journal_mode") == [expected]
 
 
 def test_first_write_creates_the_board_row_and_the_alias_row_in_one_transaction(
