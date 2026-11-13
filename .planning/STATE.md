@@ -205,6 +205,8 @@ Recent decisions affecting current work:
 
 - Edit PROJECT.md after discuss-phase: the Python line (3.11 and 3.14), the write result contract, and the "routes need a restart" wording (the first mount is hot, later code edits need a restart of every `serve` process).
 - Reorder in the pane and in the agent tools is v2 (BORD-01). PROJECT.md still lists a reorder tool under "Pieces to build".
+- Master list and tasks shared across sessions (later milestone): `.planning/todos/pending/2026-11-13-master-list-and-tasks-shared-across-sessions.md`.
+- Configurable checkbox states and workflow (later milestone): `.planning/todos/pending/2026-11-13-configurable-checkbox-states-and-workflow.md`.
 
 ### Blockers/Concerns
 
