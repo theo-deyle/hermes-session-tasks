@@ -264,7 +264,7 @@ Plans:
 - [x] 07-07-PLAN.md - Install, enable, doctor and update from the public repo in a fresh Hermes home, then Theo's choice of a second host and the same install there; catalog readiness outputs (wave 4)
 
 **Wave 5** *(blocked on Wave 4 completion)*
-- [ ] 07-08-PLAN.md - Ask rule check in a test home, announced restart on devpc, owner-checked backend stop, new-code proof, own-plan check (wave 5)
+- [x] 07-08-PLAN.md - Ask rule check in a test home, announced restart on devpc, owner-checked backend stop, new-code proof, own-plan check (wave 5)
 
 **Wave 6** *(blocked on Wave 5 completion)*
 - [ ] 07-09-PLAN.md - Install from the Plugins page and the four-step loop on the Mac and on the Windows PC, then Theo's go before the final public push (wave 6)

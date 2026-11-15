@@ -11,13 +11,13 @@ provides:
   - Pre-check results, lock table and restart announcement for Theo (Task 2)
 affects: [07-09]
 requirements: [DEV-04]
-status: in-progress
+status: complete
 plan_head_before: d463713bf560100f6b17be23bbfb87e06bf9af93
 ---
 
 # Phase 7 Plan 08: Live ask rule, restart and own-plan check Summary
 
-Task 1 is done: the real model keeps the ask rule with the new wording in a test Hermes home. Task 2 is waiting for Theo's go. Task 3 has not started.
+Task 1 is done: the real model keeps the ask rule with the new wording in a test Hermes home. Task 2 got Theo's go on 2026-11-15. Task 3 is done: the gateway restart, the new-code proof, the own-plan check and the cleanup.
 
 ## Task 1 - test Hermes home run (no restart, no request to Theo)
 
@@ -89,4 +89,61 @@ Please finish or pause any Desktop work you want to keep, then tell me to go ahe
 
 ### Theo's reply (word for word)
 
-(waiting)
+2026-11-13: "No not yet." (with two feature ideas, saved as todos in commit 3939438)
+
+2026-11-15: "go ahead"
+
+## Task 2 - state on 2026-11-15 (the Nov 3 pre-checks were out of date)
+
+| Item | Nov 3 | Nov 15 |
+|------|-------|--------|
+| Hermes Agent | v0.22.5 | v0.23.1 |
+| Gateway | manual run, pid 1942229 | systemd user service `hermes-gateway`, pid 156893, started Thu Nov 12 22:18:19 2026 |
+| `~/.hermes/plugins/hermes-session-tasks` | link to the repo `plugin` folder | installed copy from `https://github.com/theo-deyle/hermes-session-tasks#plugin`, revision 7c47337 (equal to the repo head of `plugin/`), installed Nov 13 12:46; `diff -rq` against the repo `plugin` folder shows no difference |
+| `~/.hermes/hermes-agent/venv` | Python 3.11.16 | missing; Hermes runs on `~/.hermes/tools/python-3.14.9` |
+| Desktop backends of Theo | 3 old pids | one live: lock f3619ffc, pid 1865553, started Sun Nov 15 09:14:37 2026, port 40193 (after C and after the install, so "keep") |
+
+The three pids of the Nov 3 lock table were gone. No "stop" row was left, so no stop script ran.
+
+## Task 3 - restart, new-code proof, own-plan check, cleanup
+
+- T0: 2026-11-15T23:35:16Z. C: 1794336202 (Tue Nov 10 13:43:22 2026 -0500, commit 7c47337).
+- `timeout 180 hermes gateway restart --yes --detach`: `User service restarted (PID 2090751)`. Old pid 156893 (started Thu Nov 12 22:18:19 2026), new pid 2090751 (started Sun Nov 15 18:35:36 2026, later than C).
+- `timeout 120 hermes plugins validate plugin`: `Validation passed.` after the restart and again after the cleanup.
+- Backend stop: none needed (no stop row).
+
+### Live backends after the restart
+
+| Lock | pid | start time | port | route check |
+|------|-----|------------|------|-------------|
+| f3619ffc | 1865553 | Sun Nov 15 09:14:37 2026 | 40193 | 401 |
+
+Six other lock folders hold a lock file with a dead pid.
+
+### Own-plan rounds
+
+| Run | Session | Exit | board_edit calls | Add batches | Checks (add batch, check after add, all checked) | todo_list calls | Verdict |
+|-----|---------|------|------------------|-------------|--------------------------------------------------|-----------------|---------|
+| own7-1 | `local-40cc9504...` | 0 | 2 | 1 | true, true, true | 0 | pass |
+| own7-2 | `local-ea3ca3a7...` | 0 | 2 | 1 | true, true, true | 0 | pass |
+| own7-3 | `local-00177ee5...` | 0 | 2 | 1 | true, true, true | 0 | pass |
+
+own-plan passed 3 of 3
+
+### Cleanup
+
+| Session | source | started after T0 | estimated cost (USD) | deleted | session rows, boards, aliases after |
+|---------|--------|------------------|----------------------|---------|-------------------------------------|
+| `local-40cc9504...` | oneshot | yes | 1.534 | yes | 0, 0, 0 |
+| `local-ea3ca3a7...` | oneshot | yes | 0.354 | yes | 0, 0, 0 |
+| `local-00177ee5...` | oneshot | yes | 0.321 | yes | 0, 0, 0 |
+
+Measured cost of the three own-plan runs: 2.21 USD of estimated use (state.db, `estimated_cost_usd`). With Task 1 (0.134 USD) the plan cost 2.34 USD, above the announced "about 1 USD". The first run after the restart cost 1.53 USD.
+
+Final state: `hermes-gateway` active, pid 2090751.
+
+### Deviations in Task 3
+
+- The first delete loop passed the three ids as one word (zsh does not split a plain variable). Hermes answered `No session '...'` and deleted nothing. The second loop used an array and deleted each id. The read-only check before and after confirms it.
+- The devpc dev link is replaced by an installed copy (Theo's change of Nov 13). Pre-check 2 of Task 2 (`readlink -f`) no longer applies; the check used was the install record revision plus `diff -rq`.
+- The gateway venv Python is gone, so `uv run pytest -m hermes` on the old path was not repeated for Task 3. The plan does not ask for it in Task 3.
