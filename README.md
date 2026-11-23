@@ -26,7 +26,7 @@ After `--enable`, the hooks are live at once. The board tools reach new chats. T
 3. Paste `https://github.com/theo-deyle/hermes-session-tasks#plugin`. The path form `theo-deyle/hermes-session-tasks/plugin` also works.
 4. Press Install.
 5. When the plugin shows as off, turn it on.
-6. Open the Session tasks pane on the right.
+6. Open the Session tasks pane on the right. To bring it into view at any time, click Tasks on the status bar at the bottom, or run Show Session tasks from the command palette.
 
 The short form with `#` does not work in this dialog. Desktop turns it into a wrong URL.
 
@@ -46,7 +46,8 @@ The pane can stay off after the install. Turn it on under Capabilities, Plugins.
 
 ## Known behaviour
 
-- Closing the only pane disables the plugin. Turn it on again under Capabilities, Plugins. You can also use Reset layout.
+- Tasks on the status bar shows the pane when it is hidden, behind another tab or in a collapsed column. Right-click the status bar to hide or show the Tasks button.
+- Closing the only pane disables the plugin. The Tasks button goes away with it. Turn the plugin on again under Capabilities, Plugins. You can also use Reset layout.
 - The pane can show `404 Plugin not found` until the gateway or the Desktop backend restarts.
 - Any Desktop that signs in to the host can read and write any board by session id.
 - The agent sees your edits on its next turn.
