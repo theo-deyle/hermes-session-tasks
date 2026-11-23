@@ -4,10 +4,10 @@ current_phase: 07
 current_phase_name: Deploy and hardening
 status: executing
 stopped_at: Completed 07-08-PLAN.md
-last_updated: "2026-11-03T19:31:12.621Z"
+last_updated: "2026-11-23T13:10:55.859Z"
 last_activity: 2026-11-15
 last_activity_desc: 07-08 complete (gateway restart, own-plan 3 of 3, cleanup)
-state_head: d93819049758882fdbed921ded96539c2963e497
+state_head: 71820aa7f651e9395f745a5523789f478d1ae705
 progress:
   total_phases: 7
   completed_phases: 6
@@ -30,9 +30,9 @@ See: .planning/PROJECT.md (updated 2026-11-02)
 Phase: 07 (Deploy and hardening) — EXECUTING
 Plan: 9 of 9
 Status: Ready to execute
-Last activity: 2026-11-15 - plan 07-08 complete
+Last activity: 2026-11-23 - Completed quick task 261123-b4n: Status bar button and palette command that bring the Session tasks pane into view
 
-Progress: [██████████] 98%
+Progress: [█████████░] 98%
 
 ## Performance Metrics
 
@@ -222,6 +222,7 @@ Recent decisions affecting current work:
 |---|-------------|------|--------|-----------|
 | 261031-lbp | Ask rule: the agent asks only on its own initiative; Theo's explicit instruction is the permission | 2026-10-31 | aff0e66 | [261031-lbp-ask-rule-the-agent-asks-only-on-its-own-](./quick/261031-lbp-ask-rule-the-agent-asks-only-on-its-own-/) |
 | 261031-uzq | Board holds the agent's own plan too: the agent writes its steps to the board and checks them off | 2026-10-31 | fbb003e | [261031-uzq-board-holds-the-agent-s-own-plan-too-the](./quick/261031-uzq-board-holds-the-agent-s-own-plan-too-the/) |
+| 261123-b4n | Status bar button and palette command that bring the Session tasks pane into view | 2026-11-23 | 71820aa | [261123-b4n-status-bar-button-and-palette-command-th](./quick/261123-b4n-status-bar-button-and-palette-command-th/) |
 
 ## Deferred Items
 
