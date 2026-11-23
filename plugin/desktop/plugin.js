@@ -8,6 +8,7 @@
 import {
   Button,
   Checkbox,
+  Codicon,
   ConfirmDialog,
   CopyButton,
   DropdownMenu,
@@ -17,6 +18,7 @@ import {
   DropdownMenuTrigger,
   EmptyState,
   Input,
+  PALETTE_AREA,
   ScrollArea,
   Tip,
   host,
@@ -32,6 +34,15 @@ const API_VERSION = 1
 const POLL_MS = 6000
 const NOTICE_MS = 4000
 const EVENT_TYPE = 'plugin.hermes-session-tasks.board.updated'
+const PANE_KEY = 'pane'
+// Desktop scopes a contributed pane id as `<pluginId>:<paneId>`.
+const PANE_ID = `${PLUGIN_ID}:${PANE_KEY}`
+const SHOW_LABEL = 'Tasks'
+const SHOW_TITLE = 'Show the Session tasks pane'
+const SHOW_TOGGLE_LABEL = 'Session tasks'
+const SHOW_COMMAND = 'Show Session tasks'
+const SHOW_ICON = 'checklist'
+const SHOW_ORDER = 90
 const MISMATCH_LINE = 'Version mismatch: update the desktop plugin on this machine'
 const STALE_NOTICE = 'Board changed, showing the latest'
 const WRITE_FAILED_NOTICE = 'Could not save that change. Try again.'
@@ -1334,21 +1345,52 @@ function Pane({ ctx }) {
   })
 }
 
+// Bring the pane on screen: un-hide it, open its collapsed zone and front its tab.
+// A Desktop without host.revealPane does nothing here.
+function showPane() {
+  if (typeof host.revealPane === 'function') host.revealPane(PANE_ID)
+}
+
 export default {
   id: PLUGIN_ID,
   name: 'Session tasks',
   register(ctx) {
     ctx.register({
-      id: 'pane',
+      id: PANE_KEY,
       area: 'panes',
       title: 'Session tasks',
       data: { placement: 'right', dock: { pane: 'workspace', pos: 'right' }, width: '320px' },
       render: () => jsx(Pane, { ctx })
     })
+    ctx.register({
+      id: 'show',
+      area: 'statusBar.right',
+      order: SHOW_ORDER,
+      data: {
+        id: `${PANE_ID}-show`,
+        icon: jsx(Codicon, { name: SHOW_ICON, size: '0.75rem' }),
+        label: SHOW_LABEL,
+        title: SHOW_TITLE,
+        toggleLabel: SHOW_TOGGLE_LABEL,
+        variant: 'action',
+        onSelect: showPane
+      }
+    })
+    ctx.register({
+      id: 'show-command',
+      area: PALETTE_AREA,
+      data: {
+        id: `${PLUGIN_ID}.show`,
+        label: SHOW_COMMAND,
+        keywords: ['tasks', 'board', 'session', 'checklist'],
+        run: showPane
+      }
+    })
   }
 }
 
 export {
+  PANE_ID, SHOW_COMMAND, SHOW_LABEL, SHOW_TITLE, SHOW_TOGGLE_LABEL, showPane,
   API_VERSION, EVENT_TYPE, PLUGIN_ID, PLUGIN_VERSION, LOAD_FAILED_NOTICE, NOTICE_MS, POLL_MS,
   STALE_NOTICE, WRITE_FAILED_NOTICE, ADD_PLACEHOLDER, MAX_TEXT_CHARS, SUBTASK_PLACEHOLDER,
   PICKER_TIP, UNTITLED, NO_OTHER_BOARDS, LIST_FAILED, READ_ONLY_BANNER, SESSION_LIST_LIMIT,

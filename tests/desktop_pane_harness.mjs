@@ -7,7 +7,8 @@
 //
 // SDK stubs: Button, Checkbox, ConfirmDialog, CopyButton, EmptyState, Input, ScrollArea, Tip,
 // DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator,
-// icons (Trash2, Plus, ChevronRight, ChevronDown, Check, Copy), host (state, request), useValue, cn.
+// icons (Trash2, Plus, ChevronRight, ChevronDown, Check, Copy), Codicon, PALETTE_AREA,
+// host (state, request, revealPane), useValue, cn.
 //
 // Config keys:
 //   baseUrl        relay URL; ctx.rest forwards to baseUrl + path with fetch
@@ -19,6 +20,7 @@
 //   duringWrite    list of steps. They run once, inside the first POST, before it is forwarded.
 //                  The harness then waits until only the held POST is pending.
 //   timeoutThrows  when true, every ctx.setTimeout call throws, as after a plugin dispose
+//   noReveal       when true, host has no revealPane, as on an older Desktop
 //   sessionList    the rows host.request('session.list') resolves as {sessions: [...]}, or "__error__"
 //                  to reject with an Error
 //   nowMs          when set, Date.now() inside the plugin returns this value
@@ -48,10 +50,15 @@
 //   {"render": true}                      one full render with its effects, and no waiting
 //   {"peek": true}                        one render with no effects: the render phase without the commit
 //   {"burst": [<step>, ...]}              the inner steps with no render and no waiting between them
+//   {"select": "<contribution id>"}       calls data.onSelect of that status bar contribution
+//   {"run": "<contribution id>"}          calls data.run of that palette contribution
 //   An unknown step fails the run.
 //
 // Output keys:
 //   name, lines, restCalls, contribution, intervals, eventTypes,
+//   contributions  {id, area, order, data} per registered contribution; functions in data become
+//               "<function>" and an element in data becomes {type, props} with the type name
+//   revealCalls the argument of each host.revealPane call
 //   inputs      {placeholder, row, value, readOnly, disabled, maxLength, size, autoFocus}
 //   buttons     {label, row, disabled, className, variant, size, text}; text is the direct string children
 //   checkboxes  {row, label, checked, disabled, guarded}; guarded means an ancestor onMouseDown prevents the default
@@ -105,6 +112,8 @@ const atWrite = []
 const focusCalls = []
 const listeners = []
 let contribution = null
+const contributions = []
+const revealCalls = []
 let activity = false
 let pending = 0
 let peeking = false
@@ -193,6 +202,7 @@ function DropdownMenuContent() {}
 function DropdownMenuItem() {}
 function DropdownMenuSeparator() {}
 function IconStub() {}
+function Codicon() {}
 function CheckStub() {}
 const icons = {
   Trash2: IconStub,
@@ -221,10 +231,12 @@ const focusedAtom = { get: () => focused }
 const sdkValues = {
   Button,
   Checkbox,
+  Codicon,
   ConfirmDialog,
   CopyButton,
   EmptyState,
   Input,
+  PALETTE_AREA: 'palette',
   ScrollArea,
   Tip,
   DropdownMenu,
@@ -233,7 +245,11 @@ const sdkValues = {
   DropdownMenuItem,
   DropdownMenuSeparator,
   cn: (...values) => values.filter(Boolean).join(' '),
-  host: { state: { focusedStoredSessionId: focusedAtom }, request },
+  host: {
+    state: { focusedStoredSessionId: focusedAtom },
+    request,
+    ...(config.noReveal === true ? {} : { revealPane: id => revealCalls.push(id) })
+  },
   icons,
   useValue: atom => atom.get()
 }
@@ -315,7 +331,8 @@ async function rest(path, options = {}) {
 
 const ctx = {
   register: value => {
-    contribution = value
+    contributions.push(value)
+    if (value.area === 'panes') contribution = value
     return () => {}
   },
   rest,
@@ -362,7 +379,7 @@ if (!plugin || typeof plugin.register !== 'function') {
 }
 plugin.register(ctx)
 if (!contribution || typeof contribution.render !== 'function') {
-  throw new Error('the plugin must register one contribution with a render function')
+  throw new Error('the plugin must register one pane contribution with a render function')
 }
 
 // ---- render walk ----
@@ -782,6 +799,10 @@ async function runStep(step) {
     peek()
   } else if (step.burst !== undefined) {
     for (const inner of step.burst) await runStep(inner)
+  } else if (step.select !== undefined) {
+    findContribution(step.select, 'statusBar.right').data.onSelect({ shiftKey: false })
+  } else if (step.run !== undefined) {
+    findContribution(step.run, 'palette').data.run()
   } else if (step.timers !== undefined) {
     for (const entry of [...timerQueue]) {
       if (entry.cancelled || entry.ran) continue
@@ -799,6 +820,25 @@ for (const step of steps) {
   await settle()
 }
 
+// The one contribution with that id; it must sit in the expected area.
+function findContribution(id, area) {
+  const matches = contributions.filter(entry => entry.id === id)
+  if (matches.length !== 1) throw new Error(`${matches.length} contributions with id ${JSON.stringify(id)}`)
+  if (matches[0].area !== area) throw new Error(`contribution ${JSON.stringify(id)} is not in ${area}`)
+  return matches[0]
+}
+
+// A JSON-safe copy of contribution data: functions become a marker, an element keeps its type name and props.
+function plain(value) {
+  if (typeof value === 'function') return '<function>'
+  if (Array.isArray(value)) return value.map(plain)
+  if (value && typeof value === 'object') {
+    if (typeof value.type === 'function' && 'props' in value) return { type: value.type.name, props: plain(value.props) }
+    return Object.fromEntries(Object.entries(value).map(([key, inner]) => [key, plain(inner)]))
+  }
+  return value
+}
+
 function stripHandlers(record) {
   const { onConfirm, onClose, ...rest } = record
   return rest
@@ -814,6 +854,13 @@ const output = {
     title: contribution.title,
     data: contribution.data
   },
+  contributions: contributions.map(entry => ({
+    id: entry.id,
+    area: entry.area,
+    order: entry.order ?? null,
+    data: plain(entry.data ?? null)
+  })),
+  revealCalls,
   intervals,
   eventTypes,
   buttons: buttons.map(({ onClick, ...rest }) => rest),

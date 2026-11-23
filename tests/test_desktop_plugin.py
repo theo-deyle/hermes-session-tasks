@@ -167,6 +167,65 @@ def test_plugin_name_and_registration(rig: Rig, tmp_path: Path) -> None:
     }
 
 
+PANE_ID = "hermes-session-tasks:pane"
+
+
+def contribution_in(result: dict[str, Any], contribution_id: str) -> dict[str, Any]:
+    """The one registered contribution with that id."""
+    found = [c for c in result["contributions"] if c["id"] == contribution_id]
+    assert len(found) == 1, f"{len(found)} contributions with id {contribution_id}"
+    return found[0]
+
+
+def test_status_bar_button_shape(rig: Rig, tmp_path: Path) -> None:
+    result = rig.run(tmp_path)
+
+    assert [c["area"] for c in result["contributions"]] == ["panes", "statusBar.right", "palette"]
+    show = contribution_in(result, "show")
+    assert show["area"] == "statusBar.right"
+    assert show["order"] == 90
+    assert show["data"] == {
+        "id": PANE_ID + "-show",
+        "icon": {"type": "Codicon", "props": {"name": "checklist", "size": "0.75rem"}},
+        "label": "Tasks",
+        "title": "Show the Session tasks pane",
+        "toggleLabel": "Session tasks",
+        "variant": "action",
+        "onSelect": "<function>",
+    }
+
+
+def test_palette_command_shape(rig: Rig, tmp_path: Path) -> None:
+    result = rig.run(tmp_path)
+
+    command = contribution_in(result, "show-command")
+    assert command["area"] == "palette"
+    assert command["data"] == {
+        "id": "hermes-session-tasks.show",
+        "label": "Show Session tasks",
+        "keywords": ["tasks", "board", "session", "checklist"],
+        "run": "<function>",
+    }
+
+
+def test_status_bar_button_reveals_the_pane(rig: Rig, tmp_path: Path) -> None:
+    result = rig.run(tmp_path, steps=[{"select": "show"}])
+
+    assert result["revealCalls"] == [PANE_ID]
+
+
+def test_palette_command_reveals_the_pane(rig: Rig, tmp_path: Path) -> None:
+    result = rig.run(tmp_path, steps=[{"run": "show-command"}])
+
+    assert result["revealCalls"] == [PANE_ID]
+
+
+def test_show_without_reveal_support_does_nothing(rig: Rig, tmp_path: Path) -> None:
+    result = rig.run(tmp_path, noReveal=True, steps=[{"select": "show"}, {"run": "show-command"}])
+
+    assert result["revealCalls"] == []
+
+
 HOOK_PLUGIN = """import { useState } from 'react'
 import { jsx } from 'react/jsx-runtime'
 
