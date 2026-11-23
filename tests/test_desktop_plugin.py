@@ -69,6 +69,8 @@ def test_pane_shows_the_board_from_the_real_routes(rig: Rig, tmp_path: Path) -> 
     assert contribution["data"]["placement"] == "right"
     assert contribution["data"]["dock"] == {"pane": "workspace", "pos": "right"}
     assert contribution["data"]["width"] == "320px"
+    assert contribution["data"]["minWidth"] == "240px"
+    assert contribution["data"]["maxWidth"] == "40rem"
 
 
 def test_pane_with_no_focused_session_makes_no_board_call(rig: Rig, tmp_path: Path) -> None:
@@ -163,6 +165,8 @@ def test_plugin_name_and_registration(rig: Rig, tmp_path: Path) -> None:
             "placement": "right",
             "dock": {"pane": "workspace", "pos": "right"},
             "width": "320px",
+            "minWidth": "240px",
+            "maxWidth": "40rem",
         },
     }
 

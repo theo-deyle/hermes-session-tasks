@@ -1345,8 +1345,7 @@ function Pane({ ctx }) {
   })
 }
 
-// Bring the pane on screen: un-hide it, open its collapsed zone and front its tab.
-// A Desktop without host.revealPane does nothing here.
+// Un-hide the pane, open its collapsed zone and front its tab. Older Desktops lack revealPane.
 function showPane() {
   if (typeof host.revealPane === 'function') host.revealPane(PANE_ID)
 }
@@ -1359,7 +1358,8 @@ export default {
       id: PANE_KEY,
       area: 'panes',
       title: 'Session tasks',
-      data: { placement: 'right', dock: { pane: 'workspace', pos: 'right' }, width: '320px' },
+      // maxWidth keeps the zone from taking the row's leftover space when every track in the row is fixed.
+      data: { placement: 'right', dock: { pane: 'workspace', pos: 'right' }, width: '320px', minWidth: '240px', maxWidth: '40rem' },
       render: () => jsx(Pane, { ctx })
     })
     ctx.register({
