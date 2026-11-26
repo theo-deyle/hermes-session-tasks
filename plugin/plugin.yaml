@@ -1,5 +1,5 @@
 name: hermes-session-tasks
-version: 0.2.0
+version: 0.2.1
 description: A per-session task board. The agent adds what the user must do, decide or remember; the user edits the items in a Hermes Desktop pane.
 requires_hermes: ">=0.22.5"
 provides_tools:

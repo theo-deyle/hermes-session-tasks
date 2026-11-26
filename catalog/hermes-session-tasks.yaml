@@ -4,7 +4,7 @@ title: Session Tasks
 repo: https://github.com/theo-deyle/hermes-session-tasks
 sha: "0000000000000000000000000000000000000001"
 subdir: plugin
-version: "0.2.0"
+version: "0.2.1"
 maintainer: theo-deyle
 tier: community
 category: desktop

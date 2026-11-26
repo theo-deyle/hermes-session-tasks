@@ -2,6 +2,20 @@
 
 The agent adds what you must do, decide or remember to a per-session board. You check, edit and delete the items in a Hermes Desktop side pane.
 
+## Requirements
+
+| Part | Requirement |
+|------|-------------|
+| Hermes Agent | v0.22.5 or later |
+| Hermes Agent v0.24 or later, and canary builds after v0.23.4 | plugin 0.2.1 or later. An older plugin cannot read a board there. |
+| Hermes Desktop | the version that comes with that Hermes Agent |
+| Python on the host | 3.11 to 3.14. Hermes brings its own Python. |
+| Extra Python packages | none |
+
+Tested with Hermes Agent v0.22.5, v0.23.1 and the build v0.23.4-86 of 2026-11-26.
+
+To see the versions on a machine, run `hermes --version` and `hermes plugins list`.
+
 ## Install on a Hermes host
 
 1. Run this command on the host:
