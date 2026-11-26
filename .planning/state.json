@@ -36,13 +36,13 @@
     {
       "number": "7",
       "name": "Deploy and hardening",
-      "status": "in_progress"
+      "status": "complete"
     }
   ],
   "next": {
-    "command": "/gsd-progress --next",
-    "label": "Advance to the next step",
-    "reason": "Phase 7 of 7 · 86% · executing"
+    "command": "/gsd-progress",
+    "label": "Show progress",
+    "reason": "Unsure of state — showing progress"
   },
-  "updated_at": "2026-11-03T17:15:12.584Z"
+  "updated_at": "2026-11-26T18:13:14.771Z"
 }

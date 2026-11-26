@@ -1,19 +1,19 @@
 ---
 gsd_state_version: "1.0"
-current_phase: 07
-current_phase_name: Deploy and hardening
-status: phase_complete
+status: Awaiting next milestone
 stopped_at: Completed 07-09-PLAN.md
-last_updated: "2026-11-23T13:41:06.386Z"
+last_updated: "2026-11-26T18:13:14.735Z"
 last_activity: 2026-11-26
-last_activity_desc: 07-09 complete (Mac and both Windows PCs done, reported by Theo)
-state_head: f15f5c8d2518be107413c2f8134dc8dec39ff883
+last_activity_desc: Milestone v1.0 completed and archived
+state_head: ef677c7abd36eb553da9c927ff241715a8d983d6
 progress:
   total_phases: 7
   completed_phases: 7
   total_plans: 62
   completed_plans: 62
   percent: 100
+current_phase: 07
+current_phase_name: Deploy and hardening
 ---
 
 # Project State
@@ -27,12 +27,10 @@ See: .planning/PROJECT.md (updated 2026-11-02)
 
 ## Current Position
 
-Phase: 07 (Deploy and hardening) — EXECUTING
-Plan: 9 of 9
-Status: Phase complete
-Last activity: 2026-11-26 - plan 07-09 complete, phase 7 complete
-
-Progress: [██████████] 100%
+Phase: Milestone v1.0 complete
+Plan: —
+Status: Awaiting next milestone
+Last activity: 2026-11-26 — Milestone v1.0 completed and archived
 
 ## Performance Metrics
 
@@ -220,12 +218,6 @@ Recent decisions affecting current work:
 
 | # | Description | Date | Commit | Directory |
 |---|-------------|------|--------|-----------|
-| 261031-lbp | Ask rule: the agent asks only on its own initiative; Theo's explicit instruction is the permission | 2026-10-31 | aff0e66 | [261031-lbp-ask-rule-the-agent-asks-only-on-its-own-](./quick/261031-lbp-ask-rule-the-agent-asks-only-on-its-own-/) |
-| 261031-uzq | Board holds the agent's own plan too: the agent writes its steps to the board and checks them off | 2026-10-31 | fbb003e | [261031-uzq-board-holds-the-agent-s-own-plan-too-the](./quick/261031-uzq-board-holds-the-agent-s-own-plan-too-the/) |
-| 261123-b4n | Status bar button and palette command that bring the Session tasks pane into view | 2026-11-23 | 71820aa | [261123-b4n-status-bar-button-and-palette-command-th](./quick/261123-b4n-status-bar-button-and-palette-command-th/) |
-| 261123-c04 | Cap the Session tasks pane width so it never takes the leftover space | 2026-11-23 | f15f5c8 | [261123-c04-cap-the-session-tasks-pane-width-so-it-n](./quick/261123-c04-cap-the-session-tasks-pane-width-so-it-n/) |
-| 261126-n7k | Show the item number beside each item in the Session tasks pane | 2026-11-26 | 44751dc | [261126-n7k-show-the-item-number-beside-each-item-in](./quick/261126-n7k-show-the-item-number-beside-each-item-in/) |
-| 261126-s4r | Read sessions through the Hermes storage interface (board read failed on a newer Hermes) | 2026-11-26 | 006e267 | [261126-s4r-read-sessions-through-the-hermes-storage](./quick/261126-s4r-read-sessions-through-the-hermes-storage/) |
 
 ## Deferred Items
 
@@ -237,6 +229,10 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-11-03T19:30:36.337Z
-Stopped at: Completed 07-07-PLAN.md
+Last session: 2026-11-26
+Stopped at: Milestone v1.0 complete
 Resume file: None
+
+## Operator Next Steps
+
+- Start the next milestone with /gsd-new-milestone

@@ -16,21 +16,23 @@ Items the agent lists for Theo and the agent's own steps stay visible and editab
 - ✓ Writes are safe when the agent and the pane write at the same time (revision number, reject stale writes). - Phase 1
 - ✓ Board data lives on devpc under `$HERMES_HOME` in plugin-owned storage, never in `state.db`. - Phase 1
 - ✓ The pane updates live when the agent writes to the board. - Phase 3 (REST routes, `board.updated` event, stub pane proved on the Mac and the Windows PC)
+- ✓ The agent writes items to the board when it lists things to do or remember for Theo. - v1.0
+- ✓ Theo can add, edit, check off and delete items in the pane. - v1.0
+- ✓ Items are checkboxes. An item can have subtasks (depth decided in discuss). - v1.0
+- ✓ The agent changes the board when Theo asks, or when the work makes an item done or wrong. - v1.0
+- ✓ When the agent is not sure a change is wanted, it asks Theo first and does not guess. - v1.0
+- ✓ Each session has its own board. - v1.0
+- ✓ Theo can view another session's board from a session picker in the pane. - v1.0
+- ✓ On request, the agent can read or copy items from another session's board. - v1.0
+- ✓ Markdown checklists (`- [ ]`, `- [x]`, indented subtasks) are the text format for import, export and what the agent sees. - v1.0
+- ✓ The pane renders the list as an interactive board, not as raw markdown. - v1.0
+- ✓ The agent sees Theo's own edits to the board on its next turn, with small injected context. - v1.0
+- ✓ Every Hermes host and every Desktop installs from the public repo `theo-deyle/hermes-session-tasks`; an update goes through `hermes plugins update` on each machine. - v1.0
+- ✓ The plugin reads sessions through the Hermes storage interface on Hermes v0.24 and later, and through `SessionDB` on an older Hermes. - v1.0 (version 0.2.1)
 
 ### Active
 
-- [ ] The agent writes items to the board when it lists things to do or remember for Theo.
-- [ ] Theo can add, edit, check off and delete items in the pane.
-- [ ] Items are checkboxes. An item can have subtasks (depth decided in discuss).
-- [ ] The agent changes the board when Theo asks, or when the work makes an item done or wrong.
-- [ ] When the agent is not sure a change is wanted, it asks Theo first and does not guess.
-- [ ] Each session has its own board.
-- [ ] Theo can view another session's board from a session picker in the pane.
-- [ ] On request, the agent can read or copy items from another session's board.
-- [ ] Markdown checklists (`- [ ]`, `- [x]`, indented subtasks) are the text format for import, export and what the agent sees.
-- [ ] The pane renders the list as an interactive board, not as raw markdown.
-- [ ] The agent sees Theo's own edits to the board on its next turn, with small injected context.
-- [ ] Deploy on devpc by symlink into `~/.hermes/plugins/`, enable, restart the gateway.
+None yet. The next milestone defines them. Two ideas wait in `.planning/todos/pending/`: a master list with tasks shared across sessions, and configurable checkbox states.
 
 ### Out of Scope
 
@@ -100,8 +102,9 @@ Package layout:
 - **Secrets**: none needed; if one is ever needed it comes from Infisical - house rule.
 - **Docs**: plain language, no em dash or en dash anywhere, spaced hyphen instead - house rule.
 - **Commit identity**: Theo Deyle <theo.deyle@donmor.ca>.
-- **Repo**: GSD project in this repo, pushed to GitHub `Don-Mor-Software-Group/hermes-session-tasks` (private).
-- **Deploy**: symlink the package dir into `~/.hermes/plugins/`, enable it, restart the gateway. Announce the gateway restart before it happens: it drops live Desktop connections.
+- **Repo**: GSD project in this repo. The public repo `theo-deyle/hermes-session-tasks` (remote `public`, MIT) is the install source for every Hermes host and every Desktop. The org repo `Don-Mor-Software-Group/hermes-session-tasks` (remote `origin`, private) takes changes only through a pull request.
+- **Deploy**: every host, devpc too, holds an installed copy from the public repo (`hermes plugins install theo-deyle/hermes-session-tasks#plugin --enable`). An update is: push to `public`, then `hermes plugins update hermes-session-tasks` on each machine that has its own Hermes. Desktop copies the pane from the Hermes on its own machine. A pane-only change needs no gateway restart. Announce a gateway restart before it happens: it drops live Desktop connections.
+- **Hermes versions**: Hermes Agent v0.22.5 or later. Hermes removes `hermes_state` no earlier than v0.27.0; the plugin already uses the storage interface when Hermes has it.
 - **Boundary**: never read, write, wrap or replace `todo_list`.
 
 ## Key Decisions
