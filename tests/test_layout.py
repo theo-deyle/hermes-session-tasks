@@ -39,6 +39,9 @@ HERMES_PUBLIC_IMPORTS = (
     "hermes_state",
     "hermes_constants",
     "hermes_cli.plugin_events",
+    # Hermes v0.24 storage interface, the documented replacement of `hermes_state`.
+    "persistence_assembly",
+    "persistence.conversation.messages",
 )
 MAX_MODULE_LINES = 500
 DASHBOARD_THIRD_PARTY = frozenset({"fastapi", "pydantic"})
