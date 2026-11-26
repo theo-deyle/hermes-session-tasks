@@ -25,7 +25,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 4: Pane** - Theo sees and edits the focused session's board in a right-side pane that updates live. (completed 2026-11-01)
 - [x] **Phase 5: Agent sees Theo's edits** - The agent learns of Theo's changes on its next turn, and a deleted session loses its board. (completed 2026-11-02)
 - [x] **Phase 6: Cross-session boards** - The agent and Theo list, read and copy items from other sessions' boards. (completed 2026-11-02)
-- [ ] **Phase 7: Deploy and hardening** - The plugin installs on any Hermes host and any Desktop machine from a public, catalog-ready GitHub repo.
+- [x] **Phase 7: Deploy and hardening** - The plugin installs on any Hermes host and any Desktop machine from a public, catalog-ready GitHub repo. (completed 2026-11-26)
 
 ## Phase Details
 
@@ -267,7 +267,7 @@ Plans:
 - [x] 07-08-PLAN.md - Ask rule check in a test home, announced restart on devpc, owner-checked backend stop, new-code proof, own-plan check (wave 5)
 
 **Wave 6** *(blocked on Wave 5 completion)*
-- [ ] 07-09-PLAN.md - Install from the Plugins page and the four-step loop on the Mac and on the Windows PC, then Theo's go before the final public push (wave 6)
+- [x] 07-09-PLAN.md - Install from the Plugins page and the four-step loop on the Mac and on the Windows PC, then Theo's go before the final public push (wave 6)
 **Research**: Needed. Topics: the catalog entry schema (`plugin-catalog/README.md`), how the Desktop app installs a plugin from Git against a remote backend, the GitHub history scan before the public push, and the restart procedure for every `serve` process.
 
 ## Progress
@@ -283,4 +283,4 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 | 4. Pane | 9/9 | Complete    | 2026-11-01 |
 | 5. Agent sees Theo's edits | 7/7 | Complete    | 2026-11-02 |
 | 6. Cross-session boards | 12/12 | Complete    | 2026-11-02 |
-| 7. Deploy and hardening | 7/9 | In Progress | - |
+| 7. Deploy and hardening | 9/9 | Complete | 2026-11-26 |

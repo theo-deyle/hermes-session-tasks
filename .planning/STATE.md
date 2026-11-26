@@ -2,18 +2,18 @@
 gsd_state_version: "1.0"
 current_phase: 07
 current_phase_name: Deploy and hardening
-status: executing
-stopped_at: Completed 07-08-PLAN.md
+status: phase_complete
+stopped_at: Completed 07-09-PLAN.md
 last_updated: "2026-11-23T13:41:06.386Z"
-last_activity: 2026-11-23
-last_activity_desc: 07-08 complete (gateway restart, own-plan 3 of 3, cleanup)
+last_activity: 2026-11-26
+last_activity_desc: 07-09 complete (Mac and both Windows PCs done, reported by Theo)
 state_head: f15f5c8d2518be107413c2f8134dc8dec39ff883
 progress:
   total_phases: 7
-  completed_phases: 6
+  completed_phases: 7
   total_plans: 62
-  completed_plans: 61
-  percent: 98
+  completed_plans: 62
+  percent: 100
 ---
 
 # Project State
@@ -29,10 +29,10 @@ See: .planning/PROJECT.md (updated 2026-11-02)
 
 Phase: 07 (Deploy and hardening) — EXECUTING
 Plan: 9 of 9
-Status: Ready to execute
-Last activity: 2026-11-23 - Completed quick task 261123-c04: Cap the Session tasks pane width so it never takes the leftover space
+Status: Phase complete
+Last activity: 2026-11-26 - plan 07-09 complete, phase 7 complete
 
-Progress: [█████████░] 98%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
