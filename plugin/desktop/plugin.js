@@ -63,6 +63,7 @@ const NOTICE_CLASS = 'px-2 pt-2 text-xs text-(--ui-text-secondary)'
 const ROW_CLASS = 'group flex min-h-8 items-start gap-1 py-1'
 const SUBTASK_ROW_CLASS = 'group flex min-h-8 items-start gap-1 py-1 pl-6'
 const COUNT_CLASS = 'shrink-0 py-1 text-xs text-(--ui-text-secondary)'
+const NUMBER_CLASS = 'shrink-0 py-1 text-[10px] leading-4 tabular-nums select-none text-(--ui-text-tertiary)' // the agent's `#3`
 const LIST_CLASS = 'min-h-0 flex-1'
 const LIST_BODY_CLASS = 'flex flex-col p-2'
 const ADD_LINE_CLASS = 'mt-2'
@@ -282,8 +283,7 @@ function pendingItem(op, pendingKey) {
   return { id: null, pendingKey, parent_id: parent, text: op.text, checked: false }
 }
 
-// A subtask goes after the last subtask of its parent. A top-level item goes last.
-// An add under a parent that the board does not hold changes nothing.
+// A subtask goes after its parent's last subtask, a top-level item last. An add under a missing parent changes nothing.
 function insertPending(items, entry) {
   if (isTopLevel(entry)) return [...items, entry]
   const parentAt = items.findIndex(item => item.id === entry.parent_id)
@@ -346,8 +346,7 @@ function isMismatch(meta) {
   return meta.backend_version !== PLUGIN_VERSION || meta.api_version !== API_VERSION
 }
 
-// The copy notice sentence in pieces: head, title, tail and the whole. Counts are numerals.
-// The cap clause follows only when some items were cut.
+// The copy notice sentence in pieces: head, title, tail and the whole. Counts are numerals. A cap clause follows a cut.
 function copyNoticeText({ copied, skipped, overflow, label }) {
   const cut = overflow > 0 ? ` ${overflow} not copied, the board holds ${BOARD_CAP} items.` : ''
   const head = `Copied ${copied} to `
@@ -627,6 +626,7 @@ function ItemRow({ item, subtasks, collapsed, onToggle, actions }) {
         })
       }),
       jsx(RowText, { item, textClass, actions }),
+      pendingRow ? null : jsx('span', { className: NUMBER_CLASS, children: `#${item.id}` }),
       top ? jsx(Chevron, { hasChildren: subtasks.length > 0, collapsed, onToggle }) : null,
       top && subtasks.length > 0
         ? jsx('span', { className: COUNT_CLASS, children: subtaskCountText(subtasks) })

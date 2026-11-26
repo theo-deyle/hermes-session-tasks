@@ -212,3 +212,16 @@ def test_header_sits_outside_the_scroll_area(rig: Rig, tmp_path: Path) -> None:
     assert "font-medium" in title["className"]
     assert count["scroll"] is False
     assert node(result, "Call John")["scroll"] is True
+
+
+def test_each_saved_row_shows_the_item_number_the_agent_uses(rig: Rig, tmp_path: Path) -> None:
+    seed_trip(rig.store)
+
+    result = rig.run(tmp_path)
+
+    for number in ("1", "2", "3"):
+        found = node(result, f"#{number}")
+        assert found["row"] == number
+        assert "text-(--ui-text-tertiary)" in found["className"]
+        assert "select-none" in found["className"]
+    assert "#2 Book flight" in render(rig.store.get_board("s1"), include_ids=True)
