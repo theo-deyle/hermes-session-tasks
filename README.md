@@ -41,8 +41,11 @@ The pane can stay off after the install. Turn it on under Capabilities, Plugins.
 ## Update
 
 1. Run `hermes plugins update hermes-session-tasks` on the host.
-2. Announce the gateway restart. Then run `hermes gateway restart`.
-3. In Hermes Desktop, the pane shows a version line when its copy differs from the host. Then install the pane again from Git with Force reinstall.
+2. When the update changed Python code, announce the gateway restart. Then run `hermes gateway restart`.
+3. On each Desktop machine that has its own Hermes with this plugin, run `hermes plugins update hermes-session-tasks` there too (PowerShell on Windows). Then reload the plugins in Hermes Desktop.
+4. On a Desktop machine with no Hermes of its own, install the pane again from Git with Force reinstall.
+
+Desktop copies the pane from the plugin folder of the Hermes on its own machine. When that folder holds an old copy, Desktop puts the old pane back after a Force reinstall from Git. Step 3 prevents that.
 
 ## Known behaviour
 
