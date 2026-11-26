@@ -4,3 +4,6 @@ __pycache__/
 .ruff_cache/
 .claude/worktrees/
 .planning/milestone.lock
+.venv*/
+.coverage
+htmlcov/

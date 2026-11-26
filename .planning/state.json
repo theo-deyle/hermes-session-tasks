@@ -6,43 +6,43 @@
     {
       "number": "1",
       "name": "Core, storage and session identity",
-      "status": "in_progress"
+      "status": "complete"
     },
     {
       "number": "2",
       "name": "Agent tools and skill",
-      "status": "pending"
+      "status": "complete"
     },
     {
       "number": "3",
       "name": "REST router and client install spike",
-      "status": "pending"
+      "status": "complete"
     },
     {
       "number": "4",
       "name": "Pane",
-      "status": "pending"
+      "status": "complete"
     },
     {
       "number": "5",
       "name": "Agent sees Theo's edits",
-      "status": "pending"
+      "status": "complete"
     },
     {
       "number": "6",
       "name": "Cross-session boards",
-      "status": "pending"
+      "status": "complete"
     },
     {
       "number": "7",
       "name": "Deploy and hardening",
-      "status": "pending"
+      "status": "in_progress"
     }
   ],
   "next": {
     "command": "/gsd-progress --next",
     "label": "Advance to the next step",
-    "reason": "Phase 1 of 7 · 0% · executing"
+    "reason": "Phase 7 of 7 · 86% · executing"
   },
-  "updated_at": "2026-10-30T22:19:36.725Z"
+  "updated_at": "2026-11-03T17:15:12.584Z"
 }

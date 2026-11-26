@@ -1,0 +1,1 @@
+List the sessions that have a task board. Give one line per session with its title and its open items.

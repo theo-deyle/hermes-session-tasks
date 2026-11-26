@@ -2,17 +2,20 @@
 
 ## What This Is
 
-A Hermes Desktop plugin that gives each Hermes session a task board in a Desktop side pane. The agent writes items to the board when it lists things to do or remember. Theo adds, edits, checks off and deletes items in the pane. The board is Theo's list of things to remember, not the agent's working plan.
+A Hermes Desktop plugin that gives each Hermes session a task board in a Desktop side pane. The agent writes items to the board when it lists things to do or remember. Theo adds, edits, checks off and deletes items in the pane. The board is the shared plan of the session: Theo's reminders and the agent's own steps.
 
 ## Core Value
 
-Items the agent lists for Theo stay visible and editable in the pane for the whole session, so Theo never scrolls up or asks the agent to repeat itself.
+Items the agent lists for Theo and the agent's own steps stay visible and editable in the pane for the whole session, so Theo never scrolls up, never asks the agent to repeat itself, and sees what comes next.
 
 ## Requirements
 
 ### Validated
 
-(None yet - ship to validate)
+- ✓ A board follows its session through context compression and branches. - Phase 1
+- ✓ Writes are safe when the agent and the pane write at the same time (revision number, reject stale writes). - Phase 1
+- ✓ Board data lives on devpc under `$HERMES_HOME` in plugin-owned storage, never in `state.db`. - Phase 1
+- ✓ The pane updates live when the agent writes to the board. - Phase 3 (REST routes, `board.updated` event, stub pane proved on the Mac and the Windows PC)
 
 ### Active
 
@@ -26,11 +29,7 @@ Items the agent lists for Theo stay visible and editable in the pane for the who
 - [ ] On request, the agent can read or copy items from another session's board.
 - [ ] Markdown checklists (`- [ ]`, `- [x]`, indented subtasks) are the text format for import, export and what the agent sees.
 - [ ] The pane renders the list as an interactive board, not as raw markdown.
-- [ ] The pane updates live when the agent writes to the board.
 - [ ] The agent sees Theo's own edits to the board on its next turn, with small injected context.
-- [ ] A board follows its session through context compression and branches.
-- [ ] Writes are safe when the agent and the pane write at the same time (revision number, reject stale writes).
-- [ ] Board data lives on devpc under `$HERMES_HOME` in plugin-owned storage, never in `state.db`.
 - [ ] Deploy on devpc by symlink into `~/.hermes/plugins/`, enable, restart the gateway.
 
 ### Out of Scope
@@ -39,7 +38,7 @@ Items the agent lists for Theo stay visible and editable in the pane for the who
 - Due dates, priorities, assignees - not needed for a remember list.
 - Sync to Super Productivity or GitHub - not needed in v1.
 - Changes to the Hermes Agent source tree - everything ships as a plugin.
-- Reading, writing, wrapping or replacing the built-in `todo_list` tool - `todo_list` stays the agent's own working plan.
+- Reading, writing, wrapping or replacing the built-in `todo_list` tool - the board holds the agent's plan, and the plugin never uses `todo_list`.
 
 ## Context
 
@@ -88,7 +87,7 @@ Package layout:
 
 - Board per session: items with id, text, checked state, parent id (one or more subtask levels, decide depth in discuss), order, timestamps, and who made the last change (agent or Theo).
 - Agent tools (names decided in discuss; must not collide with `todo_list`): read the current board, add items, update/check/uncheck/rename items, remove items, reorder, read another session's board, copy items from another session, list sessions that have a board. Each write returns the full board as markdown.
-- A bundled skill that tells the agent when to use the board: when it lists things to do or remember for Theo, keep the board in sync, ask before an ambiguous change, never use it as its own scratch plan.
+- A bundled skill that tells the agent when to use the board: when it lists things to do or remember for Theo, keep the board in sync, ask before an ambiguous change, put its own multi-step plan on the board and check items off.
 - Pane: shows the focused session's board, checkboxes, inline add and edit, add subtask, delete, collapse subtasks, a session picker to view other boards, import and copy as markdown. Live update when the agent writes.
 - Storage on devpc under `$HERMES_HOME` (resolve with `get_hermes_home()`), in a plugin-owned SQLite file or JSON files. Never write into `state.db`.
 
@@ -109,12 +108,17 @@ Package layout:
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
-| Separate from the built-in `todo_list` tool | `todo_list` is the agent's working plan; this board is Theo's remember list | - Pending |
+| Separate from the built-in `todo_list` tool | The board holds both Theo's reminders and the agent's own steps; `todo_list` is simply not used | - Pending |
 | One board per session, session picker, cross-session read and copy tools; no global board in v1 | Keeps v1 small; global board parked as backlog | - Pending |
 | Default pane position right, stacked with other right-side panes | Matches the other right-side panes; Theo can drag it later | - Pending |
-| Markdown checklist is the text format for import, export and agent view | Readable by agent and human, round-trips cleanly | - Pending |
-| Plugin-owned storage under `$HERMES_HOME`, never `state.db` | Keeps Hermes core data untouched | - Pending |
+| Markdown checklist is the text format for import, export and agent view | Readable by agent and human, round-trips cleanly | ✓ Phase 1: hand-written parser, 500 random boards round trip with no loss |
+| Plugin-owned storage under `$HERMES_HOME`, never `state.db` | Keeps Hermes core data untouched | ✓ Phase 1: SQLite through `plugin_db`, contract test proves `state.db` bytes unchanged |
 | Agent asks before an ambiguous board change | Theo's list; a wrong guess costs trust | - Pending |
+| Session lineage through an alias table filled by the compaction hook, with a lazy `SessionDB` read-only walk as fallback | One resolve rule for plain, compression, branch and delegate sessions; a delegate reads its delegator root | ✓ Phase 1: 20-hop loop guard, branch copy once under a race |
+| Stale write returns the current board instead of an error | The caller merges and retries; no lost update across processes | ✓ Phase 1: per-item revision rule, 4-process race test |
+| The REST routes take `session_id` from the request and refuse any extra body field; a stale route write answers HTTP 200 with `ok: false` and the current board | The pane names the focused session; a `confirmed` flag never crosses REST; Desktop turns 4xx into an opaque error string | ✓ Phase 3: D-24, D-25, live on both machines |
+| The Desktop half installs by a PowerShell script over the Desktop's own SSH link, with a host guard, an atomic copy and a SHA-256 line | A disk plugin loads uncompiled; the hash lets Theo compare with devpc in one line | ✓ Phase 3: Mac (`devbox`) and Windows PC (`devpc-ts`, home `%LOCALAPPDATA%\hermes`) |
+| No messaging gateway restart inside Phase 3; the Desktop backends restart by Theo quitting and reopening Desktop after an announcement | Claude stops no process; the schema did not change, so the gateway's older code stays safe | ✓ Phase 3: two announced restarts, `ps` checked each time |
 
 ## Evolution
 
@@ -134,4 +138,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-10-30 after initialization*
+*Last updated: 2026-11-02 after Phase 3*

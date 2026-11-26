@@ -1,0 +1,1 @@
+Read the task board of session cross-src-1 and tell me which items are still open. Do not change any board.
