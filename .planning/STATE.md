@@ -225,6 +225,7 @@ Recent decisions affecting current work:
 | 261123-b4n | Status bar button and palette command that bring the Session tasks pane into view | 2026-11-23 | 71820aa | [261123-b4n-status-bar-button-and-palette-command-th](./quick/261123-b4n-status-bar-button-and-palette-command-th/) |
 | 261123-c04 | Cap the Session tasks pane width so it never takes the leftover space | 2026-11-23 | f15f5c8 | [261123-c04-cap-the-session-tasks-pane-width-so-it-n](./quick/261123-c04-cap-the-session-tasks-pane-width-so-it-n/) |
 | 261126-n7k | Show the item number beside each item in the Session tasks pane | 2026-11-26 | 44751dc | [261126-n7k-show-the-item-number-beside-each-item-in](./quick/261126-n7k-show-the-item-number-beside-each-item-in/) |
+| 261126-s4r | Read sessions through the Hermes storage interface (board read failed on a newer Hermes) | 2026-11-26 | 006e267 | [261126-s4r-read-sessions-through-the-hermes-storage](./quick/261126-s4r-read-sessions-through-the-hermes-storage/) |
 
 ## Deferred Items
 
