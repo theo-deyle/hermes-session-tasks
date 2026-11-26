@@ -47,12 +47,26 @@ The pane can stay off after the install. Turn it on under Capabilities, Plugins.
 
 Desktop copies the pane from the plugin folder of the Hermes on its own machine. When that folder holds an old copy, Desktop puts the old pane back after a Force reinstall from Git. Step 3 prevents that.
 
+### Automatic update
+
+Hermes can pull new versions on its own. Run this one time on each machine that has a Hermes with this plugin:
+
+```
+hermes plugins auto-update on
+```
+
+- The switch covers every plugin of that Hermes.
+- The Hermes gateway of that machine checks every 24 hours. It must run for the check to happen.
+- Hermes Desktop shows the new pane after its next start, or after Rescan under Capabilities, Plugins.
+- An update that adds an agent tool or a hook waits for `hermes plugins update hermes-session-tasks`.
+
 ## Known behaviour
 
 - Tasks on the status bar shows the pane when it is hidden, behind another tab or in a collapsed column. Right-click the status bar to hide or show the Tasks button.
 - Closing the only pane disables the plugin. The Tasks button goes away with it. Turn the plugin on again under Capabilities, Plugins. You can also use Reset layout.
 - The pane can show `404 Plugin not found` until the gateway or the Desktop backend restarts.
 - Any Desktop that signs in to the host can read and write any board by session id.
+- Each item shows its number, for example `#3`, to the right of its text. It is the number the agent uses when it names an item.
 - The agent sees your edits on its next turn.
 
 ## What the plugin stores and reads
