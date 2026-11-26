@@ -224,6 +224,7 @@ Recent decisions affecting current work:
 | 261031-uzq | Board holds the agent's own plan too: the agent writes its steps to the board and checks them off | 2026-10-31 | fbb003e | [261031-uzq-board-holds-the-agent-s-own-plan-too-the](./quick/261031-uzq-board-holds-the-agent-s-own-plan-too-the/) |
 | 261123-b4n | Status bar button and palette command that bring the Session tasks pane into view | 2026-11-23 | 71820aa | [261123-b4n-status-bar-button-and-palette-command-th](./quick/261123-b4n-status-bar-button-and-palette-command-th/) |
 | 261123-c04 | Cap the Session tasks pane width so it never takes the leftover space | 2026-11-23 | f15f5c8 | [261123-c04-cap-the-session-tasks-pane-width-so-it-n](./quick/261123-c04-cap-the-session-tasks-pane-width-so-it-n/) |
+| 261126-n7k | Show the item number beside each item in the Session tasks pane | 2026-11-26 | 44751dc | [261126-n7k-show-the-item-number-beside-each-item-in](./quick/261126-n7k-show-the-item-number-beside-each-item-in/) |
 
 ## Deferred Items
 
